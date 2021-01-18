@@ -26,11 +26,14 @@ draft: true
 
 # <a id="introduction"></a> Introduction
 
-*TransitRouter* is a tool for generating shapes of GTFS feeds for bus routes using the map matching approach described in the paper [Hidden Markov Map Matching Through Noise and Sparseness](https://www.ismll.uni-hildesheim.de/lehre/semSpatial-10s/script/6.pdf).
+*TransitRouter* is a web tool for generating shapes of GTFS feeds for bus routes using the map matching approach described in the paper [Hidden Markov Map Matching Through Noise and Sparseness](https://www.ismll.uni-hildesheim.de/lehre/semSpatial-10s/script/6.pdf).
 
-*TransitRouter* uses the OSM routing engine [GraphHopper]() and a modified version the [GraphHopper Map Matching library](). 
+*TransitRouter* uses the OSM routing engine [GraphHopper]() and a modified version the [GraphHopper Map Matching library]() that enables turn restrictions and tries to prevent inter hop turns.
 
-The quality of the results are compared with the original GraphHopper Map Matching library (*GHMM*) and [*pfaedle*](https://github.com/ad-freiburg/pfaedle) a similar tool developed by the chair of Algorithms and Data Structures at the university of Freiburg.
+*GraphHopper* is a fast and memory efficient routing engine written in Java. It has built in support for different weighting strategies (e.g. fastest and shortest path routing), turn restrictions (based on OSM meta data) and turn costs and most important the ability to specify custom routing profiles. As public transit has quit different traffic rules we created a specialized *bus profile*. 
+
+The quality of the results are compared with the original GraphHopper Map Matching library (*GHMM*) and [*pfaedle*](https://github.com/ad-freiburg/pfaedle) a similar tool developed by the chair of Algorithms and Data Structures at the university of Freiburg. 
+
 
 
 # <a id="approach"></a> Approach
@@ -54,10 +57,12 @@ As a path finding strategy either shortest or fastest routing can be used. Note 
 
 For feeds with short distances between stations shortest routing might produce better results that fastest routing. An example can be seen in the evaluation chapter.
 
-GraphHopper uses vehicle profiles to control access and travel costs for edges and nodes. Traffic rules for public transit differ significantly from personal transit, so we use our own public transit optimized bus profile for *TransitRouter* and *GHMM*.
+We use our own public transit optimized bus profile for *TransitRouter* and *GHMM*.
 
 ## <a id="hmm"></a> Hidden Markov Model *HMM*
-To find the most likely sequence of candidates we use a Hidden Markov Model (*HMM*) with our stations \\(s_i\\) as observations and our candidates \\(C_i\\) as observations. The approach is based on **TODO**
+To find the most likely sequence of candidates we use a Hidden Markov Model (*HMM*) with our stations \\(s_i\\) as observations and our candidates \\(C_i\\) as observations. The approach is based on the paper [Hidden Markov Map Matching Through Noise and Sparseness](https://www.ismll.uni-hildesheim.de/lehre/semSpatial-10s/script/6.pdf).
+
+Given a optimal sequence of candidates we construct our final path \\(P\\) by combining the paths between the candidates in our sequence.
 
 ### <a id="emission-probability"></a> Emission probability
 The emission probability \\(p(s_i | c_i^k)\\) describes the likelihood that we observed \\(s_i\\) given that \\(c_i^k\\) is a matching candidate.
@@ -113,6 +118,9 @@ A *hop segment* is the path between two station / hops.
 A *hop segment* is mismatched its Frèchet Distance is \\(\geq\\) 20m.
 $$A_N = \frac{\text{\#unmatched hop segments}}{\text{\#hop segments}}$$
 
+### <a id="accuracy"></a> Accuracy
+The accuracy is the percentage of trips that are below a given threshold of \\(A_N\\).
+
 ### <a id="al"></a> Percentage of length of unmatched hop segments \\(A_L\\)
 $$A_L = \frac{\text{length of unmatched segments}}{\text{length ground truth}}$$
 
@@ -130,40 +138,35 @@ The differences to TransitRouter are:
 
 ## <a id="eval-st"></a> Stuttgart
 
+Average Frèchet Distance \\(\delta_{a_F}\\) histogram
 ![](/../../img/project_public_transit_map_matching/stuttgart.avg_fd.png)
 
-*Average Frèchet Distance \\(\delta_{a_F}\\) histogram*
-
+Accuracy
 ![](/../../img/project_public_transit_map_matching/stuttgart.accuracy.png)
 
-*Accuracy*
-
+Percentage of unmatched hop segments \\(A_N\\)
 ![](/../../img/project_public_transit_map_matching/stuttgart.an.png)
 
-*Percentage of unmatched hop segments \\(A_N\\)*
-
+Percentage of length of unmatched hop segments \\(A_L\\)
 ![](/../../img/project_public_transit_map_matching/stuttgart.al.png)
-
-*Percentage of length of unmatched hop segments \\(A_L\\)*
 
 
 ## <a id="eval-vg"></a> Victoria-Gasteiz
 
+Average Frèchet Distance \\(\delta_{a_F}\\) histogram
 ![](/../../img/project_public_transit_map_matching/vg.avg_fd.png)
 
-*Average Frèchet Distance \\(\delta_{a_F}\\) histogram*
-
+Accuracy
 ![](/../../img/project_public_transit_map_matching/vg.accuracy.png)
 
-*Accuracy*
 
+Percentage of unmatched hop segments \\(A_N\\)
 ![](/../../img/project_public_transit_map_matching/vg.an.png)
 
-*Percentage of unmatched hop segments \\(A_N\\)*
 
+Percentage of length of unmatched hop segments \\(A_L\\)
 ![](/../../img/project_public_transit_map_matching/vg.al.png)
 
-*Percentage of length of unmatched hop segments \\(A_L\\)*
 
 
 ## <a id="further-research"></a> Current problems and further research
