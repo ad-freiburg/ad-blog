@@ -54,6 +54,8 @@ As a path finding strategy either shortest or fastest routing can be used. Note 
 
 For feeds with short distances between stations shortest routing might produce better results that fastest routing. An example can be seen in the evaluation chapter.
 
+GraphHopper uses vehicle profiles to control access and travel costs for edges and nodes. Traffic rules for public transit differ significantly from personal transit, so we use our own public transit optimized bus profile for *TransitRouter* and *GHMM*.
+
 ## <a id="hmm"></a> Hidden Markov Model *HMM*
 To find the most likely sequence of candidates we use a Hidden Markov Model (*HMM*) with our stations \\(s_i\\) as observations and our candidates \\(C_i\\) as observations. The approach is based on **TODO**
 
@@ -176,3 +178,6 @@ At the moment we were not able to find the reasons why GraphHopper is not able t
 
 ### Use OSM metadata
 OSM provides useful information about public transit routes which might increase the quality of the generated shapes.
+
+### Enable other vehicle types
+Currently *TransitRouter* only supports bus routes. With new vehicle profiles we could add support for tram, subway and rail public transit.
