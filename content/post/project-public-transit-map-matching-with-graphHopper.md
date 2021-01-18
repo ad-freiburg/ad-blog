@@ -9,14 +9,10 @@ image: "img/writing.jpg"
 draft: true
 ---
 
-some abstract lorem...
-
 # Contents
 
 1. <a href="#introduction">Introduction</a>
-    1. <a href="#gtfs">General Transit Feed Specification GTFS</a>
 1. <a href="#approach">Our map matching approach</a>
-    1. <a href="#ghmm-limitations">Limitations of the GraphHopper Map Matching Library</a>
     1. <a href="#candidates">Finding Candidates</a>
     1. <a href="#pathfinding">Path finding between candidates</a>
     1. <a href="#hmm">Hidden Markov Model HMM</a>
@@ -34,24 +30,12 @@ some abstract lorem...
 
 *TransitRouter* uses the OSM routing engine [GraphHopper]() and a modified version the [GraphHopper Map Matching library](). 
 
-The quality of the results are compared with the original GraphHopper Map Matching (*GHMM*) and [*pfaedle*](https://github.com/ad-freiburg/pfaedle) a similar tool developed by the chair of Algorithms and Data Structures at the university of Freiburg.
-
-## <a id="gtfs"></a> General Transit Feed Specification GTFS
-
-TODO: Add text
+The quality of the results are compared with the original GraphHopper Map Matching library (*GHMM*) and [*pfaedle*](https://github.com/ad-freiburg/pfaedle) a similar tool developed by the chair of Algorithms and Data Structures at the university of Freiburg.
 
 
-# <a id="approach"></a> Our map matching approach
+# <a id="approach"></a> Approach
 Given a trip \\(T\\)  with a ordered sequence of stations \\(S = (s_0, s_1, s_2, ..., s_n)\\) we want to find its path \\(P\\) through our street network graph \\(G=(V, E)\\).
-
-## <a id="ghmm-limitations"></a> Limitations of the GraphHopper Map Matching library
-- removes stations that are to close
-- no turn restrictions / costs
-- no support for inter hop turns restrictions
-
-## <a id="ghmm-baseline"></a> GraphHopper Map Matching base line (*GHMM*)
-The GraphHopper Map Matching is a one to one implementation of [Hidden Markov Map Matching Through Noise and Sparseness](https://www.ismll.uni-hildesheim.de/lehre/semSpatial-10s/script/6.pdf).
-To be used as a base line we removed the filtering of close observations described in chapter 4.1 as this removes consecutive stations that are to close to one another.
+First we discuss how we can find possible candidates in G for every \\(s_i\\) and how we find a path between candidates. Then how we can find the most likely sequence of candidates and finally how we enable turn restrictions.
 
 
 ## <a id="candidates"></a> Finding candidates
@@ -76,7 +60,7 @@ To find the most likely sequence of candidates we use a Hidden Markov Model (*HM
 ### <a id="emission-probability"></a> Emission probability
 The emission probability \\(p(s_i | c_i^k)\\) describes the likelihood that we observed \\(s_i\\) given that \\(c_i^k\\) is a matching candidate.
 
-We use the great circle distance \\(d\\) between the station\\(s_i\\) and its candidate node\\(c^i_k\\) and apply a weighting function with the tuning parameter\\(\sigma\\).
+We use the great circle distance \\(d\\) between the station\\(s_i\\) and its candidate node \\(c^i_k\\) and apply a weighting function with the tuning parameter \\(\sigma\\).
 
 $$d=\|s_i - c_i^k\|_{\text{great circle}}$$
 $$p(s_i | c_i^k) = \frac{1}{\sqrt{2\pi}\sigma}e^{0.5(\frac{d}{\sigma})^2}$$
@@ -108,7 +92,11 @@ Given two candidates \\(c_1 = (u_1, e_1), c_2 = (u_2, e_2)\\). Let \\(v\\) be th
 When we combine the most likely paths \\(P_i\\) to get the whole path \\(P\\) we remove the last edge from every \\(P_i\\).
 
 
+
 # <a id="eval"></a> Evaluation
+
+We evaluate *TransitRouter* and *GHMM* on the GTFS feeds of Stuttgart (S) and Victoria-Gasteiz (VG) with both fastest and shortest routing and following tuning parameters:
+$$\sigma=10, \\: \beta=1.0, \\: \text{candidate search radius } r = 10$$
 
 ## <a id="metrics"></a> Metrics
 
@@ -125,6 +113,17 @@ $$A_N = \frac{\text{\#unmatched hop segments}}{\text{\#hop segments}}$$
 
 ### <a id="al"></a> Percentage of length of unmatched hop segments \\(A_L\\)
 $$A_L = \frac{\text{length of unmatched segments}}{\text{length ground truth}}$$
+
+
+## <a id="ghmm-baseline"></a> GraphHopper Map Matching base line
+The GraphHopper Map Matching (*GHMM*) library is a one to one implementation of [Hidden Markov Map Matching Through Noise and Sparseness](https://www.ismll.uni-hildesheim.de/lehre/semSpatial-10s/script/6.pdf).
+
+To be used as a base line we removed the filtering of close observations described in chapter 4.1 as this removes consecutive stations that are to close to one another. To compare the speed with *TransitRouter* we made the implementation thread safe to allow parallel execution.
+
+The differences to TransitRouter are:
+- uses orientationless candidates
+- no support for turn restrictions and turn costs
+- no support for inter hop turn restrictions
 
 
 ## <a id="eval-st"></a> Stuttgart
