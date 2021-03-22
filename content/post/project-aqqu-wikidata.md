@@ -224,6 +224,15 @@ The [described pipeline](#pipeline) achieves an average F1 score of 0.55 on the 
 
 ![evaluation results](/img/project_aqqu-wikidata/screenshot_evaluation_results.png)
 
+There are several reasons for why the pipeline fails to correctly answer a question, some of which are:
+
+1. Some properties have specific names and aliases which occur differently in questions. One example is `P413` with the aliases 'position played on team / speciality', 'fielding position', 'specialism', 'position (on team)', 'speciality', 'player position'. None of those occur exactly in 'What position does carlos gomez play?'. (*Note that this property alone occurs in more than 5% of all gold queries in the dataset.*)
+   
+    Another example is 'What sort of metal does petr hošek play' which must be mapped to `P136` (genre).
+
+2. Some questions can't be differentiated with the current set of features. For example, the two questions 'who discovered 4171 carrasco' and 'when was 4171 carrasco discovered' lead to the same features.
+3. There are some questions with typos. The current pipeline cannot deal with those. One example is 'what style of msuic did john pizzarelli play'.
+
 ## Possible improvements {#improvements}
 
 There are many possible improvements, some of which are already implemented in the original Aqqu and need to be migrated:
