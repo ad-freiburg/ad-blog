@@ -91,7 +91,7 @@ We find the entities in the question that relate to an entity from Wikidata. For
 
 For our example, this gives us `[('Bulgaria', 'Q219'), ('capital', 'Q5119'), ('capital', 'Q8137'), ('capital', 'Q58784'), ('capital', 'Q193893'), ('Bulgaria', 'Q55032081'), ('capital', 'Q98912'), ('Bulgaria', 'Q407383'), ('Bulgaria', 'Q390361'), ('Bulgaria', 'Q405228')]`. (These are only ten of the 49 linked entities.)
 
-Note that there are multiple linked entities matched to the same word in the question. We do not decide on which linked entities are actually correct yet. We postpone this to the ranking step.
+Note that there are multiple linked entities matched to the same word in the question. We do not decide on which linked entities are actually correct yet. We postpone this to the [ranking step](#ranker).
 
 *Note that it is possible to skip this step and instead provide gold entities together with the question. This is especially useful when using the [Aqqu frontend](https://github.com/ad-freiburg/aqqu-frontend) which lets the user choose entities in the question interactively.*
 
@@ -153,38 +153,27 @@ The token `Bulgaria` from the question has been matched to the entity `Q219` for
 We generate the following features for every candidate:
 
 - Entities
-  - `entity_score`: The popularity score (number of sitelinks) of the matched entity.
-  - `entity_label_matches`: The number of entities which are matched by their label in the question (vs. by alias).
-  - `n_entity_tokens`: The number of question tokens which belong to matched entities.
-  - `n_entity_tokens_no_stop`: Same as above, but ignoring all stop words.
+  - `entity_score` (es): The popularity score (number of sitelinks) of the matched entity.
+  - `entity_label_matches` (elm): The number of entities which are matched by their label in the question (vs. by alias).
 - Relations
-  - `n_relation_word_matches`: The number of relations that were matched to words in the question (at most one for our simple templates).
-  - `n_relation_no_stop_matches`: Same as above, but ignoring all stop words.
-  - `n_relation_tokens`: The number of question tokens which were matched to relations.
-  - `n_relation_tokens_no_stop`: Same as above, but ignoring all stop words.
+  - `n_relation_word_matches` (nrwm): The number of relations that were matched to words in the question (at most one for our simple templates).
+  - `n_relation_no_stop_matches` (nrnsm): Same as above, but ignoring all stop words.
 - General
-  - `pattern_complexity`: The number of triples[^ignore-labels] in the query. Since we use only one-triple templates at the moment, this feature has value 1 for every candidate.
-  - `token_coverage`: The number of question tokens which are covered by the entities and relations of the candidate, divided by the number of all tokens.
-  - `token_coverage_no_stop`: Same as above, but ignoring all stop words.
+  - `token_coverage` (tc): The number of question tokens which are covered by the entities and relations of the candidate, divided by the number of all tokens.
 
-[^ignore-labels]: We ignore triples for getting the label of an entity and count only the triples necessary to get the answer entity.
+We use a [`MinMaxScaler`](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MinMaxScaler.html) from [scikit-learn](https://scikit-learn.org/) for each feature separately over all candidates in order to get values between 0 and 1. We assign every one of the generated candidates a score using the following simple hard-coded formula:
 
-We assign every one of the generated candidates a score using a simple hard-coded formula. We only use these four of the listed features:
-
-1. `n_relation_word_matches`
-1. `n_relation_no_stop_matches`
-1. `entity_label_matches`
-1. `entity_score`
-
-The first of these is assigned the largest weight. The last one is assigned the lowest weight and is only used to decide between what would without it be draws. 
+\begin{align}
+score = tc + nrwm + 0.5 nrnsm + 0.1 elm + 0.01 es
+\end{align}
 
 We then sort the candidates based on their score.
 
 Four our example question, these are the scores of the three candidates from the pattern matching step. They are also the candidates with the best scores:
 
-1. `Q219-P36-?0 (score=1.61)`
-1. `?0-P1376-Q219 (score=1.61)`
-1. `Q390361-P1376-?0 (score=1.5)`
+1. `?0-P1376-Q219 (2.61)`
+1. `Q405228-P1376-?0 (2.50)`
+1. `Q390361-P1376-?0 (2.50)`
 
 ### 6. Candidate executor {#candidate-executor}
 
@@ -193,10 +182,10 @@ We translate our candidates to full SPARQL queries and send them to the QLever b
 In our example case, the answers for the three best ranked candidates are:
 
 1. `Sofia (Q472)`
-1. `Sofia (Q472)`
+1. `Byala Slatina Municipality (Q2015255)`
 1. `Breznik Municipality (Q2405103)`
 
-The highest-ranked candidate leads to the correct answer to our original question in this case.
+The highest-ranked candidate leads to the correct answer to our original question ('What is the capital of Bulgaria?') in this case.
 
 ## API documentation {#api-docs}
 
@@ -229,7 +218,7 @@ Because of the mentioned problems with the queries using the TRE pattern in the 
 
 ### Evaluation results {#evaluation-results}
 
-The [described pipeline](#pipeline) achieves an average F1 score of 0.31 on the dataset. For comparison, a ranker using a random scoring function achieves an average F1 score of 0.01. These are the two results compared:
+The [described pipeline](#pipeline) achieves an average F1 score of 0.55 on the dataset. For comparison, a ranker using a random scoring function achieves an average F1 score of 0.01. These are the two results compared:
 
 ![evaluation results](/img/project_aqqu-wikidata/screenshot_evaluation_results.png)
 
