@@ -116,7 +116,7 @@ This second template is not necessary when working with Freebase because all dat
 
 For every linked entity we found in the previous step, we create one SPARQL query for every template and send it to the SPARQL backend.
 
-In our example case, we have two templates and 52 linked entities leading to 104 queries in total. For the first matched entity `Q31`, these are the two queries:
+In our example case, we have two templates and 52 linked entities leading to 104 queries in total. For the first matched entity [`Q31`](https://www.wikidata.org/wiki/Q31), these are the two queries:
 ```sparql
 PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wikibase: <http://wikiba.se/ontology#>
@@ -141,14 +141,14 @@ The results (the relations) give us 829 pattern matches or 829 candidates for a 
 
 We have only looked at the entities so far. Now we try to find matching relations in the candidates. For that, we ask the relation index for all aliases of the relation of a particular query candidate and compare them to the tokens of the original question which have not already been matched to the entity. For every candidate, we store the relation matches.
 
-For our example case, let's look at the candidate `?0-P1376-Q31`. The relation `P1376` has the following aliases, among others:
+For our example case, let's look at the candidate `?0-P1376-Q31`. The relation [`P1376`](https://www.wikidata.org/wiki/Property:P1376) has the following aliases, among others:
 
 - capital of
 - county seat of
 - administrative seat of
 - parish seat of
 
-The token `Belgium` from the question has been matched to the entity `Q31` for this particular candidate. That leaves the remaining tokens `[What, is, the, capital, of, ?]` for potential relation matches. We now compare these tokens with the aliases from the relation. We match 'capital of' (alias of `P1376`) to the same tokens in the question and store some information about the match together with the candidate. It will be used to calculate candidate features which are used for ranking in the next step.
+The token `Belgium` from the question has been matched to the entity [`Q31`](https://www.wikidata.org/wiki/Q31) for this particular candidate. That leaves the remaining tokens `[What, is, the, capital, of, ?]` for potential relation matches. We now compare these tokens with the aliases from the relation. We match 'capital of' (alias of [`P1376`](https://www.wikidata.org/wiki/Property:P1376)) to the same tokens in the question and store some information about the match together with the candidate. It will be used to calculate candidate features which are used for ranking in the next step.
 
 ### 5. Ranker {#ranker}
 
@@ -226,9 +226,9 @@ The [described pipeline](#pipeline) achieves an average F1 score of 0.55 on the 
 
 There are several reasons for why the pipeline fails to correctly answer a question, some of which are:
 
-1. Some properties have specific names and aliases which occur differently in questions. One example is `P413` with the aliases 'position played on team / speciality', 'fielding position', 'specialism', 'position (on team)', 'speciality', 'player position'. None of those occur exactly in 'What position does carlos gomez play?'. (*Note that this property alone occurs in more than 5% of all gold queries in the dataset.*)
+1. Some properties have specific names and aliases which occur differently in questions. One example is [`P413`](https://www.wikidata.org/wiki/Property:P413) with the aliases 'position played on team / speciality', 'fielding position', 'specialism', 'position (on team)', 'speciality', 'player position'. None of those occur exactly in 'What position does carlos gomez play?'. (*Note that this property alone occurs in more than 5% of all gold queries in the dataset.*)
    
-    Another example is 'What sort of metal does petr hošek play' which must be mapped to `P136` (genre).
+    Another example is 'What sort of metal does petr hošek play' which must be mapped to [`P136`](https://www.wikidata.org/wiki/Property:P136) (genre).
 
 2. Some questions can't be differentiated with the current set of features. For example, the two questions 'who discovered 4171 carrasco' and 'when was 4171 carrasco discovered' lead to the same features.
 3. There are some questions with typos. The current pipeline cannot deal with those. One example is 'what style of msuic did john pizzarelli play'.
