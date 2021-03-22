@@ -79,19 +79,19 @@ The two indices have to be built once. The program then re-uses the same indices
 
 Aqqu-Wikidata consists of several steps combined into a pipeline.
 
-As an example, we run the pipeline for the following question: `What is the capital of Bulgaria?`
+As an example, we run the pipeline for the following question: `What is the capital of Belgium?`
 
 ### 1. Tokenizer {#tokenizer}
 
 We first run a tokenizer from [spaCy](https://spacy.io/) on the question. It finds the tokens in the text. Tokens can loosely be understood as words.
 
-For our example, this gives us `[What, is, the, capital, of, Bulgaria, ?]`.
+For our example, this gives us `[What, is, the, capital, of, Belgium, ?]`.
 
 ### 2. Entity linker {#entity-linker}
 
 We find the entities in the question that relate to an entity from Wikidata. For that, we go through every subset of consecutive tokens in the question and check whether the entity index contains an alias with that text. If it does, we store the alias together with its Wikidata ID.
 
-For our example, this gives us `[('Bulgaria', 'Q219'), ('capital', 'Q5119'), ('capital', 'Q8137'), ('capital', 'Q58784'), ('capital', 'Q193893'), ('Bulgaria', 'Q55032081'), ('capital', 'Q98912'), ('Bulgaria', 'Q407383'), ('Bulgaria', 'Q390361'), ('Bulgaria', 'Q405228')]`. (These are only ten of the 49 linked entities.)
+For our example, this gives us `[('Belgium', 'Q31'), ('capital', 'Q5119'), ('capital', 'Q8137'), ('capital', 'Q58784'), ('capital', 'Q193893'), ('capital', 'Q98912'), ('Belgium', 'Q2281631'), ('Belgium', 'Q2025327'), ('capital', 'Q3220821'), ('the capital', 'Q3520197')]`. (These are only ten of the 52 linked entities.)
 
 Note that there are multiple linked entities matched to the same word in the question. We do not decide on which linked entities are actually correct yet. We postpone this to the [ranking step](#ranker).
 
@@ -112,16 +112,16 @@ SELECT ?book WHERE {
 
 This second template is not necessary when working with Freebase because all data is (or should be) duplicated. (Freebase stores both that a book was written by a person and that a person wrote a book.) In Wikidata, this duplication is usually avoided[^duplication] which makes both templates necessary in Aqqu-Wikidata.
 
-[^duplication]: There are some duplications in Wikidata. The example query concerning the capital of Bulgaria is one of them (Sofia is the capital of Bulgaria and Bulgaria has the capital Sofia). The pair 'has child' and 'child of' is another. The property 'married to' is even symmetric.
+[^duplication]: There are some duplications in Wikidata. The example query concerning the capital of Belgium is one of them (Brussels is the capital of Belgium and Belgium has the capital Brussels). The pair 'has child' and 'child of' is another. The property 'married to' is even symmetric.
 
 For every linked entity we found in the previous step, we create one SPARQL query for every template and send it to the SPARQL backend.
 
-In our example case, we have two templates and 49 linked entities leading to 98 queries in total. For the first matched entity `Q219`, these are the two queries:
+In our example case, we have two templates and 52 linked entities leading to 104 queries in total. For the first matched entity `Q31`, these are the two queries:
 ```sparql
 PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wikibase: <http://wikiba.se/ontology#>
 SELECT DISTINCT ?relation WHERE {
-  wd:Q219 ?relation ?object .
+  wd:Q31 ?relation ?object .
   ?relation_entity wikibase:directClaim ?relation .
 }
 ```
@@ -130,25 +130,25 @@ SELECT DISTINCT ?relation WHERE {
 PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wikibase: <http://wikiba.se/ontology#>
 SELECT DISTINCT ?relation WHERE {
-  ?subject ?relation wd:Q219 .
+  ?subject ?relation wd:Q31 .
   ?relation_entity wikibase:directClaim ?relation .
 }
 ```
 
-The results (the relations) give us 946 pattern matches or 946 candidates for a SPARQL query which could potentially answer the question. Three examples of generated candidates are `Q219-P36-?0`, `?0-P1376-Q219` and `Q390361-P1376-?0` (leaving out the prefixes and keywords of the respective SPARQL query).
+The results (the relations) give us 829 pattern matches or 829 candidates for a SPARQL query which could potentially answer the question. Three examples of generated candidates are `?0-P1376-Q31`, `Q31-P36-?0` and `Q18214276-P17-?0` (leaving out the prefixes and keywords of the respective SPARQL query).
 
 ### 4. Relation matcher {#relation-matcher}
 
 We have only looked at the entities so far. Now we try to find matching relations in the candidates. For that, we ask the relation index for all aliases of the relation of a particular query candidate and compare them to the tokens of the original question which have not already been matched to the entity. For every candidate, we store the relation matches.
 
-For our example case, let's look at the candidate `Q219-P36-?0`. The relation `P36` has the following aliases, among others:
+For our example case, let's look at the candidate `?0-P1376-Q31`. The relation `P1376` has the following aliases, among others:
 
-- capital
-- county seat
-- court residence
-- chef-lieu
+- capital of
+- county seat of
+- administrative seat of
+- parish seat of
 
-The token `Bulgaria` from the question has been matched to the entity `Q219` for this particular candidate. That leaves the tokens `[What, is, the, capital, of, ?]` for potential relation matches. We now compare these tokens with the aliases from the relation. We match the word 'capital' (alias of P36) to the same word in the question and store some information about the match together with the candidate. It will be used to calculate candidate features which are used for ranking in the next step.
+The token `Belgium` from the question has been matched to the entity `Q31` for this particular candidate. That leaves the remaining tokens `[What, is, the, capital, of, ?]` for potential relation matches. We now compare these tokens with the aliases from the relation. We match 'capital of' (alias of `P1376`) to the same tokens in the question and store some information about the match together with the candidate. It will be used to calculate candidate features which are used for ranking in the next step.
 
 ### 5. Ranker {#ranker}
 
@@ -156,7 +156,7 @@ We generate the following features for every candidate:
 
 - Entities
   - `entity_score` (es): The popularity score (number of sitelinks) of the matched entity.
-  - `entity_label_matches` (elm): The number of entities which are matched by their label in the question (vs. by alias).
+  - `entity_label_matches` (elm): The number of entities which are matched by their label in the question (vs. by alias) (at most one for our simple templates).
 - Relations
   - `n_relation_word_matches` (nrwm): The number of relations that were matched to words in the question (at most one for our simple templates).
   - `n_relation_no_stop_matches` (nrnsm): Same as above, but ignoring all stop words.
@@ -171,11 +171,11 @@ score = tc + nrwm + 0.5 nrnsm + 0.1 elm + 0.01 es
 
 We then sort the candidates based on their score.
 
-Four our example question, these are the scores of the three candidates from the pattern matching step. They are also the candidates with the best scores:
+For our example question, these are the scores of the three candidates from the pattern matching step. They are also the candidates with the best scores:
 
-1. `?0-P1376-Q219 (2.61)`
-1. `Q405228-P1376-?0 (2.50)`
-1. `Q390361-P1376-?0 (2.50)`
+1. `?0-P1376-Q31 (2.61)`
+1. `Q31-P36-?0 (2.11)`
+1. `Q18214276-P17-?0 (1.10)`
 
 ### 6. Candidate executor {#candidate-executor}
 
@@ -183,9 +183,9 @@ We translate our candidates to full SPARQL queries and send them to the QLever b
 
 In our example case, the answers for the three best ranked candidates are:
 
-1. `Sofia (Q472)`
-1. `Byala Slatina Municipality (Q2015255)`
-1. `Breznik Municipality (Q2405103)`
+1. `Brussels (Q239)`
+1. `Brussels (Q239)`
+1. `Belgium (Q31)`
 
 The highest-ranked candidate leads to the correct answer to our original question ('What is the capital of Bulgaria?') in this case.
 
