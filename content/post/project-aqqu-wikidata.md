@@ -220,12 +220,12 @@ Since the dataset contains both the gold SPARQL queries and the gold answers, we
 
 ![evaluation results perfect](/img/project_aqqu-wikidata/screenshot_evaluation_results_perfect.png)
 
-(The run with the word 'forward' contains only the queries with the ERT pattern and the word 'reverse' contains only the queries with the TRE pattern.) We see that the results on the two subset are very different (compare average F1 of 10% vs 93%). We know of two problems leading to a lower score for the TRE queries:
+The run called 'variable_object' contains only the queries with the ERT pattern (meaning that the object is the query variable) and the run called 'variable_subject' contains only the queries with the TRE pattern (meaning that the subject is the query variable). We see that the results on the two subset are very different (compare average F1 of 10% vs 93%). We know of two problems leading to a lower score for the TRE queries:
 
-1. Many of the TRE questions ask for examples of a group, for example: 'Name a baseball player'. The gold answer is exactly one baseball player (the gold answer set has length one for every question in the dataset). The result to the gold SPARQL query contains all the 32,000 baseball players in Wikidata. This leads to a high precision and a very low recall.
+1. Many of the TRE questions ask for examples of a group, for example: 'Name a baseball player'. The gold answer is exactly one baseball player. (The gold answer set has length one for every question in the dataset.) The result to the gold SPARQL query contains all the 32,000 baseball players in Wikidata. This leads to a relatively high precision and a very low recall.
 1. Every candidate SPARQL query that Aqqu-Wikidata sends to its SPARQL backend currently uses a limit of 300 (meaning the result set is cut off at length 300). That means that in the baseball player example, we might even get a precision of zero because the gold answer baseball player is not part of the 300 returned baseball players. This is of course not a problem of the dataset but of our program but it is questionable whether it would be better overall to enable result sets of length 40,000 (and even that limit would be too low for some queries).
 
-Because of the mentioned problems with the queries using the TRE pattern in the dataset, we decided to only use the ERT subset of the dataset.
+Because of the mentioned problems with the queries using the TRE pattern in the dataset, we decided to only use the ERT subset of the dataset. The run called 'variable_object' gives us the best possible results we could theoretically achieve with our pipeline.
 
 ### Evaluation results {#evaluation-results}
 
