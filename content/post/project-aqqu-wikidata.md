@@ -53,6 +53,8 @@ Note that even though it is indeed a rewrite, major parts of the logic and some 
 
 [^aqqu-citation]: Note that the Aqqu version first published in the mentioned [paper](https://ad-publications.cs.uni-freiburg.de/CIKM_freebase_qa_BH_2015.pdf) was later improved by Niklas Schnelle. We used the improved version as a base for this project.
 
+If you want to run the code yourself, see the password-protected [README file](https://ad-svn.informatik.uni-freiburg.de/student-projects/thomas-goette/aqqu-new/trunk/README.md) in order to get started.
+
 ## Requirements {#requirements}
 
 Aqqu-Wikidata needs a way to get results for SPARQL queries. For now, it requires a working [QLever backend](https://qlever.cs.uni-freiburg.de/) (both for the pre-processing and for running the actual pipeline).
