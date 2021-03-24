@@ -53,6 +53,8 @@ Note that even though it is indeed a rewrite, major parts of the logic and some 
 
 [^aqqu-citation]: Note that the Aqqu version first published in the mentioned [paper](https://ad-publications.cs.uni-freiburg.de/CIKM_freebase_qa_BH_2015.pdf) was later improved by Niklas Schnelle. We used the improved version as a base for this project.
 
+If you want to run the code yourself, see the password-protected [README file](https://ad-svn.informatik.uni-freiburg.de/student-projects/thomas-goette/aqqu-new/trunk/README.md) in order to get started.
+
 ## Requirements {#requirements}
 
 Aqqu-Wikidata needs a way to get results for SPARQL queries. For now, it requires a working [QLever backend](https://qlever.cs.uni-freiburg.de/) (both for the pre-processing and for running the actual pipeline).
@@ -77,21 +79,21 @@ The two indices have to be built once. The program then re-uses the same indices
 
 Aqqu-Wikidata consists of several steps combined into a pipeline.
 
-As an example, we run the pipeline for the following question: `What is the capital of Bulgaria?`
+As an example, we run the pipeline for the following question: `What is the capital of Belgium?`
 
 ### 1. Tokenizer {#tokenizer}
 
 We first run a tokenizer from [spaCy](https://spacy.io/) on the question. It finds the tokens in the text. Tokens can loosely be understood as words.
 
-For our example, this gives us `[What, is, the, capital, of, Bulgaria, ?]`.
+For our example, this gives us `[What, is, the, capital, of, Belgium, ?]`.
 
 ### 2. Entity linker {#entity-linker}
 
 We find the entities in the question that relate to an entity from Wikidata. For that, we go through every subset of consecutive tokens in the question and check whether the entity index contains an alias with that text. If it does, we store the alias together with its Wikidata ID.
 
-For our example, this gives us `[('Bulgaria', 'Q219'), ('capital', 'Q5119'), ('capital', 'Q8137'), ('capital', 'Q58784'), ('capital', 'Q193893'), ('Bulgaria', 'Q55032081'), ('capital', 'Q98912'), ('Bulgaria', 'Q407383'), ('Bulgaria', 'Q390361'), ('Bulgaria', 'Q405228')]`. (These are only ten of the 49 linked entities.)
+For our example, this gives us `[('Belgium', 'Q31'), ('capital', 'Q5119'), ('capital', 'Q8137'), ('capital', 'Q58784'), ('capital', 'Q193893'), ('capital', 'Q98912'), ('Belgium', 'Q2281631'), ('Belgium', 'Q2025327'), ('capital', 'Q3220821'), ('the capital', 'Q3520197')]`. (These are only ten of the 52 linked entities.)
 
-Note that there are multiple linked entities matched to the same word in the question. We do not decide on which linked entities are actually correct yet. We postpone this to the ranking step.
+Note that there are multiple linked entities matched to the same word in the question. We do not decide on which linked entities are actually correct yet. We postpone this to the [ranking step](#ranker).
 
 *Note that it is possible to skip this step and instead provide gold entities together with the question. This is especially useful when using the [Aqqu frontend](https://github.com/ad-freiburg/aqqu-frontend) which lets the user choose entities in the question interactively.*
 
@@ -110,16 +112,16 @@ SELECT ?book WHERE {
 
 This second template is not necessary when working with Freebase because all data is (or should be) duplicated. (Freebase stores both that a book was written by a person and that a person wrote a book.) In Wikidata, this duplication is usually avoided[^duplication] which makes both templates necessary in Aqqu-Wikidata.
 
-[^duplication]: There are some duplications in Wikidata. The example query concerning the capital of Bulgaria is one of them (Sofia is the capital of Bulgaria and Bulgaria has the capital Sofia). The pair 'has child' and 'child of' is another. The property 'married to' is even symmetric.
+[^duplication]: There are some duplications in Wikidata. The example query concerning the capital of Belgium is one of them (Brussels is the capital of Belgium and Belgium has the capital Brussels). The pair 'has child' and 'child of' is another. The property 'married to' is even symmetric.
 
 For every linked entity we found in the previous step, we create one SPARQL query for every template and send it to the SPARQL backend.
 
-In our example case, we have two templates and 49 linked entities leading to 98 queries in total. For the first matched entity `Q219`, these are the two queries:
+In our example case, we have two templates and 52 linked entities leading to 104 queries in total. For the first matched entity [`Q31`](https://www.wikidata.org/wiki/Q31), these are the two queries:
 ```sparql
 PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wikibase: <http://wikiba.se/ontology#>
 SELECT DISTINCT ?relation WHERE {
-  wd:Q219 ?relation ?object .
+  wd:Q31 ?relation ?object .
   ?relation_entity wikibase:directClaim ?relation .
 }
 ```
@@ -128,63 +130,52 @@ SELECT DISTINCT ?relation WHERE {
 PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wikibase: <http://wikiba.se/ontology#>
 SELECT DISTINCT ?relation WHERE {
-  ?subject ?relation wd:Q219 .
+  ?subject ?relation wd:Q31 .
   ?relation_entity wikibase:directClaim ?relation .
 }
 ```
 
-The results (the relations) give us 946 pattern matches or 946 candidates for a SPARQL query which could potentially answer the question. Three examples of generated candidates are `Q219-P36-?0`, `?0-P1376-Q219` and `Q390361-P1376-?0` (leaving out the prefixes and keywords of the respective SPARQL query).
+The results (the relations) give us 829 pattern matches or 829 candidates for a SPARQL query which could potentially answer the question. Three examples of generated candidates are `?0-P1376-Q31`, `Q31-P36-?0` and `Q18214276-P17-?0` (leaving out the prefixes and keywords of the respective SPARQL query).
 
 ### 4. Relation matcher {#relation-matcher}
 
 We have only looked at the entities so far. Now we try to find matching relations in the candidates. For that, we ask the relation index for all aliases of the relation of a particular query candidate and compare them to the tokens of the original question which have not already been matched to the entity. For every candidate, we store the relation matches.
 
-For our example case, let's look at the candidate `Q219-P36-?0`. The relation `P36` has the following aliases, among others:
+For our example case, let's look at the candidate `?0-P1376-Q31`. The relation [`P1376`](https://www.wikidata.org/wiki/Property:P1376) has the following aliases, among others:
 
-- capital
-- county seat
-- court residence
-- chef-lieu
+- capital of
+- county seat of
+- administrative seat of
+- parish seat of
 
-The token `Bulgaria` from the question has been matched to the entity `Q219` for this particular candidate. That leaves the tokens `[What, is, the, capital, of, ?]` for potential relation matches. We now compare these tokens with the aliases from the relation. We match the word 'capital' (alias of P36) to the same word in the question and store some information about the match together with the candidate. It will be used to calculate candidate features which are used for ranking in the next step.
+The token `Belgium` from the question has been matched to the entity [`Q31`](https://www.wikidata.org/wiki/Q31) for this particular candidate. That leaves the remaining tokens `[What, is, the, capital, of, ?]` for potential relation matches. We now compare these tokens with the aliases from the relation. We match 'capital of' (alias of [`P1376`](https://www.wikidata.org/wiki/Property:P1376)) to the same tokens in the question and store some information about the match together with the candidate. It will be used to calculate candidate features which are used for ranking in the next step.
 
 ### 5. Ranker {#ranker}
 
 We generate the following features for every candidate:
 
 - Entities
-  - `entity_score`: The popularity score (number of sitelinks) of the matched entity.
-  - `entity_label_matches`: The number of entities which are matched by their label in the question (vs. by alias).
-  - `n_entity_tokens`: The number of question tokens which belong to matched entities.
-  - `n_entity_tokens_no_stop`: Same as above, but ignoring all stop words.
+  - `entity_score` (es): The popularity score (number of sitelinks) of the matched entity.
+  - `entity_label_matches` (elm): The number of entities which are matched by their label in the question (vs. by alias) (at most one for our simple templates).
 - Relations
-  - `n_relation_word_matches`: The number of relations that were matched to words in the question (at most one for our simple templates).
-  - `n_relation_no_stop_matches`: Same as above, but ignoring all stop words.
-  - `n_relation_tokens`: The number of question tokens which were matched to relations.
-  - `n_relation_tokens_no_stop`: Same as above, but ignoring all stop words.
+  - `n_relation_word_matches` (nrwm): The number of relations that were matched to words in the question (at most one for our simple templates).
+  - `n_relation_no_stop_matches` (nrnsm): Same as above, but ignoring all stop words.
 - General
-  - `pattern_complexity`: The number of triples[^ignore-labels] in the query. Since we use only one-triple templates at the moment, this feature has value 1 for every candidate.
-  - `token_coverage`: The number of question tokens which are covered by the entities and relations of the candidate, divided by the number of all tokens.
-  - `token_coverage_no_stop`: Same as above, but ignoring all stop words.
+  - `token_coverage` (tc): The number of question tokens which are covered by the entities and relations of the candidate, divided by the number of all tokens.
 
-[^ignore-labels]: We ignore triples for getting the label of an entity and count only the triples necessary to get the answer entity.
+We use a [`MinMaxScaler`](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MinMaxScaler.html) from [scikit-learn](https://scikit-learn.org/) for each feature separately over all candidates in order to get values between 0 and 1. We assign every one of the generated candidates a score using the following simple hard-coded formula:
 
-We assign every one of the generated candidates a score using a simple hard-coded formula. We only use these four of the listed features:
-
-1. `n_relation_word_matches`
-1. `n_relation_no_stop_matches`
-1. `entity_label_matches`
-1. `entity_score`
-
-The first of these is assigned the largest weight. The last one is assigned the lowest weight and is only used to decide between what would without it be draws. 
+\begin{align}
+score = tc + nrwm + 0.5 nrnsm + 0.1 elm + 0.01 es
+\end{align}
 
 We then sort the candidates based on their score.
 
-Four our example question, these are the scores of the three candidates from the pattern matching step. They are also the candidates with the best scores:
+For our example question, these are the scores of the three candidates from the pattern matching step. They are also the candidates with the best scores:
 
-1. `Q219-P36-?0 (score=1.61)`
-1. `?0-P1376-Q219 (score=1.61)`
-1. `Q390361-P1376-?0 (score=1.5)`
+1. `?0-P1376-Q31 (2.61)`
+1. `Q31-P36-?0 (2.11)`
+1. `Q18214276-P17-?0 (1.10)`
 
 ### 6. Candidate executor {#candidate-executor}
 
@@ -192,11 +183,11 @@ We translate our candidates to full SPARQL queries and send them to the QLever b
 
 In our example case, the answers for the three best ranked candidates are:
 
-1. `Sofia (Q472)`
-1. `Sofia (Q472)`
-1. `Breznik Municipality (Q2405103)`
+1. `Brussels (Q239)`
+1. `Brussels (Q239)`
+1. `Belgium (Q31)`
 
-The highest-ranked candidate leads to the correct answer to our original question in this case.
+The highest-ranked candidate leads to the correct answer to our original question ('What is the capital of Bulgaria?') in this case.
 
 ## API documentation {#api-docs}
 
@@ -220,18 +211,27 @@ Since the dataset contains both the gold SPARQL queries and the gold answers, we
 
 ![evaluation results perfect](/img/project_aqqu-wikidata/screenshot_evaluation_results_perfect.png)
 
-(The run with the word 'forward' contains only the queries with the ERT pattern and the word 'reverse' contains only the queries with the TRE pattern.) We see that the results on the two subset are very different (compare average F1 of 10% vs 93%). We know of two problems leading to a lower score for the TRE queries:
+The run called 'variable_object' contains only the queries with the ERT pattern (meaning that the object is the query variable) and the run called 'variable_subject' contains only the queries with the TRE pattern (meaning that the subject is the query variable). We see that the results on the two subset are very different (compare average F1 of 10% vs 93%). We know of two problems leading to a lower score for the TRE queries:
 
-1. Many of the TRE questions ask for examples of a group, for example: 'Name a baseball player'. The gold answer is exactly one baseball player (the gold answer set has length one for every question in the dataset). The result to the gold SPARQL query contains all the 32,000 baseball players in Wikidata. This leads to a high precision and a very low recall.
+1. Many of the TRE questions ask for examples of a group, for example: 'Name a baseball player'. The gold answer is exactly one baseball player. (The gold answer set has length one for every question in the dataset.) The result to the gold SPARQL query contains all the 32,000 baseball players in Wikidata. This leads to a relatively high precision and a very low recall.
 1. Every candidate SPARQL query that Aqqu-Wikidata sends to its SPARQL backend currently uses a limit of 300 (meaning the result set is cut off at length 300). That means that in the baseball player example, we might even get a precision of zero because the gold answer baseball player is not part of the 300 returned baseball players. This is of course not a problem of the dataset but of our program but it is questionable whether it would be better overall to enable result sets of length 40,000 (and even that limit would be too low for some queries).
 
-Because of the mentioned problems with the queries using the TRE pattern in the dataset, we decided to only use the ERT subset of the dataset.
+Because of the mentioned problems with the queries using the TRE pattern in the dataset, we decided to only use the ERT subset of the dataset. The run called 'variable_object' gives us the best possible results we could theoretically achieve with our pipeline.
 
 ### Evaluation results {#evaluation-results}
 
-The [described pipeline](#pipeline) achieves an average F1 score of 0.31 on the dataset. For comparison, a ranker using a random scoring function achieves an average F1 score of 0.01. These are the two results compared:
+The [described pipeline](#pipeline) achieves an average F1 score of 0.55 on the dataset. For comparison, a ranker using a random scoring function achieves an average F1 score of 0.01. These are the two results compared:
 
 ![evaluation results](/img/project_aqqu-wikidata/screenshot_evaluation_results.png)
+
+There are several reasons for why the pipeline fails to correctly answer a question, some of which are:
+
+1. Some properties have specific names and aliases which occur differently in questions. One example is [`P413`](https://www.wikidata.org/wiki/Property:P413) with the aliases 'position played on team / speciality', 'fielding position', 'specialism', 'position (on team)', 'speciality', 'player position'. None of those occur exactly in 'What position does carlos gomez play?'. (*Note that this property alone occurs in more than 5% of all gold queries in the dataset.*)
+   
+    Another example is 'What sort of metal does petr hošek play' which must be mapped to [`P136`](https://www.wikidata.org/wiki/Property:P136) (genre).
+
+2. Some questions can't be differentiated with the current set of features. For example, the two questions 'who discovered 4171 carrasco' and 'when was 4171 carrasco discovered' lead to the same features.
+3. There are some questions with typos. The current pipeline cannot deal with those. One example is 'what style of msuic did john pizzarelli play'.
 
 ## Possible improvements {#improvements}
 
