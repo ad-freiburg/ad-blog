@@ -54,5 +54,5 @@ canonifyurls    = true
   url = "/categories/research/"
   weight = 98
 
-
-
+[markup.goldmark.renderer]
+  unsafe = true
