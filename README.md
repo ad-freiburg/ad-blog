@@ -1,15 +1,15 @@
 AD Blog
 =======
 This is the source repository of the [AD
-Blog](https://ad-blog.informatik.uni-freiburg.de). Which stores all content
+Blog](https://ad-blog.informatik.uni-freiburg.de) which stores all content
 including posts and static files such as images. Therefore all posts to the
 blog should be added to this repository.
 
 The blog uses the [hugo](https://gohugo.io) site generator and our [custom
-theme](https://github.com/ad-freiburg/ad-blog-tje,e).
+theme](https://github.com/ad-freiburg/ad-blog-theme).
 
 ## Getting Started
-Clone the repository **Note** that this project uses *git submodule*s and thus
+Clone the repository. **Note** that this project uses *git submodule*s and thus
 needs to be cloned with
 
     git clone --recursive https://github.com/ad-freiburg/ad-blog
@@ -64,7 +64,7 @@ that you will add Markdown formatted content (the Post).
     draft: true
     ---
 
-Thish should be customized to the post and author.
+This should be customized to the post and author.
 
 After this (in the same file) you can now append your summary and content using
 Markdown format.
@@ -76,7 +76,7 @@ Markdown format.
     Content goes here. This uses Markdown in the
     [Blackfriday](https://github.com/russross/blackfriday) variant
 
-You can then preview your new post using the web server built into `hugo`. With
+You can then preview your new post using the web server built into `hugo` with
 the following command
 
     hugo serve -D --bind "::" --baseURL $(hostname -f)
@@ -95,12 +95,12 @@ stored in the `./public` folder. If you're happy with your post you should
 change the `draft` metadata to false.
 
 Finally, (if you have the necessary permissions) you can deploy the new version
-of the blog with.
+of the blog with
 
     ./deploy.sh
 
 This is just an easier way of executing the following commands (where `chmod`
-makes ensures other users in the correct group will be able to apply further
+ensures other users in the correct group will be able to apply further
 updates).
 
     hugo
@@ -114,12 +114,12 @@ in a post using double `&` for example `$$x_{1,2} = \frac{-b \pm \sqrt{b^s
 -4ac}}{2a}$$`.
 
 ### Adding Static Content
-Static content can be added to the `static/` folder, it is automatically synced
-to the correct destination on building
+Static content can be added to the `static/` folder. It is automatically synced
+to the correct destination on building.
 
 ## Changing the Title, Description and Menu
-These can be changed in the `config.[toml|yaml]` file. However in the future
-the syntax (TOML) may change to match the post metadata (YAML)
+These can be changed in the `config.[toml|yaml]` file. However, in the future
+the syntax (TOML) may change to match the post metadata (YAML).
 
 ## Changing the About Page
-The about page is editable through the `content/about.md` file
+The about page is editable through the `content/about.md` file.
