@@ -37,7 +37,7 @@ The quality of the results are compared with the original GraphHopper Map Matchi
 
 
 # Approach
-Given a trip \\(T\\)  with a ordered sequence of stations \\(S = (s_0, s_1, s_2, ..., s_n)\\) we want to find its path \\(P\\) through our street network graph \\(G=(V, E)\\).
+Given a trip \\(T\\)  with an ordered sequence of stations \\(S = (s_0, s_1, s_2, ..., s_n)\\) we want to find its path \\(P\\) through our street network graph \\(G=(V, E)\\).
 First we discuss how we can find possible candidates in G for every \\(s_i\\) and how we find a path between candidates. Then how we can find the most likely sequence of candidates and finally how we enable turn restrictions.
 
 ![text](/../../img/project_public_transit_map_matching/street_graph.svg)
@@ -48,14 +48,14 @@ The GPS positions of our stations might not be accurate so we cannot use them di
 
 For each station \\(s_i\\) we want to find a set of possible candidates \\(C_i\\). To construct \\(C_i\\) we use the following approach:
 
-For every edge \\(e_j \in E\\) within a radius \\(r\\) around \\(s_i\\) calculate the projection \\(p_{i,j}\\) of \\(s_i\\) on \\(e_j\\). Then for each outgoing edge \\(e_k\\) of \\(p_{i,j}\\) we add a candidate \\(c_i^{k} = (p_{i,j}, e_k)\\) to \\(C_i\\). So a candidate consists of a position in out road network and a direction in which we can drive.
+For every edge \\(e_j \in E\\) within a radius \\(r\\) around \\(s_i\\) calculate the projection \\(p_{i,j}\\) of \\(s_i\\) on \\(e_j\\). Then for each outgoing edge \\(e_k\\) of \\(p_{i,j}\\) we add a candidate \\(c_i^{k} = (p_{i,j}, e_k)\\) to \\(C_i\\). So a candidate consists of a position in our road network and a direction in which we can drive.
 
 Note that we could have used *orientation less* candidates consisting only of the projection \\(p_{i,j}\\) but we need the direction to enable turn restrictions which we will see at a later point.
 
 
 
 ## Path finding between candidates
-As a path finding strategy either shortest or fastest routing can be used. Note that turn costs do not work properly with shortest routing because of the way GraphHopper calculates the turn penalties.
+As a path finding strategy either shortest or fastest routing can be used.
 
 For feeds with short distances between stations shortest routing might produce better results that fastest routing. An example can be seen in the evaluation chapter.
 
@@ -88,7 +88,7 @@ $$p(c_i^k \rightarrow c_{i+1}^j)=\frac{1}{\beta}e^{\frac{d_t}{\beta}}$$
 
 
 ## Turn restrictions
-For our bus routes we want to prevent forbidden and unlikely turns. GraphHopper has built in support for turn restrictions based on osm meta data and for turn costs. But if we calculate the path between candidates only using there position we run into the problem of inter hop turns.
+For our bus routes we want to prevent forbidden and unlikely turns. GraphHopper has built in support for turn restrictions based on osm meta data. But if we calculate the path between candidates only using there position we run into the problem of inter hop turns.
 
 Consider the following example:
 
@@ -130,7 +130,7 @@ $$A_L = \frac{\text{length of unmatched segments}}{\text{length ground truth}}$$
 ## GraphHopper Map Matching base line
 The GraphHopper Map Matching (*GHMM*) library is a one to one implementation of [Hidden Markov Map Matching Through Noise and Sparseness](https://www.ismll.uni-hildesheim.de/lehre/semSpatial-10s/script/6.pdf).
 
-To be used as a base line we removed the filtering of close observations described in chapter 4.1 as this removes consecutive stations that are to close to one another. To compare the speed with *TransitRouter* we made the implementation thread safe to allow parallel execution.
+To be used as a base line we removed the filtering of close observations described in chapter 4.1 as this removes consecutive stations that are to close to one another.
 
 The differences to TransitRouter are:
 - uses orientationless candidates
@@ -185,4 +185,4 @@ At the moment we were not able to find the reasons why GraphHopper is not able t
 OSM provides useful information about public transit routes which might increase the quality of the generated shapes.
 
 ### Enable other vehicle types
-Currently *TransitRouter* only supports bus routes. With new vehicle profiles we could add support for tram, subway and rail public transit.
+Currently *TransitRouter* only supports bus routes. With new vehicle profiles we could add support for tram, subway and rail public transit routes.
