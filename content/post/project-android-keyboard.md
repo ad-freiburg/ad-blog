@@ -187,19 +187,18 @@ To train n-gram models, I used corpuses about web text and tweets from <a>https:
 <br> 
 
 ||__number of characters__|__number of words__|__number of sentences__|__number of documents__|__topics__|
-| --- | --- | --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- | --- |
 |corpus from tweets|1264807|223201|50070|3|negative, positive and politic tweets|
 |corpus from web   |1469355|255328|57425|4|firefox, overheard, singles, wine|
-<br>
+
 <center> Grams Info (after deleting some grams that appear only once or twice in corpus) </center>
 <br>
 
 |__gram__|__amount__|
-|---|---|---|
+|---|---|
 |unigram|9295|
 |bigram |21561|
 |trigram|10091|
-<br>
 
 Before we have talked about the aim and construction of a **q-gram**. Given a word **w**, we need to find all words from a dictionary whose **PED** fulfills the threshold **delta**. To reduce the response time, we should compute **q-grams** of all words  in advance from the dictionary, and once a query is executed, we will compute the number of common grams between **w** and all other words from the dictionary. <br> <br>
 To minimize the intern storage of app and its startup delay, the total number of words from a dictionary has been limited into 10000. Hence, for this dictionary I used 10000 most common used English words from <a> www.mit.edu/~ecprice/wordlist.10000 </a>. Another issue is that some words from corpus may not be included in the dictionary. Therefore, after keeping the words which appear both in dictionary and corpus, I removed 4400 words from the dictionary which never appeared in the corpus and added 4400 new words by their frequencies into the dictionary from the corpus.
@@ -287,7 +286,7 @@ At last, I want to show how the trainset from a corpus could adapt for different
 
 
 | __ALPHA (punishment)__ | __Reduced steps in web (5%)__ |
-| --- | --- | --- |
+| --- | --- |
 | 0.0   |27.10%|
 | 0.0005|36.04%|
 | 0.005 |41.16%|
@@ -309,7 +308,7 @@ Before we have talked about how the punishment value alpha could help filtering 
 
 
 |         |__Web(small)__ | __Web (5%)__ | __Tweets(small)__|__Tweets(5%)__|
-| ---     | ---           | ---          |---               | ---          | ---|
+| ---     | ---           | ---          |---               | ---          |
 |__API30__    |43.19%         |        --     |40.93%            |--        |
 |__ZKeyboard__|43.00%         |41.20%        |43.72%            |38.59%        |
 
@@ -326,7 +325,7 @@ Test set: 5% contents from web, 5% contents from tweets, 100 sentences from 5% o
 <br>
 
 |             |__Web(small)__ | __Web (5%)__ | __Tweets(small)__|__Tweets(5%)__|
-| ---         | ---           | ---          |---               | ---          | ---|
+| ---         | ---           | ---          |---               | ---          |
 |__API30__    |  21.00%       |        --    |     18.60%       |--            |
 |__ZKeyboard__|  21.35%       |    23.62%    |     24.06%       |   20.71%     |
 
@@ -342,7 +341,7 @@ For the evaluation of autocorrection, the first letter of every word whose lengt
 <br>
 
 |                 | __web (5%)__ |__tweets(5%)__|
-| --- | --- | --- |--- |
+| --- | --- | --- |
 | __95% web__         |41.62%        |31.33%        |
 | __95% tweets__      |33.83%        |39.27%        |
 | __95% tweets + web__|41.20%        |38.59%        |
