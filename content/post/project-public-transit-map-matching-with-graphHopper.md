@@ -3,10 +3,10 @@ title: "Project Public Transit Map Matching With GraphHopper"
 date: 2021-01-04T11:16:35+01:00
 author: "Michael Fleig"
 authorAvatar: "img/ada.jpg"
-tags: []
-categories: []
-image: "img/writing.jpg"
-draft: true
+tags: ["map-matching", "GTFS", "OSM", "public transit", "schedule data"]
+categories: ["project"]
+image: "img/project_public_transit_map_matching/webapp.png"
+draft: false
 ---
 
 # Contents
@@ -32,8 +32,9 @@ draft: true
 
 *GraphHopper* is a fast and memory efficient routing engine written in Java. It has built in support for different weighting strategies (e.g. fastest and shortest path routing), turn restrictions (based on OSM meta data), turn costs and most important the ability to specify custom routing profiles. As public transit has quite different traffic rules we created a specialized *bus profile*. 
 
-The quality of the results are compared with the original GraphHopper Map Matching library (*GHMM*) and [*pfaedle*](https://github.com/ad-freiburg/pfaedle) a similar tool developed by the chair of Algorithms and Data Structures at the university of Freiburg. 
+The quality of the results are compared with the original GraphHopper Map Matching library (*GHMM*) and [*pfaedle*](https://github.com/ad-freiburg/pfaedle) a similar tool developed by the chair of Algorithms and Data Structures at the University of Freiburg. 
 
+The source code of TransitRouter is available on [GitHub](https://github.com/fleigm/TransitRouter).
 
 
 # Approach
@@ -72,7 +73,7 @@ The emission probability \\(p(s_i | c_i^k)\\) describes the likelihood that we o
 We use the great circle distance \\(d\\) between the station\\(s_i\\) and its candidate node \\(c^i_k\\) and apply a weighting function with the tuning parameter \\(\sigma\\).
 
 $$d=\|s_i - c_i^k\|_{\text{great circle}}$$
-$$p(s_i | c_i^k) = \frac{1}{\sqrt{2\pi}\sigma}e^{0.5(\frac{d}{\sigma})^2}$$
+$$p(s_i | c_i^k) = \frac{1}{\sqrt{2\pi}\sigma}e^{-0.5(\frac{d}{\sigma})^2}$$
 
 
 
@@ -81,7 +82,7 @@ For the transition probability \\(p(c_i^k \rightarrow c_{i+1}^j)\\) describes th
 We use the distance difference \\(d_t\\) between the great circle distance of the two stations \\(s_i, s_{i+1}\\) and the length of the road path between the two candidates \\(c_i^k, c_{i+1}^j\\) and apply out weighting function with tuning parameter \\(\beta\\).
 
 $$d_t = | \|s_i - s_{i+1}\|_{\text{great circle}} - \| c_i^k - c_{i-1}^j \|_{\text{route}} |$$
-$$p(c_i^k \rightarrow c_{i+1}^j)=\frac{1}{\beta}e^{\frac{d_t}{\beta}}$$
+$$p(c_i^k \rightarrow c_{i+1}^j)=\frac{1}{\beta}e^{-\frac{d_t}{\beta}}$$
 
 ![text](/../../img/project_public_transit_map_matching/hmm.png "title here")
 
@@ -94,7 +95,7 @@ Consider the following example:
 
 ![text](/../../img/project_public_transit_map_matching/inter_hop_turn_restrictions.png)
 
-Having no information from which direction we arrived at candidate \\(c^0_1\\) the most likely path to \\(c^0_2\\) would include a full turn which is unlikely for busses and might even be forbidden at that position by traffic rules.
+Having no information from which direction we arrived at candidate \\(c^0_1\\) the most likely path to \\(c^0_2\\) would include a full turn which is unlikely for a bus and might even be forbidden at that position by traffic rules.
 
 In GraphHopper we can specify a start and end edge when finding the path between two nodes. We use this to enable turn restrictions between hops.
 Given two candidates \\(c_1 = (u_1, e_1), c_2 = (u_2, e_2)\\). Let \\(v\\) be the neighbor of \\(u_2\\) connected by \\(e_2\\). Then we calculate the path \\(P_1\\) from \\(u_1\\) starting with edge \\(e_2\\) to \\(v\\) ending with \\(e_2\\). 
