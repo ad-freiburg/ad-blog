@@ -16,7 +16,7 @@ needs to be cloned with
     cd ad-blog
 
 ### Getting hugo
-To preview and/or update and post to the blog you currently need the **version 0.83.1**
+To preview and/or update and post to the blog you currently need **version 0.83.1** (or above)
 of the `hugo` static site generator.
 
 If you have `sudo` access on the system and your package manager provides the version mentioned above (or a more recent version), we
