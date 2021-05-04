@@ -16,11 +16,11 @@ needs to be cloned with
     cd ad-blog
 
 ### Getting hugo
-To preview and/or update and post to the blog you currently need the `hugo`
-static site generator.
+To preview and/or update and post to the blog you currently need the **version 0.83.1**
+of the `hugo` static site generator.
 
-If you have `sudo` access on the system and it is at least an Ubuntu 18.04, we
-recommend installing with the package manager, for example
+If you have `sudo` access on the system and your package manager provides the version mentioned above (or a more recent version), we
+recommend installing it with for example
 
     sudo apt install hugo
 
@@ -31,9 +31,8 @@ it locally or add it to your `$PATH`.
 To download just the `hugo` binary on an Intel/AMD Linux system you can use the
 following commands. To use the downloaded binary you **must** use `./hugo`
 instead of `hugo` in all later commands or make it available on your `$PATH`.
-Also note this matches the `hugo` version from the Ubuntu 18.04 repository.
 
-    wget -O - 'https://github.com/gohugoio/hugo/releases/download/v0.40.1/hugo_0.40.1_Linux-64bit.tar.gz' | tar -xvz hugo
+    wget -O - 'https://github.com/gohugoio/hugo/releases/download/v0.83.1/hugo_0.83.1_Linux-64bit.tar.gz' | tar -xvz hugo
     # Test the binary with the version command. Remember you must prepend "./"
     ./hugo version
 
