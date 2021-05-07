@@ -1,6 +1,6 @@
 ---
 title: "Segmentation of layout-based documents"
-date: 2020-12-30T10:51:00+01:00
+date: 2021-05-07T16:05:00+02:00
 author: "Elias Kempf"
 authorAvatar: "img/project-segmentation-of-layout-based-documents/gopher.png"
 tags: []
