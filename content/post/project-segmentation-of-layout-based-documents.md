@@ -6,7 +6,6 @@ authorAvatar: "img/project-segmentation-of-layout-based-documents/gopher.png"
 tags: []
 categories: []
 image: "img/project-segmentation-of-layout-based-documents/rect-title.jpg"
-draft: true
 ---
 
 PDF is a widely used file format and in most cases very convenient to use for
