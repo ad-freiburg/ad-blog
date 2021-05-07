@@ -60,7 +60,6 @@ that you will add Markdown formatted content (the Post).
     tags: []
     categories: []
     image: "img/writing.jpg"
-    draft: true
     ---
 
 This should be customized to the post and author.
