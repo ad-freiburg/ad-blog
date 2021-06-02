@@ -252,7 +252,7 @@ For each approach we train three models of different sizes with respect to the n
 
 **Training details**
 
-The most important training information and hyperparamters are shown in the table below:
+The most important training information and hyperparameters are shown in the table below:
 
 | Component              | Info                                                         |
 |:----------------------:|:------------------------------------------------------------:|
