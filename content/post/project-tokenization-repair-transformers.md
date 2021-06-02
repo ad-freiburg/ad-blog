@@ -6,7 +6,7 @@ authorAvatar: "img/ada.jpg"
 tags: ["nlp", "deep learning", "transformer", "tokenization", "repair"]
 categories: []
 image: "img/project_tokenization_repair_transformers/title_image.svg"
-draft: true
+draft: false
 ---
 
 This project tackles the tokenization repair problem using the Transformer neural network architecture. We achieve results that match the performance of previous work on multiple tokenization repair benchmarks paired with usable runtimes in practice.
