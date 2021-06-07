@@ -11,6 +11,8 @@ draft: false
 
 This project tackles the tokenization repair problem using the Transformer neural network architecture. We achieve results that match the performance of previous work on multiple tokenization repair benchmarks paired with usable runtimes in practice.
 
+<!--more-->
+
 # Content
 
 - [Problem](#problem)

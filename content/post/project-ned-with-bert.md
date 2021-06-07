@@ -11,6 +11,7 @@ draft: false
 
 Large transformer networks such as BERT have led to recent advancements in the NLP field. The contextualized token embeddings that BERT produces should serve as good input to entity disambiguation, which benefits from context. This master project aims to use BERT on the task of Named Entity Disambiguation.
 
+<!--more-->
 
 # Content
 - [Introduction](#intro)
