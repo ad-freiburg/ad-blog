@@ -366,8 +366,8 @@ For visualising the information flow in the neural models, the following scheme 
 
 | symbol | meaning |
 | --- | --- |
-| <img src="/../../img/project_tokenization_repair/legend_H.png" title="One-hot-vector (0 0 0 ... 0 1 0 ... 0 0 0) encoding the character 'H'."></img> | Yellow boxes represent one-hot-encoded input symbols. |
-| <img src="/../../img/project_tokenization_repair/legend_h.png" title="hidden state"></img> | Yellow circles *h1* to *h6* represent hidden state vectors. |
+| <img src="/../../img/project_tokenization_repair/legend_big_h.png" title="One-hot-vector (0 0 0 ... 0 1 0 ... 0 0 0) encoding the character 'H'."></img> | Yellow boxes represent one-hot-encoded input symbols. |
+| <img src="/../../img/project_tokenization_repair/legend_small_h.png" title="hidden state"></img> | Yellow circles *h1* to *h6* represent hidden state vectors. |
 | <img src="/../../img/project_tokenization_repair/legend_p.png" title="predicted probability distribution vector over the 103 symbols"></img> | Yellow circle *p6* represents the output vector. |
 | <img src="/../../img/project_tokenization_repair/legend_LSTM.png" title="Long Short-Term Memory cell"></img> | The blue box always stands for the same LSTM cell. It gets an input vector and a hidden state as input and outputs a vector of the same dimension as the hidden state. |
 | <img src="/../../img/project_tokenization_repair/legend_FCN.png" title="fully connected network"></img> | The green box represents the fully connected network with 103 output neurons. |
