@@ -11,6 +11,9 @@ draft: false
 The project aims to predict energy prices for the next 24 hours, given the history of past features such as load, generation, prices and weather data. This data is downloaded from 2 data sources: ENTSOE and Copernicus. MLP's, residual networks and LSTMs are trained with different hyperparameters, different subsets of features and different histories and the results are compared. The residual MLP has the best results. This is likely to due to the fact that the residual MLP can adapt to changing prices better than the other models.
 
 <!--more-->
+
+*This project is the outcome of a cooperation between Fraunhofer IIS/EAS and the Algorithms & Data Structures Chair of the University of Freiburg.*
+
 <div>
 <p><b>CONTENTS</b></p>
 <ol>

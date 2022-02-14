@@ -18,6 +18,8 @@ between devices of different manufacturers.
 
 <!--more-->
 
+*This project is the outcome of a cooperation between Fraunhofer ISE and the Algorithms & Data Structures Chair of the University of Freiburg.*
+
 ## Content
 
 1. [What is EEBUS?](#what-is-eebus)
