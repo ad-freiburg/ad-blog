@@ -12,7 +12,7 @@ The project aims to predict energy prices for the next 24 hours, given the histo
 
 <!--more-->
 
-*This project is the outcome of a cooperation between Fraunhofer IIS/EAS and the Algorithms & Data Structures Chair of the University of Freiburg.*
+*This project is the outcome of a cooperation between Fraunhofer IIS/EAS in Dresden and the Algorithms & Data Structures Chair of the University of Freiburg.*
 
 <div>
 <p><b>CONTENTS</b></p>
