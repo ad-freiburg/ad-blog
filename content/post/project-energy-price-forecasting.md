@@ -325,25 +325,25 @@ metrics. These values are calculated using the test dataset:
 </tr>
 <tr>
 <td>Linear</td>
-<td>11.5</td>
-<td>13.4</td>
+<td>8.93</td>
+<td>9.98</td>
 </tr>
 <tr>
 <td>Day Before Baseline Model</td>
-<td>8.22</td>
-<td>9.79</td>
+<td>8.19</td>
+<td>9.76</td>
 </tr>
 <td>MLP</td>
-<td>6.9</td>
-<td>8.08</td>
+<td>6.06</td>
+<td>7.03</td>
 </tr>
 <td>Residual MLP</td>
-<td>6.57</td>
-<td>7.75</td>
+<td>5.66</td>
+<td>6.72</td>
 </tr>
 <td>LSTM</td>
-<td>7.64</td>
-<td>9</td>
+<td>11.33</td>
+<td>12.96</td>
 </tr>
 </table> </center><br>
 <p><u>Graphs for model loss:</u>
@@ -360,10 +360,9 @@ metrics. These values are calculated using the test dataset:
 <td> <center>LSTM<img src="/img/project-energy-price-forecasting/lstm_loss.jpg" alt="LSTM Loss" style="width:100%"> </td>
 </tr>
 </table> <br>
-<p>As observed, the LSTM and the Residual MLP do a better job of reducing the training
+<p>As observed, the MLP and the Residual MLP do a good job of reducing the training
 loss as well as the validation loss. The validation loss is much closer to the training loss in both
-instances, so there is some confidence that overfitting is avoided. The baseline linear model in
-fact suffers from overfitting as there is a point where the validation loss increases.
+instances, so there is some confidence that overfitting is avoided.
 <p><u>Graphs for evaluation metrics </u>
 <table>
    <tr> 
@@ -457,16 +456,16 @@ models, with different subsets of the data are trained. The model used is the Re
 </tr>
 <tr>
 <td>Prices </td>
-<td>7.45</td>
-<td>8.76</td>
+<td>7.5</td>
+<td>8.83</td>
 </tr>
 </tr>
 <tr>
 <td>Prices, load, Solar power, Wind
 onshore power (Electric Data)
  </td>
-<td>7.76</td>
-<td>9.14</td>
+<td>6.57</td>
+<td>7.68</td>
 </tr>
 </tr>
 <tr>
@@ -474,8 +473,8 @@ onshore power (Electric Data)
 Temperature, Precipitation, Wind
 Speed
 </td>
-<td>9.15 </td>
-<td>10.41</td>
+<td>8.48 </td>
+<td>9.72</td>
 </tr>
 </table>
 <p> It can be observed from this table that prices and the electric data are more important than the weather data to accurately forecast the prices. This does not mean that the weather data is not required, but that without the electric data, price prediction would be impossible. Additionally, the prices alone are not enough for forecasting. There is an effect of other factors on the prices that are required to be considered. <br>
@@ -490,58 +489,58 @@ experiment:
 </tr>
 <tr>
 <td>Wind Speed </td>
-<td>6.66</td>
-<td>7.89</td>
+<td>5.72</td>
+<td>6.69</td>
 </tr>
 </tr>
 <tr>
 <td>Air Temperature
  </td>
-<td>6.51 </td>
-<td>7.68</td>
+<td>5.51 </td>
+<td>6.47</td>
 </tr>
 </tr>
 <tr>
 <td>Precipitation
 </td>
-<td>6.73</td>
-<td>7.94</td>
+<td>5.77</td>
+<td>6.75</td>
 </tr>
 <tr>
 <td>Shortwave radiation
 </td>
-<td>8.41</td>
-<td>9.77</td>
+<td>7.08</td>
+<td>8.19</td>
 </tr>
 <tr>
 <td>Wind onshore power generation
 </td>
-<td>6.85</td>
-<td>8.08</td>
+<td>5.72</td>
+<td>6.76</td>
 </tr>
 <tr>
 <td>Solar power generation
 </td>
-<td>8.36</td>
-<td>9.6
+<td>7.63</td>
+<td>8.75
 </td>
 </tr>
 <tr>
 <td>Load 
 </td>
-<td>10.09</td>
-<td>11.43
+<td>9.17</td>
+<td>10.48
 </td>
 </tr>
 <tr>
 <td>Prices
 </td>
-<td>7.95</td>
-<td>9.17
+<td>7.31</td>
+<td>8.52
 </td>
 </tr>
 </table>
-<p>The model without ‘Air Temperature’ has a better MAE value by only 0.01. There are no
+<p>The model without ‘Air Temperature’ has a better MAE value by only 0.1. There are no
 significant improvements in the other models. This is at least some evidence that these
 features are impacting prices in some way and are required by the model for training.
 <p> This also shows that 'Load' is the most important feature for price prediction. This is observed by the fact that without load, the MAE and RMSE are quite high. After load, the other important features observed are radiation, solar power generation and prices. Precipitation, wind power generation and wind speed improve the model a bit.
@@ -571,7 +570,7 @@ prediction. Different hyperparameter settings are explored to find the best poss
 useful to know these before trying out more complex machine learning models for price
 prediction. The graph visualizations help to understand the difference in performances of the
 models. It was shown how the addition of the mean layer helped to improve the MAE without
-adding any extra trainable parameters. LSTM also drastically reduces the number of training parameters. However, the best hyperparameter setting still needs to be determined. 
+adding any extra trainable parameters. LSTM also drastically reduces the number of training parameters. An LSTM can perform much better once the best hyperparameter setting is determined. 
 </li>
 </ol><br>
 </div>
@@ -616,8 +615,8 @@ Some of these are documented below:
 <td> 300</td>
 </tr>
 </table> <br>
-Mean MAE = 9.34 <br>
-Mean MRSE = 10.43
+Mean MAE = 6.27 <br>
+Mean MRSE = 7.33
 </li></br>
 <li>Residual MLP <br>
 <table>
@@ -654,8 +653,8 @@ Mean MRSE = 10.43
 <td> 300</td>
 </tr>
 </table> <br>
-Mean MAE = 9.87 <br>
-Mean MRSE = 10.98
+Mean MAE = 9.85 <br>
+Mean MRSE = 10.96
 </li></br>
 <li> MLP
 <p>There are many different ways to calculate the number of neurons in the hidden layers.
@@ -699,11 +698,12 @@ final_output_size)
 <td> 300</td>
 </tr>
 </table> <br>
-Mean MAE = 6.7 <br>
-Mean MRSE = 7.93
+Mean MAE = 6.65 <br>
+Mean MRSE = 7.66
 </li></br>
-<li>MLP: Adding an extra hidden layer can help improve the MAE as compared to the
-previously mentioned MLP with a single hidden layer. <br>
+<li>MLP<br>
+Adding an extra hidden layer can help improve the MAE as compared to the
+previously mentioned MLP with a single hidden layer. However, this increases the number of trainable parameters. <br>
 <table>
 <tr>
 <td> number_steps_in  </td>
@@ -742,8 +742,8 @@ previously mentioned MLP with a single hidden layer. <br>
 <td> 300</td>
 </tr>
 </table> <br>
-Mean MAE = 6.78 <br>
-Mean MRSE = 7.95
+Mean MAE = 5.85 <br>
+Mean MRSE = 6.87
 </li> <br>
 <li>Residual MLP: Adding an extra hidden layer to the Residual MLP does not help improve the MAE. <br>
 <table>
@@ -784,8 +784,8 @@ Mean MRSE = 7.95
 <td> 300</td>
 </tr>
 </table> <br>
-Mean MAE = 7.12 <br>
-Mean MRSE = 8.35
+Mean MAE = 7.89 <br>
+Mean MRSE = 9.14
 </div>
 
 
