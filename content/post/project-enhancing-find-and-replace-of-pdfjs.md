@@ -1,6 +1,6 @@
 ---
 title: "Enhancing find functionality of pdf.js"
-date: 2021-12-10T16:37:58+01:00
+date: 2022-03-07T15:37:58+01:00
 author: "Robin Textor-Falconi"
 authorAvatar: "img/ada.jpg"
 tags: [pdf, find-text, text-extraction]
