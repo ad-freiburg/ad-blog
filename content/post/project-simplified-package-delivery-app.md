@@ -6,7 +6,7 @@ authorAvatar: "img/project-simplified-package-delivery-app/ievgen-markhai.jpg"
 tags: ["web-app", "pwa", "nuxt.js", "full-stack","node.js", "docker"]
 tags: ["web-app", "pwa", "nuxt.js", "full-stack","node.js","docker"]
 image: "img/project-simplified-package-delivery-app/package-tracker.markhai.com.png"
-draft: true
+draft: false
 ---
 
 
