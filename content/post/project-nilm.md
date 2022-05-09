@@ -6,7 +6,7 @@ authorAvatar:
 tags: []
 categories: ["non-intrusive load monitoring","machine learning", "time series forecasting"]
 image: "/img/project_nilm_ev_detection/main21.png"
-draft: true
+draft: false
 ---
 
 Non-intrusive load monitoring (NILM) is the process of estimating electrical consumption of individual appliances using the aggregate power reading. NILMTK<a href=#ref1><sup>[1]</sup></a> is an open-source toolkit for comparative analysis of NILM algorithms across various datasets. The goal of this project is to use NILMTK in order to disaggregate household readings in order to detect charging events in electric vehicles in a synthetic dataset.
