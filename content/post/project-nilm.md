@@ -4,12 +4,12 @@ date: 2022-03-21T16:00:50+01:00
 author: "Rohit Kerekoppa Ramesha"
 authorAvatar: 
 tags: []
-categories: []
+categories: ["non-intrusive load monitoring","machine learning", "time series forecasting"]
 image: "/img/project_nilm_ev_detection/main21.png"
-draft: false
+draft: true
 ---
 
-Non-intrusive load monitoring (NILM) is the process of estimating electrical consumption of individual appliances using the aggregate power reading. NILMTK is an open-source toolkit for comparative analysis of NILM algorithms across various datasets. The goal of this project is to use NILMTK in order to disaggregate household readings in order to detect charging events in electric vehicles in a synthetic dataset.
+Non-intrusive load monitoring (NILM) is the process of estimating electrical consumption of individual appliances using the aggregate power reading. NILMTK<a href=#ref1><sup>[1]</sup></a> is an open-source toolkit for comparative analysis of NILM algorithms across various datasets. The goal of this project is to use NILMTK in order to disaggregate household readings in order to detect charging events in electric vehicles in a synthetic dataset.
 <!--more-->
 *This project is the outcome of a cooperation between Fraunhofer ISE in Freiburg and the Algorithms & Data Structures Chair of the University of Freiburg.*
 
@@ -30,15 +30,17 @@ Non-intrusive load monitoring (NILM) is the process of estimating electrical con
 <li><a href="#div12">Conclusion</a></li>
 <li><a href="#div13">Future Works</a></li>
 <li><a href="#div14">Appendix</a></li>
+<li><a href="#div15">Acknowledgments</a></li>
+<li><a href="#div16">References</a></li>
 </ol>
 </div>
 <div id ="div1">
 <h2>1. Introduction <br></h2>
-<p>Energy monitoring is one of the most important aspects of energy management because there is a need to monitor the energy consumption of buildings before planning some of the technical measures to reduce energy consumption. Energy monitoring is important to help end users to save energy by taking energy-saving measures such as using energy efficient devices, more efficient use of electrical equipment and eliminating unwanted energy activity.  With the advent of renewable energy supply to the power grids energy management and monitoring is now more important as it is needed to help stabilize these grids. Energy monitoring not only helps end users by helping them reduce their electricity bill, but also is an important step that is needed to reduce emission of greenhouse gasses and combat climate change.  In order to reduce the burden of the power sector by its major challenges like the cost of electricity, energy crisis and global warming, some of the critical inefficiencies of the sector can be spotted and removed using load monitoring at a very low cost.</p>
+<p>Energy monitoring is one of the most important aspects of energy management because there is a need to monitor the energy consumption of buildings before planning some of the technical measures to reduce energy consumption. Energy monitoring is important to help end users to save energy by taking energy-saving measures such as using energy efficient devices, more efficient use of electrical equipment and eliminating unwanted energy activity.  With the advent of renewable energy supply to the power grids energy management and monitoring is now more important as it is needed to help stabilize these grids. Energy monitoring not only helps end users reduce their electricity bill, but also is an important step that is needed to reduce emission of greenhouse gasses and combat climate change.  In order to reduce the burden of the power sector by its major challenges like the cost of electricity, energy crisis and global warming, some of the critical inefficiencies of the sector can be spotted and removed using load monitoring at a very low cost.</p>
 <p>The two main ways of monitoring energy usage are Intrusive Load Monitoring (ILM) and Non-Intrusive Load Monitoring (NILM). Intrusive Load Monitoring (ILM) involves the installation of sensors at every appliance in order to monitor the power consumed by them. Using these sensor readings, we can monitor the energy consumption at an appliance level. Non-Intrusive Load Monitoring (NILM) is the process of deconstructing the aggregate energy consumption into its individual appliances as seen in Figure 1. This process does not require the intrusion into the individual appliances in order to monitor their power consumption.</p>
 <figure>
 <center><img src = "/img/project_nilm_ev_detection/NILM_concept.jpg", alt='Non Intrusive Load Monitoring Concept '>
-  <figcaption>Figure 1: Non-Intrusive Load Monitoring concept</figcaption>
+  <figcaption>Figure 1: Non-Intrusive Load Monitoring concept<a href=#ref6><sup>[6]</sup></a></figcaption>
 </center>
 </figure>
 <br>
@@ -59,15 +61,15 @@ Non-intrusive load monitoring (NILM) is the process of estimating electrical con
 </li>
 <li>Since NILM can detect which machines consumes the most energy, the end users can know not to use these appliances when electricity is either costly or has a high carbon footprint.
 </li>
-<li>Peak demand is the highest amount of energy used during a 15-to-30-minute period during the month. This peak demand determines the rate at which the end users are charged for the electricity they consume. With the help of NILM, industries can identify when they are using the most power each day, along with which machines they are using at that time. This information can help industries to find ways to reduce their peak demand.
+<li>Peak demand is the highest amount of energy used during a 15-minute period during the month. This peak demand determines the rate at which the end users (who consume more than 100 MWh a year) are charged for the electricity they consume. With the help of NILM, industries can identify when they are using the most power each day, along with which machines they are using at that time. This information can help industries to find ways to reduce their peak demand.
 </li>
 </ul>
 </div>
 <div id ="div4">
 <h2>4. Motivation</h2><br>
 
-<p>In transition to a renewable energy system, many objects with high connection powers as for example electric vehicles, PV systems and heat pumps are installed to the low voltage electrical grids. With increasing number of such participant in the grid, it becomes a more complex task to keep the grid stable. In Germany these devices have to be registered in big databases and hence are theoretically known to the grid operator but in reality, the knowledge of grid operators is often incomplete. Besides, electric vehicles are moved when used and may change the grid connection point. Energy monitoring is a necessary solution for energy management that allows acquiring appliance specific energy consumption statistics that could further be used to conceive load scheduling strategies for optimal energy usage. In this project we detect electric vehicles from synthetic data and show the suitability of the used algorithms for this task.	
-<p>When the energy consumed is above 10000 kWh per year, the smart meter data will be transferred at a 15-minute rate. Since most non-residential places consume more than 10000kWh per year, it makes sense to test the performance of these algorithms at a sample rate of 15 minutes per sample. However, most of the existing research done by the scientific community in the field of NILM is done at a higher sample rate i.e., lower than 2 minutes per sample.  It would be useful to see how well these algorithms perform at this sample rate (15 minutes) and check how the lower sample rate affects the performance of the algorithm.
+<p>In transition to a renewable energy system, many objects with high connection powers as for example electric vehicles, PV systems and heat pumps are installed to the low voltage electrical grids. With increasing number of such participant in the grid, it becomes a more complex task to keep the grid stable. In Germany these devices have to be registered in big databases<a href=#ref8><sup>[8]</sup></a> and hence are theoretically known to the grid operator but in reality, the knowledge of grid operators is often incomplete. Besides, electric vehicles are moved when used and may change the grid connection point. Energy monitoring is a necessary solution for energy management that allows acquiring appliance specific energy consumption statistics that could further be used to conceive load scheduling strategies for optimal energy usage. In this project we detect electric vehicles from synthetic data and show the suitability of the used algorithms for this task.	
+<p>When the energy consumed is above 10000 kWh per year<a href=#ref7><sup>[7]</sup></a>, the smart meter data will be transferred at a 15-minute rate. Since the grid operators recive the smart meter data at a 15-minute rate, it makes sense to test the performance of NILM algorithms at a sample rate of 15 minutes. However, most of the existing research done by the scientific community in the field of NILM is done at a higher sample rate i.e., lower than 2 minutes.  It would be useful to see how well these algorithms perform at this sample rate (15 minutes) and check how the lower sample rate affects the performance of the algorithm.
 </div>
 <div id ="div5">
 <h2>5. Overview</h2><br>
@@ -75,7 +77,7 @@ Non-intrusive load monitoring (NILM) is the process of estimating electrical con
 </div>
 <div id ="div6">
 <h2>6. NILMTK</h2><br>
-<p>NILMTK is an Open-source toolkit for comparative analysis of NILM algorithms across various datasets. It also provides a pipeline from data sets to metrics to lower the entry barrier for researchers. NILMTK was created for three main reasons. Firstly, it allowed the comparison of state-of-the-art approaches. Secondly, it allowed the comparisons of algorithm’s performance on various datasets, so that it could be verified if the approach could be generalized to new households. Thirdly, it gave users access to a stable set of metrics that would help researchers access the performance of the algorithms for various use cases. 
+<p>NILMTK is an Open-source toolkit for comparative analysis of NILM algorithms across various datasets. It also provides a pipeline from data sets to metrics to lower the entry barrier for researchers. NILMTK was created for three main reasons. Firstly, it allows the comparison of state-of-the-art approaches. Secondly, it allows the comparisons of algorithm’s performance on various datasets, so that it can be verified if the approach can be generalized to new households. Thirdly, it gives users access to a stable set of metrics that help researchers access the performance of the algorithms for various use cases. 
 <br><br>
 <figure>
 <center><img src = "/img/project_nilm_ev_detection/workflow.jpg", alt='NILMTK Workflow'>
@@ -83,7 +85,7 @@ Non-intrusive load monitoring (NILM) is the process of estimating electrical con
 </center>
 </figure>
 <br>
-<p>The NILMTK workflow is shown in Figure 2. The data from the Dataset is first converted to NILMTK-DF which is the standard energy disaggregation data structure used by the toolkit. Parsers for the different datasets are available which convert the dataset into NILMTK-DF. Now various different statistics can be observed in order to analyze the dataset. NILMTK provides statistical and diagnostic functions which provide a detailed understanding of each data set. Preprocessing functions are available that help mitigating challenges with NILM datasets. NILMTK provides the easy use or various different algorithms in order to disaggregate the data. Evaluation of results are possible with the Metrics that are provided by the toolkit. NILMTK now also provides an API in order to run various different experiments. The API makes running experiments extremely quick and efficient, with the emphasis on creating finely tuned reproducible experiments where model and parameter performances can be easily evaluated at a glance.
+<p>The NILMTK workflow is shown in Figure 2. The data from the Dataset is first converted to NILMTK-DF which is the standard energy disaggregation data structure used by the toolkit. Parsers for the different datasets are available which convert the dataset into NILMTK-DF. Now various different statistics can be observed in order to analyze the dataset. NILMTK provides statistical and diagnostic functions which provide a detailed understanding of each data set. Preprocessing functions are available that help mitigating challenges with NILM datasets. NILMTK provides the easy use of various different algorithms in order to disaggregate the data. Evaluation of results are possible with the Metrics that are provided by the toolkit. NILMTK now also provides an API in order to run various different experiments. The API makes running experiments extremely quick and efficient, with the emphasis on creating finely tuned reproducible experiments where model and parameter performances can be easily evaluated at a glance.
 </div>
 <div id = "div7">
 <h2>7. Different Algorithms for NILM</h2><br>
@@ -209,21 +211,21 @@ Sequence to point (Seq2point) is a similar model to Seq2seq but is trained to pr
 <p>NILM datasets can be divided into a dataset with low-frequency being up to 1 Hz and high-frequency when above that. So, the dataset that contains electricity consumption for all the appliances(sub-meters) and main meter (aggregate consumption) at a rate of at least one measurement per second is considered high-frequency datasets.  In this project we make use of three datasets, two publicly available datasets from literature as benchmark and a synthetic dataset. These datasets are described in the sequel.
 <ol>
 <h3>
-<li>REDD</li>
+<li>REDD<a href=#ref5><sup>[5]</sup></a></li>
 </h3>
 <p>
 The Reference Energy Disaggregation Data Set (REDD), is a publicly available dataset containing electricity usage of 6 households for a period of about 2 months. REDD was the first public energy dataset that was released by MIT in 2011.
 <p>The basic statistics and experiments on the dataset are shown in the appendix 
 <h3>
-<li>UK-Dale</li>
+<li>UK-Dale<a href=#ref4><sup>[4]</sup></a></li>
 </h3>
 <p>
 UK-Dale is a publicly available dataset from the UK recording Domestic Appliance-Level Electricity usage for 3 households. Each household was recorded for different periods of time and the first household contains readings for approimately 4 years. 
 <h3>
-<li>Synthetic Dataset(Synpro)</li>
+<li>Synthetic Dataset(Synpro)<a href=#ref3><sup>[3]</sup></a></li>
 </h3>
 <p>
-The synthetic dataset is created using the Synpro tool which was developed at ISE. This tool allows to simulate the power demand for households based on the harmonized European time usage study HETUS. Each house in this dataset contains power time series for the entire year of 2017 at a sample rate of 15 minutes per sample. Additionally to the demand of the household, charging of Electric Vehicles at home with different charging powers is simulated. A converter was needed that converted the output of the tool into a format used by NILMTK. This dataset consists of 15 households. 
+The synthetic dataset is created using the Synpro tool which was developed at ISE. This tool allows to simulate the power demand for households based on the harmonized European time usage study HETUS. Each house in this dataset contains power time series for the entire year of 2017 at a sample rate of 15 minutes. Additionally to the demand of the household, charging of Electric Vehicles at home with different charging powers is simulated. A converter was needed that converted the output of the tool into a format used by NILMTK. This dataset consists of 15 households. 
 <p>
 In this dataset, 4 houses are of type “Single Family house”, 8 of type “Multi-family house” and 3 are of type “Large Multi-family house”. These houses have different number of occupants ranging from 1-8. Each house have charging stations that charged at one of the 3 charging powers: 3.7 kw, 7.2kw, 11kw.
 </ol>
@@ -256,7 +258,7 @@ RMSE is considered as the more important metric than MAE since the errors are sq
 <li>Normalised Disaggregation Error (NDE) </li>
 </h3>
 <p>
-The comparison between appliances having a high difference in power consumption is problematic using RMSE. In order to compare the error between the different appliances the error is normalised by total demand.  
+The comparison between appliances having a high difference in power consumption is problematic using RMSE. In order to compare the error between the different appliances this metric is used.  
 <p>
 If ŷi is the predicted value of the i-th sample, and yi is the corresponding true value, then the normalised disaggregation error (NDE) over n samples is defined as<br>
 $$NDE(y,\hat{y})=\sqrt{\frac{\sum_{i=0}^{n_{sample}-1} (y_i-\hat{y}_i)^2}{\sum_{i=0}^{n_{sample}-1} (y_i)^2}}$$ 
@@ -327,7 +329,7 @@ Figure 4 shows when the appliances are on for a period of 10 days in house 1 of 
 </center>
 </figure>
 <br>
-<p>Compared to REDD, UK Dale is a much more comprehensive dataset with a higher number of recorded appliances. It also is cleaner and contains fewer missing sections. This dataset has readings for over 4 years which is beneficial for training and testing neural networks.
+<p> UK Dale is a comprehensive dataset with a high number of recorded appliances. It also is clean and contains few missing sections. This dataset has readings for over 4 years which is beneficial for training and testing neural networks.
 <h3>
 <li>Synthetic Dataset (Synpro)</li>
 </h3>
@@ -1300,13 +1302,13 @@ Figure 6 shows the fraction of energy consumed by all devices in house number 1,
     </tbody>
 </table>    
 <br>
-<p>There is improvement in the algorithm performance in all appliances. When sampled at rate of 5-minutes per sample, the amount of training data available to the algorithm is 3 times more than when sampled at rate of 15-minutes per sample. Most deep learning algorithms give better performance when more data is available and that can be one of the reasons which explains the improvement in the performance of the algorithm at this higher sample rate.
+<p>There is improvement in the algorithm performance in all appliances. When sampled at rate of 5-minutes, the amount of training data available to the algorithm is 3 times more than when sampled at rate of 15-minutes. Most deep learning algorithms give better performance when more data is available and that can be one of the reasons which explains the improvement in the performance of the algorithm at this higher sample rate.
 <br>
 <h3>
 <li>Comparison between Seq2point with UK dale dataset at sample rate of 15-minutes with 9 months of training data and the same dataset at sample rate of 5-minutes with 3 months training data</li>
 </h3>
 <br>
-<p>This experiment was carried out to check if the increased performance of the Seq2point algorithm when sampled at rate of 5 minutes per sample was because of increase in amount of training data or because of lower sample rate. Training for the dataset with 15-minute sample rate was done for the first 9 months of the year and testing on the last 3 months of the year whereas, the training for the dataset with 5-minute sample rate was done for the months of September, October and November and testing for the month of December. This way it was ensured that the number of data points in training and testing for both the experiments are similar.
+<p>This experiment was carried out to check if the increased performance of the Seq2point algorithm when sampled at rate of 5 minutes was because of increase in amount of training data or because of lower sample rate. Training for the dataset with 15-minute sample rate was done for the first 9 months of the year and testing on the last 3 months of the year whereas, the training for the dataset with 5-minute sample rate was done for the months of September, October and November and testing for the month of December. This way it was ensured that the number of data points in training and testing for both the experiments are similar.
 <br>
 <table>
     <tbody>
@@ -1443,12 +1445,12 @@ Figure 6 shows the fraction of energy consumed by all devices in house number 1,
         </tr>
     </tbody>
 </table>
-<p>The performance of the algorithm at a sample rate 15 minutes compared to 5 minutes is better for the appliances fridge and washer dryer but worse in the appliance dish washer when both experiments are done with similar number of data points. However, the performance of the algorithm is better in all cases when the sample rate was 5 minutes (9 months training time). This shows that the increased performance in the previous experiment is mainly due to increase in training data.
+<p>The performance in terms of RMSE of the algorithm at a sample rate 15 minutes compared to 5 minutes is better for the appliances fridge and washer dryer but worse in the appliance dish washer when both experiments are done with similar number of data points. However, the performance of the algorithm is better in all cases when the sample rate was 5 minutes (9 months training time). This shows that the increased performance in the previous experiment is mainly due to increase in training data.
 <br>
 <h3>
 <li>Performance of Seq2Point algorithm and comparison with other algorithms on the Synpro dataset</li>
 </h3>
-<p>Only the performance of predicting the energy consumed by the EV was shown. Since charging is only usually done few times a week, most of the values in the dataset for the appliance is 0. 
+<p>Only the performance of predicting the energy consumed by the EV for charging is shown. Since charging is only usually done few times a week, most of the values in the dataset for the appliance is 0. 
 <br>
 <table>
     <tbody>
@@ -2876,7 +2878,7 @@ Seq2Point is still the best performing algorithm in all the metrics. The perform
         </tr>
     </tbody>
 </table>
-<p>The accuracy of the model in predicting charging events is very high. This is because the task of predicting if the car is charging is a simpler than predicting how much energy is consumed while charging the car. As the car is normally only charged few times a week, most events are negative. While charging a car there is a significant increase in electricity consumption making it easy to predict charging events. F1 score is a better indicator compared accuracy as the dataset is imbalanced with high number of true negatives. Inclusion of another appliance which also consumes similar amount of electricity is expected to make the prediction task harder.
+<p>The accuracy of the model in predicting charging events is very high. This is because the task of predicting if the car is charging is a simpler than predicting how much energy is consumed while charging the car. As the car is normally only charged few times a week, most events are negative((Non charging events). While charging a car there is a significant increase in electricity consumption making it easy to predict charging events. F1 score is a better indicator compared accuracy as the dataset is imbalanced with high number of true negatives. Inclusion of another appliance which also consumes similar amount of electricity is expected to make the prediction task harder.
 <p>The F1 score of the Seq2point algorithm is higher than the baseline model in all houses. The Seq2point algorithm and baseline model both have similar precision in many houses but the baseline model has a lower recall value in all houses.  This is because of the high number of false negatives. Thus, the baseline algorithm is unable to detect events when the charging power for the EV is not high.
 </ol>
 </div>
@@ -2892,14 +2894,6 @@ Non-intrusive load monitoring (NILM) is used in order to estimate electrical con
 <p>Testing out different hyperparameter settings and how they affect the algorithm’s accuracy.
 <p>Testing the accuracy of the model in a real dataset that contains energy consumed while charging EV’s
 </div>
-
-
-
-
-
-
-
-
 
 
 <div id ="div14">
@@ -3244,3 +3238,35 @@ Figure 16 and Figure 17 shows the ground truth of the power consumed by charging
 <p>
 
 It can be seen that there are large errors in the prediction in house 4 in many cases and that the algorithm performs better in house 3. This demonstrates that one cannot compare performance between houses using the metric RMSE as the RMSE error in house 3 is higher than house 4. This shows that the NDE metric is a better metric to compare performance between houses.
+</div>
+
+<div id ="div15">
+<h2>15. Acknowledgments</h2><br>
+<p>Special thanks to my supervisor at Fraunhofer ISE Dr. Benedikt Köpfer for helping me in this project. I would also like to thank head of the Chair Algorithms and Data Structures, Hannah Bast, and my supervisor, Matthias Hertel for this opportunity to do this wonderful project. 
+</div>
+
+<div id ="div16">
+<h2>16. References</h2><br>
+
+<ol>
+<li id="ref1">Nipun Batra, Jack Kelly, Oliver Parson, Haimonti Dutta, William Knottenbelt, Alex Rogers, Amarjeet Singh, Mani Srivastava. NILMTK: An Open Source Toolkit for Non-intrusive Load Monitoring. In: 5th International Conference on Future Energy Systems (ACM e-Energy), Cambridge, UK. 2014. DOI:
+<a href="http://dx.doi.org/10.1145/2602044.2602051" rel="nofollow">10.1145/2602044.2602051</a>
+. arXiv:
+<a href="http://arxiv.org/abs/1404.3878" rel="nofollow">1404.3878</a>
+
+<li id="ref2">Nipun Batra, Rithwik Kukunuri, Ayush Pandey, Raktim Malakar, Rajat Kumar, Odysseas Krystalakos, Mingjun Zhong, Paulo Meira, and Oliver Parson. 2019. Towards reproducible state-of-the-art energy disaggregation. In Proceedings of the 6th ACM International Conference on Systems for Energy-Efficient Buildings, Cities, and Transportation (BuildSys '19). Association for Computing Machinery, New York, NY, USA, 193–202. DOI:
+<a href="https://doi.org/10.1145/3360322.3360844" rel="nofollow">10.1145/3360322.3360844</a>
+
+<li id="ref3">D. Fischer, A. Härtl, B. Wille-Haussmann. Model for Electric Load Profiles With High Time Resolution for German Households, in: Energy and Buildings, 2015, Vol. 92., Pages 170–179. <a href="https://doi.org/10.1016/j.enbuild.2015.01.058" rel="nofollow">https://doi.org/10.1016/j.enbuild.2015.01.058</a>
+
+<li id="ref4">Kelly, J., Knottenbelt, W. The UK-DALE dataset, domestic appliance-level electricity demand and whole-house demand from five UK homes. Sci Data 2, 150007 (2015). <a href=https://doi.org/10.1038/sdata.2015.7>https://doi.org/10.1038/sdata.2015.7</a>
+
+<li id="ref5">Kolter, J & Johnson, Matthew. (2011). REDD: A Public Data Set for Energy Disaggregation Research. Artif. Intell.. 25. 
+
+<li id="ref6">Pujić, Dea & Jelić, Marko & Tomasevic, Nikola & Batic, Marko. (2020). Chapter 10 Case Study from the Energy Domain. <a href= https://doi.org/10.1007/978-3-030-53199-7_10>10.1007/978-3-030-53199-7_10.</a>
+
+<li id="ref7">Verbraucherzentrale (2022, April 25)<a href=https://www.verbraucherzentrale.de/wissen/energie/preise-tarife-anbieterwechsel/smart-meter-die-neuen-stromzaehler-kommen-13275#:~:text=Ein%20intelligentes%20Messsystem%20%E2%80%93%20auch%20Smart,speichert%20und%20verarbeitet%20die%20Daten>https://www.verbraucherzentrale.de</a>.
+
+<li id="ref8">Marktstammdatenregister(2022, April 25)<a href=https://www.marktstammdatenregister.de/MaStR>https://www.marktstammdatenregister.de/MaStR
+</ol>
+</div>
