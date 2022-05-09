@@ -308,7 +308,7 @@ $$F1 score = 2*\frac{(Precision*Recall)}{(Precision+Recall)}$$
 <p>
 In figure 3 the fraction of energy consumed by the 15 highest energy consuming devices over the entire 4-year period in house 1 of the UK Dale dataset is visualized as pie chart. In house 1, it can be observed that the fridge freezer, Light, washer dryer and dish washer are some of the appliances that consume the most amount of energy.<br><br>
 <figure>
-<center><img src = "/img/project_nilm_ev_detection/Ukdale_Figure6.jpg", alt='Figure 6 Fraction of energy consumption of top 15 appliances in house 1 of the UK Dale dataset'>
+<center><img src = "/img/project_nilm_ev_detection/UKDale_Figure6.jpg", alt='Figure 6 Fraction of energy consumption of top 15 appliances in house 1 of the UK Dale dataset'>
   <figcaption>Figure 3 Fraction of energy consumption of top 15 appliances in house 1 of the UK Dale dataset</figcaption>
 </center>
 </figure>
@@ -316,7 +316,7 @@ In figure 3 the fraction of energy consumed by the 15 highest energy consuming d
 <p>
 Figure 4 shows when the appliances are on for a period of 10 days in house 1 of UK Dale dataset. Appliances are considered on when they consume more than 10Watts at that timepoint. Fridge freezer is a device that is always on, whereas the washer dryer and dish washer are appliances that are only turned on few times a week.<br><br>
 <figure>
-<center><img src = "/img/project_nilm_ev_detection/Ukdale_Figure7.jpg", alt='Figure 4 On-off graph for appliances'>
+<center><img src = "/img/project_nilm_ev_detection/UKDale_Figure7.jpg", alt='Figure 4 On-off graph for appliances'>
   <figcaption>Figure 4 On-off graph for appliances  for a 10 day period in house 1 of UK Dale dataset </figcaption>
 </center>
 </figure>
@@ -324,7 +324,7 @@ Figure 4 shows when the appliances are on for a period of 10 days in house 1 of 
 <p>Figure 5 shows the appliance and Main meter consumption for a single day in house 1 of UK Dale dataset. Only the top 7 appliances are taken into account. The peaks are caused by the kettle, dish washer, kettle and toaster. These appliances cause similar peaks and use similar amount of energy while turned on. 
  <br><br>
  <figure>
-<center><img src = "/img/project_nilm_ev_detection/Ukdale_Figure8.jpg", alt='Figure 8 Appliance and aggregate consumption for a single day'>
+<center><img src = "/img/project_nilm_ev_detection/UKDale_Figure8.jpg", alt='Figure 8 Appliance and aggregate consumption for a single day'>
   <figcaption>Figure 5 Appliance and aggregate consumption for a single day in house 1 of UK-Dale </figcaption>
 </center>
 </figure>
