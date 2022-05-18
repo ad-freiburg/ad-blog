@@ -1,6 +1,6 @@
 ---
 title: Detection of Electric Vehicle Charging Events Using Non-Intrusive Load Monitoring
-date: 2022-03-21T16:00:50+01:00
+date: 2022-05-10T16:00:50+01:00
 author: "Rohit Kerekoppa Ramesha"
 authorAvatar: 
 tags: []
@@ -95,7 +95,7 @@ Non-intrusive load monitoring (NILM) is the process of estimating electrical con
 </h3>
 <ul>
 <h3>
-<u><li>Hart</li></u>
+<u><li>Hart <a href=#ref11><sup>[11]</sup></a></li></u>
 </h3>
 <p>The first algorithm for NILM was proposed by George Hart in 1985. The algorithm first divides the measurements along the time in sequence of time of “same power”, considered as steady state. The signal is then considered to be a sequence of stable states. A new sequence starts when the level of power change. Thus, edges in the steady time series data can be detected, which signifies that an appliance has changed its state.  In the algorithm in the toolkit, the output of hart’s algorithm (steady time series data) is assigned to the appliance categories which, maximize the algorithm’s accuracy. This is normally used as baseline model for the NILM problem.
 <h3>
@@ -118,7 +118,7 @@ Early stopping is used while training these neural networks in order to avoid ov
 
 <ul>
 <h3>
-<u><li>Denoising Autoencoder (DAE)</li></u>
+<u><li>Denoising Autoencoder (DAE)<a href=#ref10><sup>[10]</sup></a></li></u>
 </h3>
 <p>
 An Autoencoder is an unsupervised artificial neural network that first efficiently compresses the data using an encoder and then learns to reconstruct the input from the reduced form.  A denoising autoencoder (DAE) is an autoencoder which attempts to reconstruct a clean target from a noisy input. DAE was used for NILM by creating one model per appliance that considers the Main meter reading (aggregate reading) as a noisy input. The network then reconstructs the clean power demand of the target appliance.  DAE gets main meter reading of specific length and then outputs the target appliance consumption for the same sequence length. Architecture of DAE is as follows
@@ -135,7 +135,7 @@ An Autoencoder is an unsupervised artificial neural network that first efficient
 </ol>
 <br>
 <h3>
-<u><li>Recurrent Neural Network (RNN)</li></u>
+<u><li>Recurrent Neural Network (RNN)<a href=#ref10><sup>[10]</sup></a></li></u>
 </h3>
 <p>
 Recurrent Neural Network (RNN) is a type of neural network that has internal memory and works very well with sequential data. This network receives a sequence of main meter readings and outputs a single value of power consumption of the target appliance. Instead of having a normal RNN which has the vanishing gradient problem, LSTMs are used. Architecture of RNN is as follows
@@ -151,7 +151,7 @@ Recurrent Neural Network (RNN) is a type of neural network that has internal mem
 </ol>
 <br>
 <h3>
-<u><li>Gated recurrent unit (GRU)</li></u>
+<u><li>Gated recurrent unit (GRU)<a href=#ref9><sup>[9]</sup></a></li></u>
 </h3>
 <p>
 This network is very similar to the RNN network but replaces the LSTMs with a more lightweight RNN called Gated Recurrent Units (GRU). Similar to the DAE network,Window GRU gets main meter readings of specific length and then outputs the target appliance consumption for the same sequence length. Architecture of GRU is as follows
@@ -168,7 +168,7 @@ This network is very similar to the RNN network but replaces the LSTMs with a mo
 </ol>
 <br>
 <h3>
-<u><li>Sequence to Sequence (Seq2seq)</li></u>
+<u><li>Sequence to Sequence (Seq2seq)<a href=#ref12><sup>[12]</sup></a></li></u>
 </h3>
 <p>
 Sequence-to-sequence learning is about training models to convert sequences from one domain to sequences in another domain. The sequence to sequence learning model learns a regression map from the main meter sequence to the corresponding target appliance sequence. The neural network maps a sliding window Yt:t+W−1 of the aggregate input power to corresponding windows Xt:t+W−1 of the output appliance power. Since there are multiple predictions for a particular time, we take the mean for each sliding window that contains that time. Architecture of Seq2seq is as follows
@@ -186,7 +186,7 @@ Sequence-to-sequence learning is about training models to convert sequences from
 </ol>
 <br>
 <h3>
-<u><li>Sequence to Point (Seq2point)</li></u>
+<u><li>Sequence to Point (Seq2point)<a href=#ref12><sup>[12]</sup></a></li></u>
 </h3>
 <p>
 Sequence to point (Seq2point) is a similar model to Seq2seq but is trained to predict only the midpoint element of that sliding window. Thus, the output of this model only has 1 node whereas the output of Seq2Seq has more number of nodes. We expect the state of the midpoint element of that appliance should relate to the information of the aggregate power before and after that midpoint. The neural network maps a sliding window Yt:t+W−1 of the aggregate input power to the midpoint element of the corresponding window of the target appliance. This allows the neural network to focus its representational power on the midpoint of the window, rather than on the more difficult outputs on the edges, yielding more accurate predictions. Architecture of Seq2point is as follows
@@ -220,14 +220,14 @@ The Reference Energy Disaggregation Data Set (REDD), is a publicly available dat
 <li>UK-Dale<a href=#ref4><sup>[4]</sup></a></li>
 </h3>
 <p>
-UK-Dale is a publicly available dataset from the UK recording Domestic Appliance-Level Electricity usage for 3 households. Each household was recorded for different periods of time and the first household contains readings for approimately 4 years. 
+UK-Dale is a publicly available dataset from the UK recording Domestic Appliance-Level Electricity usage for 5 households. Each household was recorded for different periods of time and the first household contains readings for approimately 4 years. 
 <h3>
 <li>Synthetic Dataset(Synpro)<a href=#ref3><sup>[3]</sup></a></li>
 </h3>
 <p>
 The synthetic dataset is created using the Synpro tool which was developed at ISE. This tool allows to simulate the power demand for households based on the harmonized European time usage study HETUS. Each house in this dataset contains power time series for the entire year of 2017 at a sample rate of 15 minutes. Additionally to the demand of the household, charging of Electric Vehicles at home with different charging powers is simulated. A converter was needed that converted the output of the tool into a format used by NILMTK. This dataset consists of 15 households. 
 <p>
-In this dataset, 4 houses are of type “Single Family house”, 8 of type “Multi-family house” and 3 are of type “Large Multi-family house”. These houses have different number of occupants ranging from 1-8. Each house have charging stations that charged at one of the 3 charging powers: 3.7 kw, 7.2kw, 11kw.
+In this dataset, 4 houses are of type “Single Family house”, 8 of type “Multi-family house” and 3 are of type “Large Multi-family house”. These houses have different number of occupants ranging from 1-8. Each house have charging stations that charged at one of the 3 charging powers: 3.7 kW, 7.2kW, 11kW.
 </ol>
 </div>
 <div id ="div9">
@@ -300,11 +300,9 @@ $$F1 score = 2*\frac{(Precision*Recall)}{(Precision+Recall)}$$
 <h2>10. Basic Statistics of various Datasets</h2><br>
 <ol>
 <h3>
-
-<h3>
 <li>UK-Dale</li>
 </h3>
-<p>UK Dale contains data from 6 households and each house has different number appliances. We present a basic overview of the data from house 1.
+<p>UK Dale contains data from 5 households and each house has different number appliances. We present a basic overview of the data from house 1.
 <p>
 In figure 3 the fraction of energy consumed by the 15 highest energy consuming devices over the entire 4-year period in house 1 of the UK Dale dataset is visualized as pie chart. In house 1, it can be observed that the fridge freezer, Light, washer dryer and dish washer are some of the appliances that consume the most amount of energy.<br><br>
 <figure>
@@ -356,7 +354,7 @@ Figure 6 shows the fraction of energy consumed by all devices in house number 1,
             </td>
             <td width="102" valign="top">
                 <p>
-                    Charging rate
+                    Charging rate (Kilowatt)
                 </p>
             </td>
             <td width="121" valign="top">
@@ -808,345 +806,440 @@ Figure 6 shows the fraction of energy consumed by all devices in house number 1,
 <table>
     <tbody>
         <tr>
-            <td width="124" valign="top">
+            <td width="112" valign="top">
                 <p>
                     Appliance
                 </p>
             </td>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     Algorithm
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
-                    RMSE
+                    RMSE (Watt)
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
-                    MAE
+                    MAE (Watt)
+                </p>
+            </td>
+            <td width="123" valign="top">
+                <p>
+                    NDE
                 </p>
             </td>
         </tr>
         <tr>
-            <td width="124" rowspan="6" valign="top">
+            <td width="112" rowspan="6" valign="top">
                 <p>
                     Fridge
                 </p>
             </td>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     HART
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     58.51
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     44.41
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    1.0
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     Seq2Seq
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     32.53
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     27.23
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    0.55
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     DAE
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     39.29
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     34.72
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    0.67
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     WindowGRU
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     31.67
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     25.01
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    0.54
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     RNN
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     29.67
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     22.90<strong></strong>
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    0.50
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     Seq2Point
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     <strong>29.14</strong>
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     <strong>22.20</strong>
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    <strong>0.49</strong>
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" rowspan="6" valign="top">
+            <td width="112" rowspan="6" valign="top">
                 <p>
                     Dish Washer
                 </p>
             </td>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     HART
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     162.91
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     20.60
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    1.0
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     Seq2Seq
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     <strong>54.99</strong>
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     8.02
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    <strong>0.35</strong>
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     DAE
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     131.92
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     29.39
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    0.85
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     WindowGRU
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     74.48
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     10.24
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    0.48
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     RNN
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     61.02
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     7.19
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    0.40
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     Seq2Point
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     57.42
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     <strong>6.25</strong>
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    0.37
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" rowspan="6" valign="top">
+            <td width="112" rowspan="6" valign="top">
                 <p>
                     Washer Dryer
                 </p>
             </td>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     HART
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     198.82
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     38.75
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    1.0
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     Seq2Seq
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     89.39
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     25.18
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    0.45
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     DAE
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     132.72
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     41.19
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    0.67
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     WindowGRU
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     112.86
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     41.53
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    0.57
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     RNN
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     92.99
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     23.04
                 </p>
             </td>
+            <td width="123" valign="top">
+                <p>
+                    0.45
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="124" valign="top">
+            <td width="116" valign="top">
                 <p>
                     Seq2Point
                 </p>
             </td>
-            <td width="162" valign="top">
+            <td width="137" valign="top">
                 <p>
                     <strong>87.13</strong>
                 </p>
             </td>
-            <td width="156" valign="top">
+            <td width="132" valign="top">
                 <p>
                     <strong>20.97</strong>
+                </p>
+            </td>
+            <td width="123" valign="top">
+                <p>
+                    <strong>0.44</strong>
                 </p>
             </td>
         </tr>
@@ -1169,138 +1262,173 @@ Figure 6 shows the fraction of energy consumed by all devices in house number 1,
 <table>
     <tbody>
         <tr>
-            <td width="163" valign="top">
+            <td width="153" valign="top">
             </td>
-            <td width="120" valign="top">
+            <td width="114" valign="top">
                 <p>
                     Appliance
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="112" valign="top">
                 <p>
-                    RMSE
+                    RMSE (Watt)
                 </p>
             </td>
-            <td width="132" valign="top">
+            <td width="122" valign="top">
                 <p>
-                    MAE
+                    MAE (Watt)
+                </p>
+            </td>
+            <td width="118" valign="top">
+                <p>
+                    NDE
                 </p>
             </td>
         </tr>
         <tr>
-            <td width="163" rowspan="3" valign="top">
+            <td width="153" rowspan="3" valign="top">
                 <p>
                     Seq2Point sample rate 5 minutes
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="114" valign="top">
                 <p>
                     Fridge Freezer
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="112" valign="top">
                 <p>
-                    <strong>27.71</strong>
+                    <strong>27.71 </strong>
                 </p>
             </td>
-            <td width="132" valign="top">
+            <td width="122" valign="top">
                 <p>
                     <strong>17.78</strong>
                 </p>
             </td>
+            <td width="118" valign="top">
+                <p>
+                    <strong>0.43</strong>
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="120" valign="top">
+            <td width="114" valign="top">
                 <p>
                     Dish washer
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="112" valign="top">
                 <p>
                     <strong>42.69</strong>
                 </p>
             </td>
-            <td width="132" valign="top">
+            <td width="122" valign="top">
                 <p>
                     <strong>4.19</strong>
                 </p>
             </td>
+            <td width="118" valign="top">
+                <p>
+                    <strong>0.23</strong>
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="120" valign="top">
+            <td width="114" valign="top">
                 <p>
                     Washer Dryer
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="112" valign="top">
                 <p>
                     <strong>74.68</strong>
                 </p>
             </td>
-            <td width="132" valign="top">
+            <td width="122" valign="top">
                 <p>
                     <strong>12.12</strong>
                 </p>
             </td>
+            <td width="118" valign="top">
+                <p>
+                    <strong>0.34</strong>
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="163" rowspan="3" valign="top">
+            <td width="153" rowspan="3" valign="top">
                 <p>
                     Seq2Point sample rate 15 minutes
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="114" valign="top">
                 <p>
                     Fridge Freezer
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="112" valign="top">
                 <p>
                     29.14
                 </p>
             </td>
-            <td width="132" valign="top">
+            <td width="122" valign="top">
                 <p>
                     22.20
                 </p>
             </td>
+            <td width="118" valign="top">
+                <p>
+                    0.49
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="120" valign="top">
+            <td width="114" valign="top">
                 <p>
                     Dish washer
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="112" valign="top">
                 <p>
                     57.42
                 </p>
             </td>
-            <td width="132" valign="top">
+            <td width="122" valign="top">
                 <p>
                     6.25
                 </p>
             </td>
+            <td width="118" valign="top">
+                <p>
+                    0.37
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="120" valign="top">
+            <td width="114" valign="top">
                 <p>
                     Washer Dryer
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="112" valign="top">
                 <p>
                     87.13
                 </p>
             </td>
-            <td width="132" valign="top">
+            <td width="122" valign="top">
                 <p>
                     20.97
                 </p>
             </td>
+            <td width="118" valign="top">
+                <p>
+                    0.44
+                </p>
+            </td>
         </tr>
     </tbody>
-</table>    
+</table>
 <br>
 <p>There is improvement in the algorithm performance in all appliances. When sampled at rate of 5-minutes, the amount of training data available to the algorithm is 3 times more than when sampled at rate of 15-minutes. Most deep learning algorithms give better performance when more data is available and that can be one of the reasons which explains the improvement in the performance of the algorithm at this higher sample rate.
 <br>
@@ -1313,133 +1441,168 @@ Figure 6 shows the fraction of energy consumed by all devices in house number 1,
 <table>
     <tbody>
         <tr>
-            <td width="163" valign="top">
+            <td width="153" valign="top">
             </td>
-            <td width="120" valign="top">
+            <td width="114" valign="top">
                 <p>
                     Appliance
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="112" valign="top">
                 <p>
-                    RMSE
+                    RMSE (Watt)
                 </p>
             </td>
-            <td width="132" valign="top">
+            <td width="122" valign="top">
                 <p>
-                    MAE
+                    MAE (Watt)
+                </p>
+            </td>
+            <td width="118" valign="top">
+                <p>
+                    NDE
                 </p>
             </td>
         </tr>
         <tr>
-            <td width="163" rowspan="3" valign="top">
+            <td width="153" rowspan="3" valign="top">
                 <p>
                     Seq2Point sample rate 5 minutes
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="114" valign="top">
                 <p>
                     Fridge Freezer
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="112" valign="top">
                 <p>
                     33.97
                 </p>
             </td>
-            <td width="132" valign="top">
+            <td width="122" valign="top">
                 <p>
                     24.76
                 </p>
             </td>
+            <td width="118" valign="top">
+                <p>
+                    0.56
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="120" valign="top">
+            <td width="114" valign="top">
                 <p>
                     Dish washer
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="112" valign="top">
                 <p>
                     <strong>44.55</strong>
                 </p>
             </td>
-            <td width="132" valign="top">
+            <td width="122" valign="top">
                 <p>
                     <strong>5.38</strong>
                 </p>
             </td>
+            <td width="118" valign="top">
+                <p>
+                    <strong>0.24</strong>
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="120" valign="top">
+            <td width="114" valign="top">
                 <p>
                     Washer Dryer
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="112" valign="top">
                 <p>
                     98.86
                 </p>
             </td>
-            <td width="132" valign="top">
+            <td width="122" valign="top">
                 <p>
                     <strong>16.81</strong>
                 </p>
             </td>
+            <td width="118" valign="top">
+                <p>
+                    <strong>0.43</strong>
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="163" rowspan="3" valign="top">
+            <td width="153" rowspan="3" valign="top">
                 <p>
                     Seq2Point sample rate 15 minutes
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="114" valign="top">
                 <p>
                     Fridge Freezer
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="112" valign="top">
                 <p>
                     <strong>29.14</strong>
                 </p>
             </td>
-            <td width="132" valign="top">
+            <td width="122" valign="top">
                 <p>
                     <strong>22.20</strong>
                 </p>
             </td>
+            <td width="118" valign="top">
+                <p>
+                    <strong>0.49</strong>
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="120" valign="top">
+            <td width="114" valign="top">
                 <p>
                     Dish washer
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="112" valign="top">
                 <p>
                     57.42
                 </p>
             </td>
-            <td width="132" valign="top">
+            <td width="122" valign="top">
                 <p>
                     6.25
                 </p>
             </td>
+            <td width="118" valign="top">
+                <p>
+                    0.37
+                </p>
+            </td>
         </tr>
         <tr>
-            <td width="120" valign="top">
+            <td width="114" valign="top">
                 <p>
                     Washer Dryer
                 </p>
             </td>
-            <td width="120" valign="top">
+            <td width="112" valign="top">
                 <p>
                     <strong>87.13</strong>
                 </p>
             </td>
-            <td width="132" valign="top">
+            <td width="122" valign="top">
                 <p>
                     20.97
+                </p>
+            </td>
+            <td width="118" valign="top">
+                <p>
+                    0.44
                 </p>
             </td>
         </tr>
@@ -1462,12 +1625,12 @@ Figure 6 shows the fraction of energy consumed by all devices in house number 1,
             </td>
             <td width="155" valign="top">
                 <p>
-                    RMSE
+                    RMSE (Watt)
                 </p>
             </td>
             <td width="155" valign="top">
                 <p>
-                    MAE
+                    MAE (Watt)
                 </p>
             </td>
             <td width="155" valign="top">
@@ -1820,12 +1983,12 @@ A direct comparison between the results of various houses cannot be made using R
             </td>
             <td width="155" valign="top">
                 <p>
-                    RMSE
+                    RMSE (Watt)
                 </p>
             </td>
             <td width="155" valign="top">
                 <p>
-                    MAE
+                    MAE (Watt)
                 </p>
             </td>
             <td width="155" valign="top">
@@ -2949,12 +3112,12 @@ Figure 10 shows the fraction of energy consumed by the 10 highest energy consumi
             </td>
             <td width="137" valign="top">
                 <p>
-                    RMSE
+                    RMSE (Watt)
                 </p>
             </td>
             <td width="134" valign="top">
                 <p>
-                    MAE
+                    MAE (Watt)
                 </p>
             </td>
             <td width="123" valign="top">
@@ -3210,13 +3373,16 @@ The sequence length chosen for all above experiments was the default value of 99
   <figcaption>Figure 13 Sequence length vs RMSE for houses 1-4 of Synpro dataset</figcaption>
 </figure>
 <br>
+</center>
 <figure>
 <center><img src = "/img/project_nilm_ev_detection/Sequence_length_Figure21.png", alt='Figure 13 Sequence length modifications for houses 5-12'>
   <figcaption>Figure 14 Sequence length vs RMSE for houses 5-12 of Synpro Dataset</figcaption>
+</center>
 </figure>
 <figure>
 <center><img src = "/img/project_nilm_ev_detection/Sequence_length_Figure22.png", alt='Figure 13 Sequence length modifications for houses 13-15'>
   <figcaption>Figure 15 Sequence length vs RMSE for houses 13-15 of Synpro Dataset</figcaption>
+</center>
 </figure>
 <p>In some houses lower sequence length than the default value (99) results in lower RMSE error results whereas in other houses higher sequence length than 99 result in improved performance. A direct correlation between sequence length modifications and RMSE error cannot be made and thus the default values were used in the experiments.
 <br>
@@ -3229,15 +3395,18 @@ Figure 16 and Figure 17 shows the ground truth of the power consumed by charging
 <figure>
 <center><img src = "/img/project_nilm_ev_detection/Synpro_house3.png", alt='Figure 16  Result of Seq2Point on house 3 of Synpro'>
   <figcaption style = " text-align: left">Figure 16  Result of Seq2Point on house 3 of Synpro</figcaption>
+</center>
 </figure>
 <br>
 <figure>
 <center><img src = "/img/project_nilm_ev_detection/Synpro_house4.png", alt='Figure 17  Result of Seq2Point on house 4 of Synpro'>
   <figcaption style = " text-align: left">Figure 17  Result of Seq2Point on house 4 of Synpro</figcaption>
+</center>
 </figure>
 <p>
 
 It can be seen that there are large errors in the prediction in house 4 in many cases and that the algorithm performs better in house 3. This demonstrates that one cannot compare performance between houses using the metric RMSE as the RMSE error in house 3 is higher than house 4. This shows that the NDE metric is a better metric to compare performance between houses.
+</ol>
 </div>
 
 <div id ="div15">
@@ -3253,20 +3422,34 @@ It can be seen that there are large errors in the prediction in house 4 in many 
 <a href="http://dx.doi.org/10.1145/2602044.2602051" rel="nofollow">10.1145/2602044.2602051</a>
 . arXiv:
 <a href="http://arxiv.org/abs/1404.3878" rel="nofollow">1404.3878</a>
-
+</li>
 <li id="ref2">Nipun Batra, Rithwik Kukunuri, Ayush Pandey, Raktim Malakar, Rajat Kumar, Odysseas Krystalakos, Mingjun Zhong, Paulo Meira, and Oliver Parson. 2019. Towards reproducible state-of-the-art energy disaggregation. In Proceedings of the 6th ACM International Conference on Systems for Energy-Efficient Buildings, Cities, and Transportation (BuildSys '19). Association for Computing Machinery, New York, NY, USA, 193–202. DOI:
 <a href="https://doi.org/10.1145/3360322.3360844" rel="nofollow">10.1145/3360322.3360844</a>
-
+</li>
 <li id="ref3">D. Fischer, A. Härtl, B. Wille-Haussmann. Model for Electric Load Profiles With High Time Resolution for German Households, in: Energy and Buildings, 2015, Vol. 92., Pages 170–179. <a href="https://doi.org/10.1016/j.enbuild.2015.01.058" rel="nofollow">https://doi.org/10.1016/j.enbuild.2015.01.058</a>
-
+</li>
 <li id="ref4">Kelly, J., Knottenbelt, W. The UK-DALE dataset, domestic appliance-level electricity demand and whole-house demand from five UK homes. Sci Data 2, 150007 (2015). <a href=https://doi.org/10.1038/sdata.2015.7>https://doi.org/10.1038/sdata.2015.7</a>
-
+</li>
 <li id="ref5">Kolter, J & Johnson, Matthew. (2011). REDD: A Public Data Set for Energy Disaggregation Research. Artif. Intell.. 25. 
-
+</li>
 <li id="ref6">Pujić, Dea & Jelić, Marko & Tomasevic, Nikola & Batic, Marko. (2020). Chapter 10 Case Study from the Energy Domain. <a href= https://doi.org/10.1007/978-3-030-53199-7_10>10.1007/978-3-030-53199-7_10.</a>
-
+</li>
 <li id="ref7">Verbraucherzentrale (2022, April 25)<a href=https://www.verbraucherzentrale.de/wissen/energie/preise-tarife-anbieterwechsel/smart-meter-die-neuen-stromzaehler-kommen-13275#:~:text=Ein%20intelligentes%20Messsystem%20%E2%80%93%20auch%20Smart,speichert%20und%20verarbeitet%20die%20Daten>https://www.verbraucherzentrale.de</a>.
+</li>
+<li id="ref8">Marktstammdatenregister(2022, April 25)<a href=https://www.marktstammdatenregister.de/MaStR>https://www.marktstammdatenregister.de/MaStR</a>
+</li>
+<li id="ref9">
+Odysseas Krystalakos, Christoforos Nalmpantis, and Dimitris Vrakas. Sliding window approach for online energy disaggregation using artificial neural networks. In Proceedings of the 10th Hellenic Conference on Artificial Intelligence, 2018.
+</li>
+<li id="ref10">
+Jack Kelly and William Knottenbelt. Neural NILM: Deep Neural Networks Applied to Energy Disaggregation. In Proceedings of the 2nd ACM International Conference on Embedded Systems for Energy-Efficient Built Environments, BuildSys ’15, pages 55–64, New York, NY, USA, 2015. ACM.event-place: Seoul, South Korea.
+</li>
+<li id="ref11">
+G. W. Hart. Nonintrusive appliance load monitoring. Proceedings of the IEEE, 80(12):1870–1891, December 1992.
+</li>
+<li id ="ref12">
+ Jack Kelly and William Knottenbelt. Neural NILM: Deep Neural Networks Applied to Energy Disaggregation. In Proceedings of the 2nd ACM International Conference on Embedded Systems for Energy-Efficient Built Environments, BuildSys ’15, pages 55–64, New York, NY, USA, 2015. ACM. event-place: Seoul, South Korea
+</li>
 
-<li id="ref8">Marktstammdatenregister(2022, April 25)<a href=https://www.marktstammdatenregister.de/MaStR>https://www.marktstammdatenregister.de/MaStR
 </ol>
 </div>
