@@ -49,10 +49,10 @@ Non-intrusive load monitoring (NILM) is the process of using the energy consumpt
 </div>
 
 <div id ="div2">
-<h2>2. General Framework of NILM </h2><br>
+<h2>2. Problem Statement </h2><br>
 
 <p>Let the time series of aggregate measurements \(Y=(Y_1,Y_2,… ,Y_T )\)where \(Y_t\in R^+\) represent the energy or power measured in Watt-hours or Watts consumed by the building at time t. This is considered to be the aggregate of energy consumed by the individual appliances. The building facility is assumed to have m appliances and for each appliance the energy signal is represented as \(X=(X_{i1},X_{i2} ,… ,X_{iT})\) where \(x_{it} \in R^+.\)<br>
-\[ Y_t=\sum_{i=1}^{m} x_{it}+\epsilon \textit{ where }\epsilon \textit{ represents the error at time t.}\] 
+\[ Y_t=\sum_{i=1}^{m} x_{it}+\epsilon \text{, where }\epsilon \text{ represents the error at time t.}\] 
 <p> The aim of NILM is to retrieve the unknown signal \(X_i\) when the aggregate signal \(Y\) is given.
 </div>
 <div id ="div3">
