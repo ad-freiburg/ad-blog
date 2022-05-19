@@ -9,7 +9,7 @@ image: "/img/project_nilm_ev_detection/main21.png"
 draft: false
 ---
 
-Non-intrusive load monitoring (NILM) is the process of estimating electrical consumption of individual appliances using the aggregate power reading. NILMTK<a href=#ref1><sup>[1]</sup></a> is an open-source toolkit for comparative analysis of NILM algorithms across various datasets. The goal of this project is to use NILMTK in order to disaggregate household readings in order to detect charging events in electric vehicles in a synthetic dataset.
+Non-intrusive load monitoring (NILM) is the process of using the energy consumption of a house as a time series, which is the sum of the consumptions of the individual appliances to predict the individual appliance's consumption time series. NILMTK<a href=#ref1><sup>[1]</sup></a> is an open-source toolkit for comparative analysis of NILM algorithms across various datasets. The goal of this project is to use NILMTK to predict the energy consumed while charging electric vehicles from overall energy consumption of a house using a synthetic dataset.
 <!--more-->
 *This project is the outcome of a cooperation between Fraunhofer ISE in Freiburg and the Algorithms & Data Structures Chair of the University of Freiburg.*
 
@@ -17,21 +17,22 @@ Non-intrusive load monitoring (NILM) is the process of estimating electrical con
 <p><b>CONTENTS</b></p>
 <ol>
 <li><a href="#div1">Introduction</a></li>
-<li><a href="#div2">General Framework of NILM</a></li>
+<li><a href="#div2">Problem Statement</a></li>
 <li><a href="#div3">Advantages of NILM</a></li>
 <li><a href="#div4">Motivation</a></li>
 <li><a href="#div5">Overview</a></li>
 <li><a href="#div6"style="text-decoration: none;">NILMTK</a></li>
-<li><a href="#div7">Different Algorithms for NILM</a></li>
-<li><a href="#div8">Datasets</a></li>
-<li><a href="#div9">Evaluation Metrics</a></li>
-<li><a href="#div10">Basic Statistics of various Datasets</a></li>
-<li><a href="#div11">Experiments</a></li>
-<li><a href="#div12">Conclusion</a></li>
-<li><a href="#div13">Future Works</a></li>
-<li><a href="#div14">Appendix</a></li>
-<li><a href="#div15">Acknowledgments</a></li>
-<li><a href="#div16">References</a></li>
+<li><a href="#div7">Contributions</a></li>
+<li><a href="#div8">Different Algorithms for NILM</a></li>
+<li><a href="#div9">Datasets</a></li>
+<li><a href="#div10">Evaluation Metrics</a></li>
+<li><a href="#div11">Basic Statistics of Various Datasets</a></li>
+<li><a href="#div12">Experiments</a></li>
+<li><a href="#div13">Conclusion</a></li>
+<li><a href="#div14">Future Works</a></li>
+<li><a href="#div15">Appendix</a></li>
+<li><a href="#div16">Acknowledgments</a></li>
+<li><a href="#div17">References</a></li>
 </ol>
 </div>
 <div id ="div1">
@@ -87,8 +88,19 @@ Non-intrusive load monitoring (NILM) is the process of estimating electrical con
 <br>
 <p>The NILMTK workflow is shown in Figure 2. The data from the Dataset is first converted to NILMTK-DF which is the standard energy disaggregation data structure used by the toolkit. Parsers for the different datasets are available which convert the dataset into NILMTK-DF. Now various different statistics can be observed in order to analyze the dataset. NILMTK provides statistical and diagnostic functions which provide a detailed understanding of each data set. Preprocessing functions are available that help mitigating challenges with NILM datasets. NILMTK provides the easy use of various different algorithms in order to disaggregate the data. Evaluation of results are possible with the Metrics that are provided by the toolkit. NILMTK now also provides an API in order to run various different experiments. The API makes running experiments extremely quick and efficient, with the emphasis on creating finely tuned reproducible experiments where model and parameter performances can be easily evaluated at a glance.
 </div>
-<div id = "div7">
-<h2>7. Different Algorithms for NILM</h2><br>
+<div id ="div7">
+<h2>7. Contributions</h2><br>
+<ul>
+<li>Creation of the synthetic dataset and adding metadata information so that the dataset is in a format that can used by NILMTK.
+<li>Analysis of the different datasets by visualising the data.
+<li>Adapting the NILMTK API so that one could load the saved models of different algorithms. 
+<li>Adding early stopping to all the deep learning based algorithms to halt the training of these algorithms at the right time.
+<li>Adding new metrics to evaluate the results.
+<li>Conducting different experiments mentioned in the 'Overview' section.
+</ul>
+</div>
+<div id = "div8">
+<h2>8. Different Algorithms for NILM</h2><br>
 <ol>
 <h3>
 <li>Simple Algorithms</li>
@@ -206,8 +218,8 @@ Sequence to point (Seq2point) is a similar model to Seq2seq but is trained to pr
 </ul>
 </ol>
 </div>
-<div id ="div7">
-<h2>8. Datasets</h2><br>
+<div id ="div9">
+<h2>9. Datasets</h2><br>
 <p>NILM datasets can be divided into a dataset with low-frequency being up to 1 Hz and high-frequency when above that. So, the dataset that contains electricity consumption for all the appliances(sub-meters) and main meter (aggregate consumption) at a rate of at least one measurement per second is considered high-frequency datasets.  In this project we make use of three datasets, two publicly available datasets from literature as benchmark and a synthetic dataset. These datasets are described in the sequel.
 <ol>
 <h3>
@@ -230,8 +242,8 @@ The synthetic dataset is created using the Synpro tool which was developed at IS
 In this dataset, 4 houses are of type “Single Family house”, 8 of type “Multi-family house” and 3 are of type “Large Multi-family house”. These houses have different number of occupants ranging from 1-8. Each house have charging stations that charged at one of the 3 charging powers: 3.7 kW, 7.2kW, 11kW.
 </ol>
 </div>
-<div id ="div9">
-<h2>9. Evaluation Metrics</h2><br>
+<div id ="div10">
+<h2>10. Evaluation Metrics</h2><br>
 Many different metrics were used for evaluation
 <br>
 <ol>
@@ -296,8 +308,8 @@ $$F1 score = 2*\frac{(Precision*Recall)}{(Precision+Recall)}$$
 <br><br>
 </ol>
 </div>
-<div id ="div10">
-<h2>10. Basic Statistics of various Datasets</h2><br>
+<div id ="div11">
+<h2>11. Basic Statistics of various Datasets</h2><br>
 <ol>
 <h3>
 <li>UK-Dale</li>
@@ -794,8 +806,8 @@ Figure 6 shows the fraction of energy consumed by all devices in house number 1,
 </ol>
 </div>
 
-<div id ="div11">
-<h2>11. Experiments</h2><br>
+<div id ="div12">
+<h2>12. Experiments</h2><br>
 
 <ol>
 <h3>
@@ -3045,13 +3057,13 @@ Seq2Point is still the best performing algorithm in all the metrics. The perform
 <p>The F1 score of the Seq2point algorithm is higher than the baseline model in all houses. The Seq2point algorithm and baseline model both have similar precision in many houses but the baseline model has a lower recall value in all houses.  This is because of the high number of false negatives. Thus, the baseline algorithm is unable to detect events when the charging power for the EV is not high.
 </ol>
 </div>
-<div id ="div12">
-<h2>12. Conclusion</h2><br>
+<div id ="div13">
+<h2>13. Conclusion</h2><br>
 <p>
 Non-intrusive load monitoring (NILM) is used in order to estimate electrical consumption of individual appliances using the aggregate power meter reading. Different algorithms were compared in a real dataset in order to identify the best performing model. Performance of Seq2Point is better than other algorithms in the experiment. Performance of model improved when the sampling rate was 5 minutes as the amount of training data available to the algorithm is more than when the sampling rate was 15minutes. A synthetic dataset was used to simulate the power demand for charging EV’s. Performance of Seq2Point was analysed in order to predict both charging events as well power consumed while charging EV’s.  The model was able to predict with high accuracy if the EV’s were charging or not. In the synthetic dataset the Seq2point algorithm’s normalised error was higher when the pattern of power consumed while charging EV’s and other appliances were similar.
 </div>
-<div id ="div13">
-<h2>13. Future Work</h2><br>
+<div id ="div14">
+<h2>14. Future Work</h2><br>
 <p>Including the sub meter (appliance) Heat pump to the synthetic dataset. Heat Pumps consume a lot of energy.  After the addition of Heat Pumps to the dataset, energy needed to charge EV’s will no longer end up being the only appliance that consumes a lot of energy. Thus, it is expected to be harder for the model to predict accurately the charging events.
 <p>Creation of new algorithm that improves the prediction of power consumed while charging EV’s. 
 <p>Testing out different hyperparameter settings and how they affect the algorithm’s accuracy.
@@ -3059,8 +3071,8 @@ Non-intrusive load monitoring (NILM) is used in order to estimate electrical con
 </div>
 
 
-<div id ="div14">
-<h2>14. Appendix</h2><br>
+<div id ="div15">
+<h2>15. Appendix</h2><br>
 
 <ol>
 <h3>
@@ -3409,13 +3421,13 @@ It can be seen that there are large errors in the prediction in house 4 in many 
 </ol>
 </div>
 
-<div id ="div15">
-<h2>15. Acknowledgments</h2><br>
+<div id ="div16">
+<h2>16. Acknowledgments</h2><br>
 <p>Special thanks to my supervisor at Fraunhofer ISE Dr. Benedikt Köpfer for helping me in this project. I would also like to thank head of the Chair Algorithms and Data Structures, Hannah Bast, and my supervisor, Matthias Hertel for this opportunity to do this wonderful project. 
 </div>
 
-<div id ="div16">
-<h2>16. References</h2><br>
+<div id ="div17">
+<h2>17. References</h2><br>
 
 <ol>
 <li id="ref1">Nipun Batra, Jack Kelly, Oliver Parson, Haimonti Dutta, William Knottenbelt, Alex Rogers, Amarjeet Singh, Mani Srivastava. NILMTK: An Open Source Toolkit for Non-intrusive Load Monitoring. In: 5th International Conference on Future Energy Systems (ACM e-Energy), Cambridge, UK. 2014. DOI:
@@ -3448,7 +3460,8 @@ Jack Kelly and William Knottenbelt. Neural NILM: Deep Neural Networks Applied to
 G. W. Hart. Nonintrusive appliance load monitoring. Proceedings of the IEEE, 80(12):1870–1891, December 1992.
 </li>
 <li id ="ref12">
- Jack Kelly and William Knottenbelt. Neural NILM: Deep Neural Networks Applied to Energy Disaggregation. In Proceedings of the 2nd ACM International Conference on Embedded Systems for Energy-Efficient Built Environments, BuildSys ’15, pages 55–64, New York, NY, USA, 2015. ACM. event-place: Seoul, South Korea
+  Chaoyun Zhang, Mingjun Zhong, Zongzuo Wang, Nigel Goddard, and Charles
+Sutton. 2018. Sequence-to-Point Learning With Neural Networks for NonIntrusive Load Monitoring. In Thirty-Second AAAI Conference on Artificial Intelligence <a href=https://arxiv.org/abs/1612.09106>https://arxiv.org/abs/1612.09106</a>
 </li>
 
 </ol>
