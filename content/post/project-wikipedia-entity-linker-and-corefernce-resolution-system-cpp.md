@@ -1,5 +1,5 @@
 ---
-title: "Wikipedia Entity Linker and Coreference Resolution in C++"
+title: "Wikipedia Entity Linking and Coreference Resolution in C++"
 date: 2022-06-24T12:05:46+02:00
 author: "Benjamin Dietrich"
 authorAvatar: "img/project_wikipedia_entity_linker_and_coreference_resolution_cpp/benjamin_dietrich.jpeg"
