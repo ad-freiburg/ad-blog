@@ -6,7 +6,7 @@ authorAvatar: "img/ada.jpg"
 tags: ["map-matching", "GTFS", "public transit", "mobile phones", "flutter"]
 categories: ["project"]
 image: "img/freiburg-nahverkehr.jpg"
-draft: true
+draft: false
 ---
 Map matching can be used to match a given sequence of GPS points to a digital model of the real world.
 'Traditional' map matching, like navigation systems for cars, uses a static map for the matching.
