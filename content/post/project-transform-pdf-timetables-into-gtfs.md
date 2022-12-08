@@ -6,7 +6,7 @@ authorAvatar: ""
 tags: ["python", "GTFS", "PDF timetable"]
 categories: ["project"]
 image: "/img/project-transform-pdf-timetables-into-gtfs/title.png"
-draft: true
+draft: false
 ---
 
 The current inability to extract the schedule data from PDF timetables
@@ -952,7 +952,7 @@ other parts of the world.
 
 In case the user has a lot of PDFs, for example for every bus route of a
 single agency, it makes sense to output all information in a single GTFS feed.
-Currently reading multiple PDF files is not possible.
+Currently, reading multiple PDF files is not possible.
 Before implementing, further testing needs to be done, to ensure that the
 program state after processing one PDF does not alter the output of processing
 another.
