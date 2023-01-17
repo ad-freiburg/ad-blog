@@ -367,20 +367,10 @@ It is clearly evident that Context based models outperform non-context based mod
 </table>
 <figcaption id="table3" style="text-align: center">Table 3. Accuracy and F1 Score on the test dataset.</figcaption>
 
-
-<img id="fig5" src="/img/project-spelling-error-detection/cm_lstm_wo_context.png" >
-<figcaption  style="text-align: center">Fig 5. Confusion Matrix for LSTM Without Context.</figcaption>
-
 <figure>
-<img id="fig6" src="/img/project-spelling-error-detection/cm_lstm_w_context_ckpt43.png">
-<figcaption  style="text-align: center">Fig 6. Confusion Matrix for LSTM With Context Semi Character</figcaption>
+<img id="fig5" src="/img/project-spelling-error-detection/cm_all_Screenshot.png" >
+<figcaption  style="text-align: center">Fig 5. Confusion Matrix for the three models.</figcaption>
 </figure>
-
-<figure>
-<img id="fig7" src="/img/project-spelling-error-detection/cm_lstm_onehot_ckpt37.png">
-<figcaption  style="text-align: center">Fig 7. Confusion Matrix for LSTM With One-Hot Encoding</figcaption>
-</figure>
-
 
 
 <p><b>Some sample evaluations:</b>
