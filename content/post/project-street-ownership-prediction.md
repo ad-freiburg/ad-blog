@@ -144,15 +144,15 @@ gets optimized with the following settings:
     }
 
 Again, 90% of the data are used for training and 10% for testing.
-With this model, we get even better results:
+With this model, we get the following results:
 
-+ accuracy:  0.8671 (ratio of correctly classified data points)
-+ precision: 0.8525 (ratio of positive (private) predictions which are correct)
-+ recall:    0.9519 (ratio of 'detected' positive values)
++ accuracy:  0.7801 (ratio of correctly classified data points)
++ precision: 0.7867 (ratio of positive (private) predictions which are correct)
++ recall:    0.8890 (ratio of 'detected' positive values)
 
 ## Conlusion
 
-This poof of concept shows that it's possible to predict the ownership status
+This proof of concept shows that it's possible to predict the ownership status
 of streets with public available data from OpenStreetMap and Machine Learning. While the overall
 accuracy of the best model still has some room for improvement, the detection of privately owned streets
 works well. In a context of fiber-optic-cable roll-out planning where deployment of infrastructure on private
