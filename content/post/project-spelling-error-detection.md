@@ -1,6 +1,6 @@
 ---
 title: "Spelling Error Detection using Deep Neural Networks"
-date: 2022-08-01T15:36:35+05:30
+date: 2023-02-24T15:36:35+05:30
 author: "Stanley George"
 authorAvatar: "img/ada.jpg"
 tags: ["deep learning","spelling error","LSTM"]
@@ -9,6 +9,7 @@ image: "img/writing.jpg"
 draft: false
 ---
 This project aims to detect spelling errors in a given sentence using a Deep Learning approach.
+<!--more-->
 
 <div>
 <p><b>CONTENTS</b></p>
