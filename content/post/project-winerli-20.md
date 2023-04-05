@@ -1,5 +1,5 @@
 ---
-title: "Introducing WiNERLi 2.0"
+title: "Introducing WiNERLi 2.0, an extension of WiNERLi"
 date: 2023-04-05T18:10:45+02:00
 author: "Johanna Götz"
 authorAvatar: "img/ada.jpg"
@@ -8,8 +8,6 @@ categories: ["project"]
 image: "img/project-winerli-20/titleimg.jpg"
 draft: true
 ---
-
-# Introducing WiNERLi 2.0
 
 *Named-entity recognition* is a task from the area of natural language processing where the goal is to detect *named entities* in text[^wikiner]. *Named entities* are real-world objects ranging from people (e.g. *Elizabeth II*) to places (e.g. *Freiburg*) to events (e.g. *French Revolution*) to more abstract concepts that can be denoted by a proper name[^wikine]. *Named-entity linking*, also known as *named-entity recognition and disambiguation* is the task of assigning a unique identifier to entities mentioned in text[^wikinel]. For example in the sentence *In 1984, Apple launched the Macintosh, the first personal computer to be sold without a programming language.* the word *Apple* refers to the company *Apple Inc.*, not the fruit named *apple*.
 
