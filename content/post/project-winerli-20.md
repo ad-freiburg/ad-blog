@@ -1,5 +1,5 @@
 ---
-title: "Introducing Winerli 2.0"
+title: "Introducing WiNERLi 2.0"
 date: 2023-04-05T18:10:45+02:00
 author: "Johanna Götz"
 authorAvatar: "img/ada.jpg"
