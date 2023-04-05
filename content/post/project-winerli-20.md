@@ -104,7 +104,7 @@ In order to get a normalized, canonical version of the link text, the LNRM repre
 
 Previous implementation: To compute the LNRM representation the string is converted into lowercase and the following diacritics and characters are removed: `!?.,-_ \\(){}[]#\t\n`
 
-My implementation: The LNRM as described in *Stanford-UBC entity linking at TAC-KBP* by Angel X Chang et al. used. Here, the string is turned into lowercase and diacritics and all non-alphanumeric ASCII range characters (`!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~\t\n `) are removed.
+My implementation: The LNRM as described in *Stanford-UBC entity linking at TAC-KBP* by Angel X Chang et al. used. Here, the string is turned into lowercase and diacritics and all non-alphanumeric ASCII range characters (``!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~\t\n ``) are removed.
 
 **Database usage:**
 The extracted link data and the resulting aliasmap will be saved in a database for easy querying later on.
