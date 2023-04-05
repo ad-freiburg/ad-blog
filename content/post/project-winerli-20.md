@@ -1,11 +1,11 @@
 ---
-title: "Project Winerli 2.0"
+title: "Introducing Winerli 2.0"
 date: 2023-04-05T18:10:45+02:00
 author: "Johanna Götz"
 authorAvatar: "img/ada.jpg"
-tags: []
+tags: [entity recognition, entity linking, entity categorization, winerli]
 categories: ["project"]
-image: "img/writing.jpg"
+image: "img/project-winerli-20/titleimg.jpg"
 draft: true
 ---
 
@@ -87,7 +87,7 @@ In order to get a normalized, canonical version of the link text, the LNRM repre
 
 Previous implementation: To compute the LNRM representation the string is converted into lowercase and the following diacritics and characters are removed: `!?.,-_ \\(){}[]#\t\n`
 
-My implementation: The LNRM as described in https://www.researchgate.net/publication/265107266_Stanford-UBC_entity_linking_at_TAC-KBPis used. Here, the string is turned into lowercase and diacritics and all non-alphanumeric ASCII range characters (`!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~\t\n `) are removed.
+My implementation: The LNRM as described in *Stanford-UBC entity linking at TAC-KBP* by Angel X Chang et al. used. Here, the string is turned into lowercase and diacritics and all non-alphanumeric ASCII range characters (`!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~\t\n `) are removed.
 
 **Database usage:**
 The extracted link data and the resulting aliasmap will be saved in a database for easy querying later on.
@@ -275,7 +275,7 @@ First of all, I noticed a few issues with the Wikipedia-based evaluation file cr
 3. The Wikipedia evaluation set only contains introductory parts of the articles. These parts contain lots of links, so my implementation using explicitly given link information does not have as much entity recognition/linking to do because it will use the link data trivially.
 4. The previous implementation evaluates each sentence in the Wikipedia-based evaluation set independently, even if they belong to the same article. This means that the approach to use pronouns and to try and find out which previous entity the pronoun references will not be able to work well unless the entity and a later matching pronoun occur in the same sentence.
 5. I had to change the tokenisation in the *Wikipedia w/o links* result file because the tokenisation was different from what SpaCy would do. In order to be able to compare this data to the results of SpaCy and of my implementation (which, just like the previous implementation, uses SpaCy for tokenisation) I needed the same tokenisation that SpaCy would produce. I'm not sure why the previous version of the file was tokenized the way it is, I can only assume that maybe SpaCy's tokenisation has changed in newer versions. I split up the previous tokens the way SpaCy would do it and assigned the previously assigned entities to all of the single tokens.
-6. In the evaluation code from the previous implementation I noticed that for the GMB data set the tokens tagged with the IOB tag `O` (which means that the token does not belong to any chunk) were correctly excluded from the potential entities in the part that determines the quality of the entity categorisation, however in the part that evaluates the entity detection these tokens were considered entities which they aren't. This could potentially explain the very low values for recall (but very high precision as all tokens were considered entities) given in the thesis from the previous implementation for the GMB dataset, both for the implementation and for SpaCy.
+6. In the evaluation code from the previous implementation I noticed that for the GMB data set the tokens tagged with the IOB tag `O` (which means that the token does not belong to any chunk) were correctly excluded from the potential entities in the part that determines the quality of the entity categorization, however in the part that evaluates the entity detection these tokens were considered entities which they aren't. This could potentially explain the very low values for recall (but very high precision as all tokens were considered entities) given in the thesis from the previous implementation for the GMB dataset, both for the implementation and for SpaCy.
 
 Because of the 3rd point I have created my own additional evaluation file (later referred to as *Wikipedia w/ links*) that uses longer parts of articles. This file contains the links and uses all trivially linked entities. I selected a few articles from different topics and prepared them for annotation by using SpaCy to split the text into tokens but reinserting the links and their corresponding entities again. The annotation was done both by a friend of mine and myself. The rest of the text will be assigned entities based on my own human expectations, so it is of course not completely neutral and should be taken with a grain of salt. For example on the word *"British"* the other annotator assigned the entity *"United Kingdom"* while I intuitively chose *"Great Britain"* which demonstrates that expectations may vary.
 
@@ -291,7 +291,7 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 |---------------------|-------------|-----------|---------------------------------|-----------|--------|--------|
 | Wikipedia w/o links | WiNERLi     | 0.5       | N/A                             | 0.5746    | 0.4074 | 0.4768 |
 | Wikipedia w/o links | SpaCy (old) | N/A       | N/A                             | 0.5       | 0.1111 | 0.1818 |
-| Wikipedia w/o links | SpaCy 3.2.4 | N/A       | `N/A`                           | 0.587     | 0.1317 | 0.2151 |
+| Wikipedia w/o links | SpaCy 3.2.4 | N/A       | N/A                           | 0.587     | 0.1317 | 0.2151 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` / `(1.5, 0, 0, 0)` / `(0, 1.5, 0, 0)` w/o a/n.         | 0.7628    | 0.5805 | 0.6593 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` / `(1.5, 0, 0, 0)` / `(0, 1.5, 0, 0)` w/o adj.         | 0.7346    | 0.5805 | 0.6485 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` / `(1.5, 0, 0, 0)` / `(0, 1.5, 0, 0)` w/o num.         | 0.7309    | 0.7951 | 0.7617 |
@@ -308,7 +308,7 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` / `(1.5, 1.5, 1.5, 3)` w/o adj.         | 0.7381    | 0.6049 | 0.6649 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` / `(1.5, 1.5, 1.5, 3)` w/o num.         | 0.7368    | 0.8195 | <span style="color:red">0.776</span>  |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` / `(1.5, 1.5, 1.5, 3)`                  | 0.7149    | 0.8195 | 0.7636 |
-| Wikipedia w/ links  | SpaCy 3.2.4 | N/A       | `N/A`                           | 0.702     | 0.2213 | 0.3365 |
+| Wikipedia w/ links  | SpaCy 3.2.4 | N/A       | N/A                           | 0.702     | 0.2213 | 0.3365 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o a/n.         | 0.7691    | 0.6762 | 0.7197 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o adj.         | 0.7481    | 0.7302 | 0.739  |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o num.         | 0.7171    | 0.7169 | 0.717  |
@@ -343,7 +343,7 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)`            | 0.7049    | 0.7807 | 0.7409 |
 | GMB-Walia           | WiNERLi     |           | N/A                             | 1.0       | 0.2353 | 0.3810 |
 | GMB-Walia           | SpaCy (old) |           | N/A                             | 1.0       | 0.0883 | 0.1622 |
-| GMB-Walia           | SpaCy 3.2.4 | N/A       | `N/A`                           | 0.7103    | 0.3968 | <span style="color:red">0.5092</span> |
+| GMB-Walia           | SpaCy 3.2.4 | N/A       | N/A                           | 0.7103    | 0.3968 | <span style="color:red">0.5092</span> |
 | GMB-Walia           | WiNERLi 2.0 | 0.5       | w/o a/n.                        | 0.3794    | 0.5756 | 0.4574 |
 | GMB-Walia           | WiNERLi 2.0 | 0.5       | w/o adj.                        | 0.3747    | 0.5974 | 0.4605 |
 | GMB-Walia           | WiNERLi 2.0 | 0.5       | w/o num.                        | 0.344     | 0.6558 | 0.4512 |
@@ -355,12 +355,12 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 |---------------------|-------------|-----------|---------------------------------|-----------|--------|--------|
 | Wikipedia w/o links | WiNERLi     | 0.5       | N/A                             | 0.5588    | 0.1011 | 0.1712 |
 | Wikipedia w/o links | SpaCy (old) | N/A       | N/A                             | 0.4717    | 0.1330 | 0.2075 |
-| Wikipedia w/o links | SpaCy 3.2.4 | N/A       | `N/A`                           | 0.4231    | 0.1078 | 0.1719 |
+| Wikipedia w/o links | SpaCy 3.2.4 | N/A       | N/A                           | 0.4231    | 0.1078 | 0.1719 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | w/o a/n.                        | 0.7778    | 0.1373 | 0.2333 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | w/o adj.                        | 0.7       | 0.1373 | 0.2295 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | w/o num.                        | 0.7662    | 0.2892 | <span style="color:red">0.4199</span> |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | w/ adj./num.                    | 0.7284    | 0.2892 | 0.414  |
-| Wikipedia w/ links  | SpaCy 3.2.4 | N/A       | `N/A`                           | 0.4674    | 0.1701 | 0.2494 |
+| Wikipedia w/ links  | SpaCy 3.2.4 | N/A       | N/A                           | 0.4674    | 0.1701 | 0.2494 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o a/n.         | 0.7384    | 0.2642 | 0.3891 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o adj.         | 0.7488    | 0.3482 | 0.4754 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o num.         | 0.6736    | 0.2713 | 0.3868 |
@@ -395,7 +395,7 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)`            | 0.7018    | 0.3634 | 0.4788 |
 | GMB-Walia           | WiNERLi     | 0.5       | N/A                             | 0.5258    | 0.3115 | 0.3912 |
 | GMB-Walia           | SpaCy (old) | N/A       | N/A                             | 0.5001    | 0.5025 | <span style="color:red">0.5013</span> |
-| GMB-Walia           | SpaCy 3.2.4 | N/A       | `N/A`                           | 0.4595    | 0.463  | 0.4613 |
+| GMB-Walia           | SpaCy 3.2.4 | N/A       | N/A                           | 0.4595    | 0.463  | 0.4613 |
 | GMB-Walia           | WiNERLi 2.0 | 0.5       | w/o a/n.                        | 0.4571    | 0.3005 | 0.3627 |
 | GMB-Walia           | WiNERLi 2.0 | 0.5       | w/o adj.                        | 0.4367    | 0.3009 | 0.3563 |
 | GMB-Walia           | WiNERLi 2.0 | 0.5       | w/o num.                        | 0.375     | 0.3001 | 0.3334 |
@@ -483,7 +483,7 @@ When adjectives are used, just like on the Wikipedia dataset, the precision decr
 
 All additional approaches yield no improvement at all since they're Wikipedia-based. They rely on explicitly given link data, page categories and links from articles to other articles (requiring knowledge about which article the currently processed data belongs to) which does not exist in such a general dataset.
 
-Conclusion: On the GMB dataset the recall was considerably higher than for SpaCy (and the previous implementation, however the reason could be the issue in the evaluation code described above), however at the expense of precision. Both WiNERLi and WiNERLi 2.0 as well as SpaCy don't perform particularly well at entity categorisation. This has a lot to do with the categories in use and which categories are expected. The main problem with categorisation will be described in more detail later on. It can be considered a weakness of this whole approach that it is highly Wikipedia-specific, so the usefulness for more general tasks is limited.
+Conclusion: On the GMB dataset the recall was considerably higher than for SpaCy (and the previous implementation, however the reason could be the issue in the evaluation code described above), however at the expense of precision. Both WiNERLi and WiNERLi 2.0 as well as SpaCy don't perform particularly well at entity categorization. This has a lot to do with the categories in use and which categories are expected. The main problem with categorization will be described in more detail later on. It can be considered a weakness of this whole approach that it is highly Wikipedia-specific, so the usefulness for more general tasks is limited.
 
 **Generally, WiNERLi 2.0 outperforms WiNERLi in all tasks, even in the basic case, not using adjectives or numbers. It is hard to say whether this is due to the changes made to the entity recognition/linking procedure such as keeping explicitly given link information or due to a higher quality aliasmap.**
 
@@ -492,12 +492,12 @@ Conclusion: On the GMB dataset the recall was considerably higher than for SpaCy
 **Entity definition:**
 In addition to the issues mentioned above, sometimes it's difficult to determine which entity should be the result, for example if the text *"programmable computer"* appears, should it be considered one entity or should only the *"computer"* part be linked? Should the text *"May 1941"* be treated as one entity or should it be treated as *"May"* and *"1941"*? Should both words be assigned entities or are they considered too general? In the previous implementation, more specific entities were supposed to be used, so the longest possible sequence (using certain rules to determine to which extent a current token could be part of the sequence) of tokens for which an entity can be found would be used. On the other hand, even within Wikipedia year numbers or month names only rarely have links on them. However, the general problem persists: The result of the evaluation depends a lot on the expectations that the creator of the evaluation set had and these can be quite subjective, so it can be hard to determine the objective quality of the entity recognition and entity linking result.
 
-**Categorisation:**
-I did not make any major changes to the way categorisation is handled. Just like the previous implementation I use the information from infoboxes and their types, however I parse all infoboxes, so an entity can have several categories assigned to it. In the thesis about the previous implementation it was mentioned that categorisation could potentially be improved using the categories Wikipedia articles belong to. I considered this option, however article categories tend to be very specific, for example the article about *Ada Lovelace* has categories like `19th-century British women scientists, 19th-century British writers, 19th-century English mathematicians, Women computer scientists, British countesses` and analogous categories for which a human can infer that the article is about a person but there is no category directly for this. Categories are ordered in hierarchical ways, so for example the category `19th-century British women scientists` itself belongs to the following categories: `19th-century women scientists, British women scientists by century, 19th-century British women, 19th-century British scientists`. All of these again allow a human who knows that women are persons to infer that this category is about persons but, again, it is not explicitly stated anywhere. An example hierarchy would be: `19th-century British women scientists > 19th-century women scientists > 19th-century scientists > 19th-century people by occupation > People by century and occupation > People by century > People by time > People`. It's clearly visible that it takes many steps to arrive at the general `People` category, however even this category again belongs to many other categories (like `Humans, Main topic classifications, Individual apes`), so the question would be: How deeply does one need to traverse the hierarchy to arrive at a suitable and useful result? The `Main topic classifications` category lists very general categories, like `People`, `Business`, `Nature` etc. but the usefulness of these is also questionable or at least limited. On the other hand, the article about *Ada Lovelace* also belongs to the category `Ada (programming language)` whose main category (after several steps up in the hierarchy) belongs to the `Main topic classifications` category `Technology` which is a topic she belongs to but it is not who or what she is.
+**categorization:**
+I did not make any major changes to the way categorization is handled. Just like the previous implementation I use the information from infoboxes and their types, however I parse all infoboxes, so an entity can have several categories assigned to it. In the thesis about the previous implementation it was mentioned that categorization could potentially be improved using the categories Wikipedia articles belong to. I considered this option, however article categories tend to be very specific, for example the article about *Ada Lovelace* has categories like `19th-century British women scientists, 19th-century British writers, 19th-century English mathematicians, Women computer scientists, British countesses` and analogous categories for which a human can infer that the article is about a person but there is no category directly for this. Categories are ordered in hierarchical ways, so for example the category `19th-century British women scientists` itself belongs to the following categories: `19th-century women scientists, British women scientists by century, 19th-century British women, 19th-century British scientists`. All of these again allow a human who knows that women are persons to infer that this category is about persons but, again, it is not explicitly stated anywhere. An example hierarchy would be: `19th-century British women scientists > 19th-century women scientists > 19th-century scientists > 19th-century people by occupation > People by century and occupation > People by century > People by time > People`. It's clearly visible that it takes many steps to arrive at the general `People` category, however even this category again belongs to many other categories (like `Humans, Main topic classifications, Individual apes`), so the question would be: How deeply does one need to traverse the hierarchy to arrive at a suitable and useful result? The `Main topic classifications` category lists very general categories, like `People`, `Business`, `Nature` etc. but the usefulness of these is also questionable or at least limited. On the other hand, the article about *Ada Lovelace* also belongs to the category `Ada (programming language)` whose main category (after several steps up in the hierarchy) belongs to the `Main topic classifications` category `Technology` which is a topic she belongs to but it is not who or what she is.
 
-The general problem here is still which categories specifically are needed for a certain task and also what these categories should be named. If the category named *people* is used for a person then this might mean the same as a category named *person* but for a computer program these are not the same thing. In some cases, category names can be mapped to other equivalent category names but even this is not always possible. For example GMB categorises the city of London as `geo` while the Wikipedia infobox category is `settlement` which both make sense depending on the exact context. Through several steps in the article categories of Wikipedia London could be categorized into `Main topic classifications` like `Society` but also `Geography`, however this again requires a rather complex category hierarchy system that'd need to be built first.
+The general problem here is still which categories specifically are needed for a certain task and also what these categories should be named. If the category named *people* is used for a person then this might mean the same as a category named *person* but for a computer program these are not the same thing. In some cases, category names can be mapped to other equivalent category names but even this is not always possible. For example GMB categorizes the city of London as `geo` while the Wikipedia infobox category is `settlement` which both make sense depending on the exact context. Through several steps in the article categories of Wikipedia London could be categorized into `Main topic classifications` like `Society` but also `Geography`, however this again requires a rather complex category hierarchy system that'd need to be built first.
 
-There have been approaches that train classifiers based on support vector machines using Wikipedia category data to assign a topic to Wikipedia articles (https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/viewFile/14927/14204). Approaches such as this seem to be more flexible in regards to which target topics are desired.
+There have been approaches that train classifiers based on support vector machines using Wikipedia category data to assign a topic to Wikipedia articles [^wikicatsvm]. Approaches such as this seem to be more flexible in regards to which target topics are desired.
 
 --------------------------------------------------------------------------------
 
@@ -506,3 +506,5 @@ At this point I want to thank Axel Lehmann for his enormous help with annotating
 [^wikiner]: https://en.wikipedia.org/wiki/Named-entity_recognition
 [^wikine]: https://en.wikipedia.org/wiki/Named_entity
 [^wikinel]: https://en.wikipedia.org/wiki/Entity_linking
+[^stanfordubc]: https://www.researchgate.net/publication/265107266_Stanford-UBC_entity_linking_at_TAC-KBPis
+[^wikicatsvm]: https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/viewFile/14927/14204
