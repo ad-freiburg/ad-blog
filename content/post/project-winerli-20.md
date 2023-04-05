@@ -306,7 +306,7 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 1.5)` /<br /> `(1.5, 1.5, 1.5, 1.5)`                | 0.7167    | 0.8146 | 0.7626 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)` w/o a/n.         | 0.7702    | 0.6049 | 0.6776 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)` w/o adj.         | 0.7381    | 0.6049 | 0.6649 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)` w/o num.         | 0.7368    | 0.8195 | <span style="color:red">0.776</span>  |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)` w/o num.         | 0.7368    | 0.8195 | <span style="font-weight:bold; color:red">0.776</span>  |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)`                  | 0.7149    | 0.8195 | 0.7636 |
 | Wikipedia w/ links  | SpaCy 3.2.4 | N/A       | N/A                           | 0.702     | 0.2213 | 0.3365 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o a/n.         | 0.7691    | 0.6762 | 0.7197 |
@@ -338,12 +338,12 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 1.5)` w/o num. | 0.7186    | 0.7237 | 0.7212 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 1.5)`          | 0.7042    | 0.7779 | 0.7392 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)` w/o a/n.   | 0.7708    | 0.6832 | 0.7244 |
-| Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)` w/o adj.   | 0.7499    | 0.739  | <span style="color:red">0.7444</span> |
+| Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)` w/o adj.   | 0.7499    | 0.739  | <span style="font-weight:bold; color:red">0.7444</span> |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)` w/o num.   | 0.7189    | 0.7247 | 0.7218 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)`            | 0.7049    | 0.7807 | 0.7409 |
 | GMB-Walia           | WiNERLi     |           | N/A                             | 1.0       | 0.2353 | 0.3810 |
 | GMB-Walia           | SpaCy (old) |           | N/A                             | 1.0       | 0.0883 | 0.1622 |
-| GMB-Walia           | SpaCy 3.2.4 | N/A       | N/A                           | 0.7103    | 0.3968 | <span style="color:red">0.5092</span> |
+| GMB-Walia           | SpaCy 3.2.4 | N/A       | N/A                           | 0.7103    | 0.3968 | <span style="font-weight:bold; color:red">0.5092</span> |
 | GMB-Walia           | WiNERLi 2.0 | 0.5       | w/o a/n.                        | 0.3794    | 0.5756 | 0.4574 |
 | GMB-Walia           | WiNERLi 2.0 | 0.5       | w/o adj.                        | 0.3747    | 0.5974 | 0.4605 |
 | GMB-Walia           | WiNERLi 2.0 | 0.5       | w/o num.                        | 0.344     | 0.6558 | 0.4512 |
@@ -358,7 +358,7 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 | Wikipedia w/o links | SpaCy 3.2.4 | N/A       | N/A                           | 0.4231    | 0.1078 | 0.1719 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | w/o a/n.                        | 0.7778    | 0.1373 | 0.2333 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | w/o adj.                        | 0.7       | 0.1373 | 0.2295 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | w/o num.                        | 0.7662    | 0.2892 | <span style="color:red">0.4199</span> |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | w/o num.                        | 0.7662    | 0.2892 | <span style="font-weight:bold; color:red">0.4199</span> |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | w/ adj./num.                    | 0.7284    | 0.2892 | 0.414  |
 | Wikipedia w/ links  | SpaCy 3.2.4 | N/A       | N/A                           | 0.4674    | 0.1701 | 0.2494 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o a/n.         | 0.7384    | 0.2642 | 0.3891 |
@@ -386,7 +386,7 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 0, 0, 0)` w/o num.       | 0.6758    | 0.274  | 0.3899 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 0, 0, 0)`                | 0.6983    | 0.3581 | 0.4734 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 1.5)` w/o a/n. | 0.7448    | 0.2725 | 0.399  |
-| Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 1.5)` w/o adj. | 0.7536    | 0.3565 | <span style="color:red">0.4841</span> |
+| Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 1.5)` w/o adj. | 0.7536    | 0.3565 | <span style="font-weight:bold; color:red">0.4841</span> |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 1.5)` w/o num. | 0.6804    | 0.2793 | 0.3961 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 1.5)`          | 0.7018    | 0.3634 | 0.4788 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)` w/o a/n.   | 0.7448    | 0.2725 | 0.399  |
@@ -394,7 +394,7 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)` w/o num.   | 0.6804    | 0.2793 | 0.3961 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)`            | 0.7018    | 0.3634 | 0.4788 |
 | GMB-Walia           | WiNERLi     | 0.5       | N/A                             | 0.5258    | 0.3115 | 0.3912 |
-| GMB-Walia           | SpaCy (old) | N/A       | N/A                             | 0.5001    | 0.5025 | <span style="color:red">0.5013</span> |
+| GMB-Walia           | SpaCy (old) | N/A       | N/A                             | 0.5001    | 0.5025 | <span style="font-weight:bold; color:red">0.5013</span> |
 | GMB-Walia           | SpaCy 3.2.4 | N/A       | N/A                           | 0.4595    | 0.463  | 0.4613 |
 | GMB-Walia           | WiNERLi 2.0 | 0.5       | w/o a/n.                        | 0.4571    | 0.3005 | 0.3627 |
 | GMB-Walia           | WiNERLi 2.0 | 0.5       | w/o adj.                        | 0.4367    | 0.3009 | 0.3563 |
@@ -418,7 +418,7 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 1.5, 0)` /<br /> `(0, 0, 0, 1.5)` /<br /> `(1.5, 1.5, 1.5, 1.5)`                | 0.678     | 0.678  | 0.678  |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)` w/o a/n.         | 0.7063    | 0.4341 | 0.5378 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)` w/o adj.         | 0.6692    | 0.4341 | 0.5266 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)` w/o num.         | 0.7       | 0.6829 | <span style="color:red">0.6914</span> |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)` w/o num.         | 0.7       | 0.6829 | <span style="font-weight:bold; color:red">0.6914</span> |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)`                  | 0.6763    | 0.6829 | 0.6796 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o a/n.         | 0.676     | 0.4239 | 0.5211 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o adj.         | 0.6787    | 0.52   | 0.5888 |
@@ -449,7 +449,7 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 1.5)` w/o num. | 0.6189    | 0.4606 | 0.5282 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 1.5)`          | 0.6282    | 0.5527 | 0.588  |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)` w/o a/n.   | 0.6815    | 0.4353 | 0.5312 |
-| Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)` w/o adj.   | 0.6833    | 0.5323 | <span style="color:red">0.5984</span> |
+| Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)` w/o adj.   | 0.6833    | 0.5323 | <span style="font-weight:bold; color:red">0.5984</span> |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)` w/o num.   | 0.6189    | 0.4606 | 0.5282 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(1.5, 1.5, 1.5, 3)`            | 0.6289    | 0.5544 | 0.5893 |
 
@@ -485,7 +485,7 @@ All additional approaches yield no improvement at all since they're Wikipedia-ba
 
 Conclusion: On the GMB dataset the recall was considerably higher than for SpaCy (and the previous implementation, however the reason could be the issue in the evaluation code described above), however at the expense of precision. Both WiNERLi and WiNERLi 2.0 as well as SpaCy don't perform particularly well at entity categorization. This has a lot to do with the categories in use and which categories are expected. The main problem with categorization will be described in more detail later on. It can be considered a weakness of this whole approach that it is highly Wikipedia-specific, so the usefulness for more general tasks is limited.
 
-**Generally, WiNERLi 2.0 outperforms WiNERLi in all tasks, even in the basic case, not using adjectives or numbers. It is hard to say whether this is due to the changes made to the entity recognition/linking procedure such as keeping explicitly given link information or due to a higher quality aliasmap.**
+**Generally, WiNERLi 2.0 outperforms WiNERLi in all tasks, even in the basic case, not using adjectives or numbers. It is hard to say whether this is due to the changes made to the entity recognition/linking procedure or due to a higher quality aliasmap.**
 
 ### General issues with the evaluation
 
