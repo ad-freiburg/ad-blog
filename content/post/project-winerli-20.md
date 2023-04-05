@@ -264,7 +264,7 @@ For the evaluation, in the previous implementation two files were used. I used t
 
 The first file (later referred to as *Wikipedia w/o links*) was created by hand based on the introduction of 3 different Wikipedia pages (*Konrad Zuse*, *Caesar cipher* and *Binary search algorithm*). In this file, each sentence was split up into tokens and each token got the desired entity assigned (if there is one) and the category the entity should belong to.
 
-The second file (later referred to as *GMB-Walia*) is available at `kaggle.com` (kaggle.com/abhinavwalia95/entity-annotated-corpus) and contains a subset of the *Groningen Meaning Bank (GMB)*. This dataset also contains text that is split into tokens and for each token the annotation consists of the part-of-speech tag, the IOB tag and which category the entity belongs to if it is an entity.
+The second file (later referred to as *GMB-Walia*) is available at `kaggle.com` [^kagglegmbwalia] and contains a subset of the *Groningen Meaning Bank (GMB)*. This dataset also contains text that is split into tokens and for each token the annotation consists of the part-of-speech tag, the IOB tag and which category the entity belongs to if it is an entity.
 
 **Issues with the evaluation datasets and procedure:**
 
@@ -277,7 +277,7 @@ First of all, I noticed a few issues with the Wikipedia-based evaluation file cr
 5. I had to change the tokenisation in the *Wikipedia w/o links* result file because the tokenisation was different from what SpaCy would do. In order to be able to compare this data to the results of SpaCy and of my implementation (which, just like the previous implementation, uses SpaCy for tokenisation) I needed the same tokenisation that SpaCy would produce. I'm not sure why the previous version of the file was tokenized the way it is, I can only assume that maybe SpaCy's tokenisation has changed in newer versions. I split up the previous tokens the way SpaCy would do it and assigned the previously assigned entities to all of the single tokens.
 6. In the evaluation code from the previous implementation I noticed that for the GMB data set the tokens tagged with the IOB tag `O` (which means that the token does not belong to any chunk) were correctly excluded from the potential entities in the part that determines the quality of the entity categorization, however in the part that evaluates the entity detection these tokens were considered entities which they aren't. This could potentially explain the very low values for recall (but very high precision as all tokens were considered entities) given in the thesis from the previous implementation for the GMB dataset, both for the implementation and for SpaCy.
 
-Because of the 3rd point I have created my own additional evaluation file (later referred to as *Wikipedia w/ links*) that uses longer parts of articles. This file contains the links and uses all trivially linked entities. I selected a few articles from different topics and prepared them for annotation by using SpaCy to split the text into tokens but reinserting the links and their corresponding entities again. The annotation was done both by a friend of mine and myself. The rest of the text will be assigned entities based on my own human expectations, so it is of course not completely neutral and should be taken with a grain of salt. For example on the word *"British"* the other annotator assigned the entity *"United Kingdom"* while I intuitively chose *"Great Britain"* which demonstrates that expectations may vary.
+Because of the 3rd point I have created my own additional evaluation file (later referred to as *Wikipedia w/ links*) that uses longer parts of articles. This file retains all links. I selected a few articles from different topics and prepared them for annotation by using SpaCy to split the text into tokens but reinserting the links again. The annotation was done both by a friend of mine and myself. The links are assigned the entities that correspond with their link target. The rest of the text will be assigned entities based on our own human expectations, so it is of course not completely neutral and should be taken with a grain of salt. For example on the word *"British"* the other annotator assigned the entity *"United Kingdom"* while I intuitively chose *"Great Britain"* which demonstrates that expectations may vary.
 
 For the evaluation of the *Wikipedia w/o links* and the GMB dataset I used an older Wikipedia dump for the creation of the aliasmap. This dump is slightly newer than the one that was used for the evaluation in the previous implementation but still from the same year (2018). This older dump was used to obtain a higher degree of comparability between the previous and my implementation.
 
@@ -292,22 +292,22 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 | Wikipedia w/o links | WiNERLi     | 0.5       | N/A                             | 0.5746    | 0.4074 | 0.4768 |
 | Wikipedia w/o links | SpaCy (old) | N/A       | N/A                             | 0.5       | 0.1111 | 0.1818 |
 | Wikipedia w/o links | SpaCy 3.2.4 | N/A       | N/A                           | 0.587     | 0.1317 | 0.2151 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` / `(1.5, 0, 0, 0)` / `(0, 1.5, 0, 0)` w/o a/n.         | 0.7628    | 0.5805 | 0.6593 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` / `(1.5, 0, 0, 0)` / `(0, 1.5, 0, 0)` w/o adj.         | 0.7346    | 0.5805 | 0.6485 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` / `(1.5, 0, 0, 0)` / `(0, 1.5, 0, 0)` w/o num.         | 0.7309    | 0.7951 | 0.7617 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` / `(1.5, 0, 0, 0)` / `(0, 1.5, 0, 0)`                  | 0.7118    | 0.7951 | 0.7512 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` /<br /> `(1.5, 0, 0, 0)` /<br /> `(0, 1.5, 0, 0)` w/o a/n.         | 0.7628    | 0.5805 | 0.6593 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` /<br /> `(1.5, 0, 0, 0)` /<br /> `(0, 1.5, 0, 0)` w/o adj.         | 0.7346    | 0.5805 | 0.6485 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` /<br /> `(1.5, 0, 0, 0)` /<br /> `(0, 1.5, 0, 0)` w/o num.         | 0.7309    | 0.7951 | 0.7617 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` /<br /> `(1.5, 0, 0, 0)` /<br /> `(0, 1.5, 0, 0)`                  | 0.7118    | 0.7951 | 0.7512 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 1.5, 0)` w/o a/n.       | 0.7658    | 0.5902 | 0.6667 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 1.5, 0)` w/o adj.       | 0.7378    | 0.5902 | 0.6558 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 1.5, 0)` w/o num.       | 0.7333    | 0.8049 | 0.7674 |
 | Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 1.5, 0)`                | 0.7143    | 0.8049 | 0.7569 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 1.5)` / `(1.5, 1.5, 1.5, 1.5)` w/o a/n.       | 0.7688    | 0.6    | 0.674  |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 1.5)` / `(1.5, 1.5, 1.5, 1.5)` w/o adj.       | 0.741     | 0.6    | 0.6631 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 1.5)` / `(1.5, 1.5, 1.5, 1.5)` w/o num.       | 0.7357    | 0.8146 | 0.7731 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 1.5)` / `(1.5, 1.5, 1.5, 1.5)`                | 0.7167    | 0.8146 | 0.7626 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` / `(1.5, 1.5, 1.5, 3)` w/o a/n.         | 0.7702    | 0.6049 | 0.6776 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` / `(1.5, 1.5, 1.5, 3)` w/o adj.         | 0.7381    | 0.6049 | 0.6649 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` / `(1.5, 1.5, 1.5, 3)` w/o num.         | 0.7368    | 0.8195 | <span style="color:red">0.776</span>  |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` / `(1.5, 1.5, 1.5, 3)`                  | 0.7149    | 0.8195 | 0.7636 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 1.5)` /<br /> `(1.5, 1.5, 1.5, 1.5)` w/o a/n.       | 0.7688    | 0.6    | 0.674  |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 1.5)` /<br /> `(1.5, 1.5, 1.5, 1.5)` w/o adj.       | 0.741     | 0.6    | 0.6631 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 1.5)` /<br /> `(1.5, 1.5, 1.5, 1.5)` w/o num.       | 0.7357    | 0.8146 | 0.7731 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 1.5)` /<br /> `(1.5, 1.5, 1.5, 1.5)`                | 0.7167    | 0.8146 | 0.7626 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)` w/o a/n.         | 0.7702    | 0.6049 | 0.6776 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)` w/o adj.         | 0.7381    | 0.6049 | 0.6649 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)` w/o num.         | 0.7368    | 0.8195 | <span style="color:red">0.776</span>  |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)`                  | 0.7149    | 0.8195 | 0.7636 |
 | Wikipedia w/ links  | SpaCy 3.2.4 | N/A       | N/A                           | 0.702     | 0.2213 | 0.3365 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o a/n.         | 0.7691    | 0.6762 | 0.7197 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o adj.         | 0.7481    | 0.7302 | 0.739  |
@@ -408,18 +408,18 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 | Wikipedia w/o links | WiNERLi     | 0.5       | N/A                             | 0.4184    | 0.4184 | 0.2857 |
 | Wikipedia w/o links | SpaCy (old) | N/A       | N/A                             | N/A       | N/A    | N/A    |
 | Wikipedia w/o links | SpaCy 3.2.4 | N/A       | N/A                             | N/A       | N/A    | N/A    |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` / `(1.5, 0, 0, 0)` / `(0, 1.5, 0, 0)` w/o a/n.         | 0.6992    | 0.4195 | 0.5244 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` / `(1.5, 0, 0, 0)` / `(0, 1.5, 0, 0)` w/o adj.         | 0.6667    | 0.4195 | 0.515  |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` / `(1.5, 0, 0, 0)` / `(0, 1.5, 0, 0)` w/o num.         | 0.6954    | 0.6683 | 0.6816 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` / `(1.5, 0, 0, 0)` / `(0, 1.5, 0, 0)`                  | 0.6749    | 0.6683 | 0.6716 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 1.5, 0)` / `(0, 0, 0, 1.5)` / `(1.5, 1.5, 1.5, 1.5)` w/o a/n.       | 0.704     | 0.4293 | 0.5333 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 1.5, 0)` / `(0, 0, 0, 1.5)` / `(1.5, 1.5, 1.5, 1.5)` w/o adj.       | 0.6718    | 0.4293 | 0.5238 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 1.5, 0)` / `(0, 0, 0, 1.5)` / `(1.5, 1.5, 1.5, 1.5)` w/o num.       | 0.6985    | 0.678  | 0.6881 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 1.5, 0)` / `(0, 0, 0, 1.5)` / `(1.5, 1.5, 1.5, 1.5)`                | 0.678     | 0.678  | 0.678  |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` / `(1.5, 1.5, 1.5, 3)` w/o a/n.         | 0.7063    | 0.4341 | 0.5378 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` / `(1.5, 1.5, 1.5, 3)` w/o adj.         | 0.6692    | 0.4341 | 0.5266 |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` / `(1.5, 1.5, 1.5, 3)` w/o num.         | 0.7       | 0.6829 | <span style="color:red">0.6914</span> |
-| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` / `(1.5, 1.5, 1.5, 3)`                  | 0.6763    | 0.6829 | 0.6796 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` /<br /> `(1.5, 0, 0, 0)` /<br /> `(0, 1.5, 0, 0)` w/o a/n.         | 0.6992    | 0.4195 | 0.5244 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` /<br /> `(1.5, 0, 0, 0)` /<br /> `(0, 1.5, 0, 0)` w/o adj.         | 0.6667    | 0.4195 | 0.515  |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` /<br /> `(1.5, 0, 0, 0)` /<br /> `(0, 1.5, 0, 0)` w/o num.         | 0.6954    | 0.6683 | 0.6816 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` /<br /> `(1.5, 0, 0, 0)` /<br /> `(0, 1.5, 0, 0)`                  | 0.6749    | 0.6683 | 0.6716 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 1.5, 0)` /<br /> `(0, 0, 0, 1.5)` /<br /> `(1.5, 1.5, 1.5, 1.5)` w/o a/n.       | 0.704     | 0.4293 | 0.5333 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 1.5, 0)` /<br /> `(0, 0, 0, 1.5)` /<br /> `(1.5, 1.5, 1.5, 1.5)` w/o adj.       | 0.6718    | 0.4293 | 0.5238 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 1.5, 0)` /<br /> `(0, 0, 0, 1.5)` /<br /> `(1.5, 1.5, 1.5, 1.5)` w/o num.       | 0.6985    | 0.678  | 0.6881 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 1.5, 0)` /<br /> `(0, 0, 0, 1.5)` /<br /> `(1.5, 1.5, 1.5, 1.5)`                | 0.678     | 0.678  | 0.678  |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)` w/o a/n.         | 0.7063    | 0.4341 | 0.5378 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)` w/o adj.         | 0.6692    | 0.4341 | 0.5266 |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)` w/o num.         | 0.7       | 0.6829 | <span style="color:red">0.6914</span> |
+| Wikipedia w/o links | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 3)` /<br /> `(1.5, 1.5, 1.5, 3)`                  | 0.6763    | 0.6829 | 0.6796 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o a/n.         | 0.676     | 0.4239 | 0.5211 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o adj.         | 0.6787    | 0.52   | 0.5888 |
 | Wikipedia w/ links  | WiNERLi 2.0 | 0.5       | `(0, 0, 0, 0)` w/o num.         | 0.6132    | 0.4488 | 0.5183 |
@@ -501,10 +501,11 @@ There have been approaches that train classifiers based on support vector machin
 
 --------------------------------------------------------------------------------
 
-At this point I want to thank Axel Lehmann for his enormous help with annotating the dataset so that it would be less biased as well as serving as my "rubber duck" for debugging purposes.
+At this point I want to thank Axel Lehmann for his enormous help with annotating the dataset so that it would be less biased.
 
 [^wikiner]: https://en.wikipedia.org/wiki/Named-entity_recognition
 [^wikine]: https://en.wikipedia.org/wiki/Named_entity
 [^wikinel]: https://en.wikipedia.org/wiki/Entity_linking
 [^stanfordubc]: https://www.researchgate.net/publication/265107266_Stanford-UBC_entity_linking_at_TAC-KBPis
+[^kagglegmbwalia]: https://www.kaggle.com/abhinavwalia95/entity-annotated-corpus
 [^wikicatsvm]: https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/viewFile/14927/14204
