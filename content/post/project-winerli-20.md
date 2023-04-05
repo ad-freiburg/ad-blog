@@ -13,13 +13,32 @@ draft: true
 
 This project is about named-entity linking on Wikipedia, so the goal is to detect and assign possible entities in the text of Wikipedia pages. My code and its functionality are based on the work that another student did for their bachelor's project and thesis. This previous system was named *WiNERLi* (short for *Wikipedia Named-Entity Recognition Linking*). I reimplemented and extended most of the code in an attempt to deliver a higher quality result in a more efficient manner. This new version is called *WiNERLi 2.0*. In the following, I will describe the functionality of WiNERLi 2.0, the differences to WiNERLi and present the evaluation results.
 
+<p><b>CONTENTS</b></p>
+<ol>
+    <li><a href="#aliasmap_gen">Aliasmap generation</a>
+        <ol>
+            <li><a href="#aliasmap_goal">Approach and goal</a></li>
+            <li><a href="#aliasmap_tech">Technical aspects</a></li>
+        </ol>
+    </li>
+    <li><a href="#ner_disamb">Named-entity recognition and disambiguation</a>
+        <ol>
+            <li><a href="#ner_preproc">Preprocessing</a></li>
+            <li><a href="#ner_er_li">Entity recognition and linking procedure</a></li>
+            <li><a href="#ner_add_appr">Additional approaches</a></li>
+            <li><a href="#ner_eval">Evaluation</a></li>
+            <li><a href="#ner_issues">General issues with the evaluation</a></li>
+        </ol>
+    </li>
+</ol>
+
 --------------------------------------------------------------------------------
 
-## Aliasmap generation
+## Aliasmap generation <a id="aliasmap_gen"></a>
 
 The first step in both this and the previous implementation is the generation of the *aliasmap*.
 
-### Approach and goal
+### Approach and goal <a id="aliasmap_goal"></a>
 
 The *aliasmap* is a database that contains synonym data. Two terms would be considered synonymous if they belong to the same entity. This is achieved by parsing all Wikipedia pages and extracting the information given by the links and their corresponding link texts. The goal is to assign these possible synonyms to the entities, so that later on when a certain term appears in a text, it can be looked up which entities it could possibly belong to.
 
@@ -34,7 +53,7 @@ Additionally, the previous implementation used the data given in Wikipedia's inf
 The extracted synonym data will then be processed. For this it is counted how many times a given text (e. g. *"Fear of the Dark"*) links to a certain entity (e. g. Iron Maiden's song *"Fear of the Dark"*, the 2003 horror film *"Fear of the Dark"* etc.). With this information the *relevance score* can be calculated, which is how high the chance is that a certain text links to a certain entity. For example if the text *"Fear of the Dark"* occurs 30 times and in 6 of these cases the entity is the homonymous Iron Maiden song, then the relevance score would be 6/30 = 0.2.
 The goal is to be able to find out which entity a certain text most likely belongs to in order to use the data in tasks such as named-entity linking.
 
-### Technical aspects
+### Technical aspects <a id="aliasmap_tech"></a>
 
 Since Wikipedia is written by volunteers, irregularities in the way data is given can occur. Also, many templates, including infoboxes, can have a plethora of aliases which makes it hard to correctly gather all information that is presented in the Wikipedia pages. In the following some differences in the way the data is handled by the previous implementation and by my program will be described. None of the lists in the following table are exhaustive by any means.
 
@@ -103,11 +122,11 @@ My implementation: My implementation uses Python's multiprocessing library. One 
 
 --------------------------------------------------------------------------------
 
-## Named-entity recognition and disambiguation
+## Named-entity recognition and disambiguation <a id="ner_disamb"></a>
 
 For the named-entity recognition and disambiguation, pages from the English Wikipedia will be processed in order to detect and assign entities appearing the text. First, the text is preprocessed to clean it up by filtering out unnecessary elements like templates (e.g. for formatting). After this, the cleaned up text will be examined to perform the actual entity linking. For this, the basic procedure of the previous implementation got extended by different experimental approaches that seem plausible to humans. The results were evaluated against a data set manually annotated by humans.
 
-### Preprocessing
+### Preprocessing <a id="ner_preproc"></a>
 
 **Template filtering and clean-up:**
 The final result should consist of only plain text that can be fed into the entity recognition procedure.
@@ -116,7 +135,7 @@ Previous implementation: All templates including links were completely removed w
 
 My implementation: I decided to try to keep content inside of templates where it makes sense. For example tables contain lots of information that might not be running text but still relevant for example in the context of searching, so my goal was to keep the content for entity recognition. Again, there's an enormous number of templates, so it was infeasible to try to process all of them. Because of this, I concentrated on templates that usually contain a decent amount of information or that occur frequently, such as tables, text formatting templates, listings etc. A slight disadvantage is that some data might be kept that is not visible on the page or relevant to it (like the size information for images in infoboxes) because the wiki templates are very flexible in regards to the arguments they take and their order, so it's a very complex task to filter out only those arguments that contain actual content.
 
-### Entity recognition and linking procedure
+### Entity recognition and linking procedure <a id="ner_er_li"></a>
 
 In order to examine the text, it needs to be *tokenized* first. This means that the text will be split up into separate tokens, like words, punctuation marks etc. For example the text *"Elizabeth was born in Mayfair, London, as the first child of the Duke and Duchess of York (later King George VI and Queen Elizabeth The Queen Mother)."* would be split into the following list of tokens: `['Elizabeth', 'was', 'born', 'in', 'Mayfair', ',', 'London', ',' ,'as', 'the', 'first', 'child', 'of', 'the', 'Duke', 'and', 'Duchess', 'of', 'York', '.']` An entity consists of at least one token but there is no upper limit to how many tokens it can consist of. This means that there's no use in examining only single tokens and it is required to generate sequences of several tokens and extend them if necessary. Such sequences of tokens will be called *subsequence* in the following.
 
@@ -139,7 +158,7 @@ I made a few design decisions that deviate from those employed in the previous i
 1. In the previous implementation, to be considered an entity candidate, the subsequence has to end in a (proper) noun or a pronoun. I kept this idea but added adjectives because adjectives, per definition, are attributes to nouns, so they could help finding more specific entities, especially if they're kept as leading adjectives. I also decided to keep numbers (SpaCy can detect both numerical numbers as well as number words) because they are frequently used to give further information as well as dates.
 2. So far, subsequences that end in adpositions would be extended which is a feature that I kept, however, I changed the further handling of subsequences that start with adpositions. If for a sequence starting with an adposition no entity can be found in the aliasmap, it won't continue with the next word but it will ignore the adposition and start a new subsequence with the word right after it. This choice was made because adpositions that connect words like nouns together help to add information (example: *Murder on the Orient Express*) while adpositions at the start of a subsequence are not likely to add useful information (example *In December 1989*), however excluding adpositions completely from the start of subsequences did not seem reasonable to me either. It's necessary to note that such decisions, both the ones made in the previous implementation as well as the ones I made, are rather arbitrary as language, grammar and the occurring entity names are quite varied.
 
-### Additional approaches
+### Additional approaches <a id="ner_add_appr"></a>
 
 The basic implementation described above was extended by adding 4 additional approaches that attempt to boost the accuracy of the entity linking task. These approaches are based on common sense and on what might seem plausible to humans but they are experimental in nature.
 
@@ -254,7 +273,7 @@ The final scores are as follows (sorted descendingly):
 So the text *"queen"* in the given example text will be assigned the entity *"Elizabeth_II"* because it has the highest final score.
 
 
-### Evaluation
+### Evaluation <a id="ner_eval"></a>
 
 **Evaluation sets:**
 
@@ -485,7 +504,7 @@ Conclusion: On the GMB dataset the recall was considerably higher than for SpaCy
 
 **Generally, WiNERLi 2.0 outperforms WiNERLi in all tasks, even in the basic case, not using adjectives or numbers. It is hard to say whether this is due to the changes made to the entity recognition/linking procedure or due to a higher quality aliasmap.**
 
-### General issues with the evaluation
+### General issues with the evaluation <a id="ner_issues"></a>
 
 **Entity definition:**
 In addition to the issues mentioned above, sometimes it's difficult to determine which entity should be the result, for example if the text *"programmable computer"* appears, should it be considered one entity or should only the *"computer"* part be linked? Should the text *"May 1941"* be treated as one entity or should it be treated as *"May"* and *"1941"*? Should both words be assigned entities or are they considered too general? In the previous implementation, more specific entities were supposed to be used, so the longest possible sequence (using certain rules to determine to which extent a current token could be part of the sequence) of tokens for which an entity can be found would be used. On the other hand, even within Wikipedia year numbers or month names only rarely have links on them. However, the general problem persists: The result of the evaluation depends a lot on the expectations that the creator of the evaluation set had and these can be quite subjective, so it can be hard to determine the objective quality of the entity recognition and entity linking result.
