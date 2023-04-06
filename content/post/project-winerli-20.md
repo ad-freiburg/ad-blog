@@ -46,7 +46,6 @@ The previous implementation consisted used the following method to generate the 
 
 Every article page constitutes an entity with the page title as the name for the entity.
 Every article page in the English Wikipedia was parsed and the links were extracted. Each link consists of the link's display text and its link target. If the link target is an article page, the link text would be assumed to be a synonym of the entity that is defined by the link target's Wikipedia page. For the link text a canonical form named LNRM which removes diacritics and some other characters will be used to achieve more forgiving matching. The resulting pair of data will then be added to a database.
-Disambiguation pages are ignored because almost all of the time the link texts given there are exactly the name of the Wikipedia page the link links to and thus don't add any new information.
 
 Additionally, the previous implementation used the data given in Wikipedia's infoboxes. Infoboxes consist of key-value pairs. Some of these pairs contain additional information about the name of something or someone, for example for people there exist `native_name`, `birth_name` etc. and for books `title_orig` and `working_title`. There exist a myriad of possible keys in all sorts of infoboxes, so a few ones that clearly give an (alternative) name and thus synonym data were manually selected.
 
