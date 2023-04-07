@@ -14,7 +14,6 @@ It is built using x-search, a C++ library for fast external string search that w
 bachelor-thesis.
 This project aims to introduce xs grep in a more practical way than my thesis did and to provide implementation insights
 of xs grep.
-Further, reading this post enables you to use x-search's Extended-API within your C++ projects.
 The source code of xs grep and x-search is available [here](https://github.com/lfreist/xsgrep).
 
 ## Content
@@ -22,7 +21,6 @@ The source code of xs grep and x-search is available [here](https://github.com/l
 1. [Introduction](#introduction)
 2. [Using xs grep](#Usage)
 3. [Benchmarks](#benchmarks)
-4. [Implementation](#implementation)
 5. [Conclusion](#conclusion)
 
 ## Introduction
@@ -194,261 +192,111 @@ Within my thesis, I have not only presented comparisons of GNU grep, ripgrep and
 reasons for the observations with respect to the used search algorithms etc.
 If you are interested in such details, I recommend you to check out the *Evaluation* section within my thesis.
 
+### Sample Specifications
+- Search tools:
+  - GNU grep Version 3.7
+  - ripgrep Version 13.0.0
+  - xs grep Version 1.0 (submitted version)
+- Sample data: English version of the
+  [opensubtitles2016](https://object.pouta.csc.fi/OPUS-OpenSubtitles/v2016/mono/en.txt.gz) dataset:
+  - Size: 9.3 GB
+  - Lines: 337,845,355
+- Patterns:
+  - `Sherlock`: 13,645 matching lines
+  - `[sS][A-Za-z]*[kK]`: 1,079,731 matching lines
+
 ### Reading from RAM Cache
 
 Reading data from RAM cache is similar to operating on data that are read into RAM.
 A common use case for this is running grep multiple times on the same file (e.g. for searching different patterns).
 
-![cache.png](../../static/img/project-xsgrep/cache.png)
+> ![cache.png](../../static/img/project-xsgrep/cache.png)
+> 
+> _Figure 1: Comparison results of GNU grep, ripgrep and xs grep for literal (left), case-insensitive literal (mid) and
+> regex (right) searches on data read from RAM cache. Full raw data are available on GitHub._
+
+xs grep outperforms GNU grep by far in all three scenarios (literal: ~ 750 %, case-insensitive: ~ 760 %, regex search:
+~ 1090 %).
+It also outperforms ripgrep when performing literal or regex searches.
+xs grep is only left behind for the case-insensitive search.
+However, this is easily explained:
+xs grep performs a case-insensitive search by transforming all data and the pattern to lower case and then runs a
+case-sensitive search.
+ripgrep in contrast implements a pretty smart case aware algorithm called Teddy.
+Using Teddy, ripgrep can perform case-insensitive searches without lower casing all data which saves a lot of time.
+I have provided more information on Teddy within my thesis.
 
 ### Reading from HDD
 
-Now let's check out the same benchmarks for reading from HDD...
+Reading from HDD is slow and a commonly known bottleneck for text based algorithms.
+However, reading data from HDD is also a process that frequently takes place - especially when operating on large data.
+Therefore, the performance of command line search tools in this scenario matters a lot.
 
-## Implementation
+>![hdd.png](../../static/img/project-xsgrep/hdd.png)
+> 
+> _Figure 2: Comparison results of GNU grep, ripgrep and xs grep for literal searches on data read from HDD. Full raw
+> data are available on GitHub._
 
-> **Remark:**
->
-> The code snippets I am presenting in this section are simplified and compressed to the basic functionalities.
-> The code submitted and available on GitHub is a little more complex and implements tiny features that make it possible
-> to use xs grep as C++ library using a simple API.
-> I describe the API in the corresponding section [Usage](#Usage).
-> Introducing and explaining the full source code is out of the scope of a single blog post.
+Uff. All three compared tools are equally fast (or slow) when searching data that are read from HDD.
+This is, because of the slow read.
+The 25 seconds that GNU grep, ripgrep and xs grep need to search are dominated by reading the data from HDD.
+The only way to increase the performance is to lower the amount of data that are read.
 
-x-search provides two different kinds of APIs (link):
+By compressing the data, we can trade I/O time for computing time.
+While the data become smaller by compression (lower I/O time), the data also need to be decompressed (higher computing
+time) before they can be searched.
 
-1. The Single-Call-API that covers the basic searches:
-    - searching for matching lines
-    - searching for byte offsets
-    - searching for line indices
-    - counting matching lines or matches
-2. The Extended-API that enables developers to extend and optimize components.
+Figure 3 shows, how compressing data can increase the overall performance.
+GNU grep and ripgrep do not support any internal configuration for reading and decompressing compressed data.
+Therefore, we use command line compression and decompression tools for these processes and simply pipe the uncompression
+output to the corresponding search tool (example using ZStandard):
 
-Using the Single-Call-API is pretty straight forward and does not require a blog post for introduction.
-Therefore, we will use the Extended-API to build a grep-like executable.
+1. Compress data: `zstd en/data.txt en/data.zst`
+2. Decompress and search data: `zstdcat en/data.zst | grep Sherlock`
 
-### Prerequisites: What Do We Need?
+xs grep provides an internal configuration and preprocessing tool (`xspp`) for compressing data and searching compressed
+data:
+
+1. Compress data: `xspp en/data.txt -o en/data.xszst -m en/data.xszst.meta -a zstd`
+2. Decompress and search data: `xs Sherlock en/data.xszst -m en/data.xszst.meta`
+
+Figure 3 shows a selection of the benchmarking results.
+
+> ![compression.png](../../static/img/project-xsgrep/compression.png)
+> 
+> _Figure 3: Comparison results of reading and searching compressed data (ZStandard: left, LZ4 HC: mid, LZ4: right)
+> using GNU grep, ripgrep and xs grep. Full raw data are available on GitHub._
 
 First things first:
-The procedure run by x-search is pipeline based.
-The wrapper class that executes the pipeline is called `Executor`.
-The pipelines tasks must be provided to the `Executor`'s constructor.
-The grep-like executable that we are going to implement includes the following tasks:
+Compressing the data increases the overall performance for all considered compression tools by at least 200 %.
+Using ZStandard as compression tool achieves the highest speedups.
+This is because of the good compression ratio:
+The size of the ZStandard compressed data is only 1.5 GB and since the process is heavily I/O-bound, shrinking the file
+size achieves the best speedups.
 
-1. Reading an input file
-2. Searching a pattern within the files content
-3. Writing the results in the desired format to the console
+Using the xs grep specific preprocessing further increases the overall performance when using ZStandard or LZ4 HC.
+This is due to xs greps ability to utilize multiple threads for decompression.
+For ZStandard and LZ4 HC compressed data, the decompression dominated the I/O (because of the small file sizes) and thus
+using multiple threads for decompression increases the performance.
 
-Concerning the reading task, we make use of one of the predefined task implementations provided within x-search:
-The `FileBlockReader`, which reads a file in chunks starting right after and ending with a newline character.
-For the searching and printing, we implement a custom searcher and output task respectively.
-
-#### What options do we implement?
-
-We will only implement GNU greps basic options (its actually me who decided, what's basic...):
-
-1. **Search Options**: By default, GNU grep accepts literal or regex patterns.
-   However, using the `-F` option, we can force grep to treat regex patterns as literal patterns (e.g. regex specific
-   characters are literally searched).
-   Further, the `-i` option can be used to perform case-insensitive searches.
-2. **Output Control**:
-   By default, GNU grep outputs matching lines (lines that contain the given pattern).
-   If the `-o` option is set, GNU grep considers actual (substring) matches instead of matching lines.
-   For both cases, grep provides the following additional options:
-    - Output the corresponding byte offset of a line (or match) (`-b`)
-    - Output the corresponding line indices of a line (or match) (`-n`)
-
-Therefore, we implement a searcher, that supports regex and literal searches and provides results that can be formatted
-into the output specified by `-o`, `-n` and `-b`.
-
-### Defining a Result Type
-
-We start by defining a result type, representing a single match that all searchers have in common:
-
-```c++
-// GrepOutput.h
-
-struct Match {
-int64_t byte_offset{
--1
-};  // the byte offset of a match or matching line if the -o option is set
-int64_t line_number{ -1 };  // the line number if the -n option is set
-std::string content;      // the match (if -o option is set) or matching line
-};
-```
-
-If we have a set of such types in the end, we have everything we need for producing the outputs according to the options
-provided.
-
-### Implementing Custom Searchers
-
-Since x-search is pipeline based and the readers used for reading file contents provide chunks of those contents to the
-subsequent searchers, the searcher returns a `std::vector<Match>` for every chunk processed.
-
-According to x-search's API reference (todo: link), custom component implementations must inherit the abstract base
-class of their intent respectively.
-Since a searcher searches for occurrences of a pattern within the provided data and returns the search result, the
-searcher is considered a *ReturnProcessor*.
-Therefore, our searcher implementation (`GrepSearcher`) must inherit the `xs::task::base::ReturnProcessor<T0, T1>`.
-Since we use one of the default readers provided within the x-search library (`FileBlockReader`) which operates on a
-string-view-like data structure called `xs::DataChunk`, the searcher operates on objects of the `xs::DataChunk` data
-type as well (`T0`).
-The second template argument (`T1`) is the result type that `GrepSearcher` produces: `std::vector<Match>`.
-
-The header file for `GrepSearcher` is the following:
-
-```c++
-// GrepSearcher.h
-
-#include
-<xsearch/xsearch.h>
-#include
-"./GrepOutput.h"  // for Match
-
-class GrepSearcher :
-public xs::task::base::ReturnProcessor<xs::DataChunk, std::vector<Match>> {
-public:
-// GrepSearcher is initialized with all information needed to create a result that can easily be formatted as intended
-// later:
-// - pattern:          the pattern that is searched
-// - byte_offset  (-b): search byte offsets
-// - line_number  (-n): search line numbers
-// - match_only   (-o): search matches instead of matching lines
-// - fixed_string (-F): search literal pattern
-// - ignore_case  (-i): perform case-insensitive searches
-GrepSearcher(std::string pattern, bool byte_offset, bool line_number, bool match_only, bool fixed_string, bool ignore_case);
-
-// The process method is abstract within ReturnProcessor. Therefore, we must implement it within this searcher class.
-std::vector<Match> process(const xs::DataChunk* data) const override;
-
-private:
-std::string _pattern;  // the pattern that is provided
-bool _line_number;     // whether to search line numbers or not
-bool _byte_offset;     // whether to search byte offsets or not
-bool _only_matching;   // whether to search matches or matching lines
-bool _regex;           // whether to perform regex search or not
-bool _ignore_case;     // whether to perform case-insensitive search or not
-std::unique_ptr<re2::RE2> _re_pattern;  // the pattern as regex pattern using RE2
-};
-```
-
-Since the source code is available, I will not harm you with the implementation of the methods of the `GrepSearcher`.
-
-The important things are:
-
-- `GrepSearcher` inherits `ReturnProcessor<xs::DataChunk, std::vector<Match>>`
-- `GrepSearcher` implements `GrepSearcher::process(const xs::DataChunk data)`
-- `GrepSearcher::process(data)` is called from the `Executor` and performs the search of `pattern` within `data` while
-  considering the options provided.
-
-### Implementing a Custom Result Type
-
-The result type instance (`GrepOutput`) is responsible for collecting the partial results (search results of all
-chunks).
-The result type is special for implementing a grep-like executable:
-Instead of literally collecting results and providing them after the search has completed, `GrepOutput` print all
-partial results it receives immediately to the console.
-
-According to x-search's API reference (link), custom result implementations must inherit the abstract base result type
-`xs::result::base::Result<T>`.
-The template argument (`T`) is our partial result type `std::vector<Match>`.
-
-The header file of `GrepOutput` is the following:
-
-```c++
-// GrepOutput.h
-
-class GrepOutput :
-public xs::result::base::Result<std::vector<Match>> {
-public:
-// GrepOutput is initialized with booleans indicating whether byte offset or line number should be printed
-GrepOutput(bool byte_offset, bool line_number);
-
-// implementation of the abstract add(T, uint_64_t) method:
-// - partial_result is the result of searching a chunk.
-// - id is used for printing partial results in their original order. More details are provided below this code
-//   fragment.
-void add(std::vector<Match> partial_result, uint64_t id) override;
-
-size_t size() const override;
-
-private:
-// implementation of the abstract add(T) method:
-// This method is called from add(T, uint64_t) and outputs the partial result according to the options (byte_offset,
-// line_number)
-void add(std::vector<Match> partial_result) override;
-
-bool byte_offsets{ false };  // whether to print byte offsets or not
-bool line_numbers{ false };  // whether to print line numbers or not
-std::unordered_map<uint64_t, std::vector<Match>> _buffer{};  // A buffer for partial results that must not yet be
-// printed. More details below.
-uint64_t _current_index{ 0 };  // the index of the next chunks results
-};
-```
-
-Once again, the implementations of the methods are available on GitHub and I will just state the most important things
-here:
-
-- `Executor` passes the partial results to `GrepOutput` by calling `GrepOutput::add(partial_result, id)`
-- `GrepOutput::add(partial_result, id)` evaluates `id == _current_index`:
-    - If `id == _current_index` evaluates to false, `partial_result` is stored within `_buffer` for later usage
-    - If they match, the `partial_result` is passed to `GrepOutput::add(partial_results)` which prints them.
-      Further, `_current_index` is increased and if the increased `_current_index` can be found within `_buffer`, the
-      corresponding partial result is passed to `GrepOutput::add(partial_results)` as well.
-      This repeats until `_current_index` cannot be found within `_buffer`.
-
-You may have noticed the `_buffer` and `_current_index` members of `GrepOutput`.
-They are used to output the partial results in the order they occur within the file that was searched.
-Since `Executor` (which will run the components later) utilizes multiple threads to concurrently search read chunks, it
-may be that the order in which partial results are passed to `GrepOutput` is not the original one.
-In this case, the partial results are stored in `_buffer` for later usage as described above.
-
-### Sticking the Peaces Together
-
-Last, we need to stick everything together to build a grep-like command line tool.
-
-```c++
-#include "./GrepOutput.h"
-#include "./GrepSearcher.h"
-
-int main(int argc, char** argv) {
-    // everything we need for searching and outputting:
-    struct Options {
-        bool line_number = false;
-        bool byte_offset = false;
-        bool ignore_case = false;
-        bool fixed_string = false;
-        bool match_only = false;
-        std::string pattern;
-        std::string file_path;
-    } options;
-    
-    int num_worker_threads = 4;
-    
-    // We now need to parse argv and map the provided command line arguments to the corresponding member of options.
-    // I used boost_program_options for parsing but this requires some lines that I would like to spare you - Its pretty
-    // self explanatory and you can find the full source on Github anyways, so I focus on the interesting part here.
-    
-    // Construct reader, searcher and result:
-    auto reader = std::make_unique<xs::task::reader::FileBlockReader>(options.file_path);
-    auto searcher = std::make_unique<GrepSearcher>(options.pattern, options.byte_offset, options.line_number,
-                                                   options.match_only, options.fixed_string, options.ignore_case);
-    auto initial_result = std::make_unique<GrepOutput>(options.byte_offset, options.line_number);
-    
-    // Construct the Executor:
-    auto executor = xs::Executor<
-            xs::DataChunk,              // the type of the data that are read and searched
-            GrepOutput,                 // the "result" type
-            std::vector<Grep::Match>>(  // the partial result type
-        num_worker_threads, std::move(reader), {}, std::move(searcher), std::move(initial_result)
-    );
-    
-    // wait for the search to finish
-    executor.join();
-    return 0;
-}
-```
-
-As you can see, once the custom tasks are implemented, it's fairly easy to wrap them into the `Executor`.
+However, it is important to note, that the observations cannot be generalized.
+You might have a little faster or slower HDD or SSD and the critical point on which the process switches from being
+I/O-bound to CPU-bound is shifted.
+Thus, it is important to play around with the compression algorithms on your system to achieve best results.
 
 ## Conclusion
+
+xs grep is a powerful search tool that enables developers to easily include grep-like searches into their projects.
+Further, xs grep provides an executable that outperforms traditional grep-like programs.
+The presented data show that for both literal and regex searches, xs grep is able to deliver results more than 200 %
+faster than comparable tools.
+
+Furthermore, xs grep has the unique ability to utilize internal configurations for compressing and decompressing data.
+This means that even on machines with slow secondary memory, xs grep is able to deliver fast search results without
+sacrificing performance too much.
+
+Whether you're a developer, system administrator, or just looking for a more efficient way to search data, xs grep is an
+excellent choice.
+With its customizable search parameters, flexible output options, and lightning-fast performance, xs grep is sure to
+help streamline your workflow and save you time and effort.
+So why not give it a try and see how it can help you achieve your goals?
