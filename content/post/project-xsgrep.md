@@ -12,14 +12,16 @@ draft: true
 xs grep is a GNU grep-like executable.
 It is built using x-search, a C++ library for fast external string search that was written in the scope of my
 bachelor-thesis.
-This project aims to introduce xs grep in a more practical way than my thesis did and to provide implementation insights
-of xs grep.
+This project briefly describes, how x-search was used to implement xs grep.
+Further, this projects aim is to introduce xs grep in a more practical way than my thesis did and to provide
+implementation insights of xs grep.
 The source code of xs grep and x-search is available [here](https://github.com/lfreist/xsgrep).
 
 ## Content
 
 1. [Introduction](#introduction)
 2. [Using xs grep](#Usage)
+3. [Implementation](#implementation)
 3. [Benchmarks](#benchmarks)
 5. [Conclusion](#conclusion)
 
@@ -186,8 +188,62 @@ Since xs grep is built using CMake, I'll show you how to include it into your CM
 A full API description is available on [GitHub](https://github.com/lfreist/xsgrep/wiki/Library#api) and since API docs
 are considered boring, I won't list them here.
 
-## Benchmarks
+## Implementation
+xs grep utilizes x-search, the C++ library for fast external string search developed in the scope of my thesis.
+x-search provides two different types of APIs that are described [here](https://github.com/lfreist/x-search/wiki).
 
+Since xs grep implements custom tasks to increase performance, it uses the
+[advanced API](https://github.com/lfreist/x-search/wiki/Advanced-Usage) of x-search.
+
+Since the advanced API provides base classes that must be inherited by custom task implementations, most of the
+implementations of the tasks used within xs grep are just implementing inherited virtual methods.
+
+I will not bother you with too much details on these implementations since the source code is documented and available
+on GitHub.
+Instead, I will introduce the custom tasks in a more descriptive way:
+
+### The Reader
+xs grep utilizes the default implementations provided by x-search.
+Therefore, no custom implementations are necessary.
+
+### The Processors
+Since xs grep supports searching compressed inputs, tasks that decompress the read data are necessary.
+As with the readers, xs grep utilizes the default implementations for decompressing ZStandard and LZ4 compressed data
+provided by x-search.
+
+### The Searcher
+To support the different grep-like search settings (case-sensitivity, regex, count matches, ...), I have implemented
+a custom searcher (`GrepSearcher`) for xs grep.
+It inherits the `xs::task::base::ReturnProcessor<T>` class and implements the virtual `R process(const T* data)` method.
+`GrepSearcher` is constructed with parameters defining the settings for the searcher.
+A call of `GrepSearcher::process(const T* data)` searches the data considering the provided settings.
+
+### The Result Type
+The default result types provided by x-search aim to return collected results.
+However, a grep-like executable should write results to the console instead of collecting them.
+Therefore, I have implemented a custom result type that writes results to a provided stream instead of collecting them.
+
+xs grep can utilize multiple threads for concurrently searching read chunks.
+However, the printed results should be in the same order the matches occur within the original data.
+Therefore, the result type must implement a solution for the case that a chunk B that is read after chunk A is searched
+faster and thus provided to the result before A.
+
+The solution to this is the following:
+- The searcher does not only return the search results but also the index of the chunk that was searched.
+- The result type to which the search results are provided checks for the index of the chunk of the results:
+  - If the index is in order, the results are written to the stream.
+  - If the index it out of order, the partial results are buffered in a map using the index as key.
+    Using a map, it is fast to check if the next index is buffered or not yet provided.
+
+# TODO:
+- there is this simple API
+- we use the extended API 
+- API references
+- implement a searcher
+- implement a result -> printer
+- writing the main function
+
+## Benchmarks
 Within my thesis, I have not only presented comparisons of GNU grep, ripgrep and xs grep, but also discussed the
 reasons for the observations with respect to the used search algorithms etc.
 If you are interested in such details, I recommend you to check out the *Evaluation* section within my thesis.
