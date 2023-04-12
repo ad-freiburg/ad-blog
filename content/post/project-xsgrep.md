@@ -3,9 +3,9 @@ title: "xs grep: A GNU grep-like executable built with x-search"
 date: 2023-04-03T11:09:03+02:00
 author: "Leon Freist"
 authorAvatar: "img/ada.jpg"
-tags: [text search, command line tool, grep]
+tags: [text search, grep, command line tool, C++]
 categories: [project]
-image: "img/writing.jpg"
+image: "img/project-xsgrep/cover.png"
 draft: true
 ---
 
@@ -15,7 +15,7 @@ bachelor-thesis.
 This project briefly describes how x-search was used to implement xs grep.
 Further, this project aims to introduce xs grep in a more practical way than my thesis did and to provide
 implementation insights into xs grep.
-The source code of xs grep and x-search is available [here](https://github.com/lfreist/xsgrep).
+<!--more-->
 
 ## Content
 
@@ -54,6 +54,8 @@ Performant, customizable, versatile.
 Whether you are a developer, a system administrator or just looking for a search tool, xs grep is worth checking out.
 In this blog post, we'll look at xs grep: Its command line tool usage, library and how you can
 extend and customize it to your specific needs.
+
+The source code is available [here](https://github.com/lfreist/xsgrep).
 
 ## Usage
 
@@ -257,7 +259,7 @@ If you are interested in such details, please check out the *Evaluation* section
 Reading data from RAM cache is similar to operating on data read into RAM.
 An everyday use case for this is running grep multiple times on the same file (e.g. for searching different patterns).
 
-> ![cache.png](../../static/img/project-xsgrep/cache.png)
+> ![cache.png](/../../img/project-xsgrep/cache.png)
 >
 > _Figure 1: Comparison results of GNU grep, ripgrep and xs grep for literal (left), case-insensitive literal (mid) and
 > regex (right) searches on data read from RAM cache. Full raw data are available on GitHub._
@@ -279,7 +281,7 @@ Reading from HDD is slow and a commonly known bottleneck for text-based algorith
 However, reading data from HDD is also a process that frequently takes place - especially when operating on large data.
 Therefore, the performance of command line search tools in this scenario matters a lot.
 
->![hdd.png](../../static/img/project-xsgrep/hdd.png)
+>![hdd.png](/../../img/project-xsgrep/hdd.png)
 >
 > _Figure 2: Comparison results of GNU grep, ripgrep and xs grep for literal searches on data read from HDD. Full raw
 > data are available on GitHub._
@@ -309,7 +311,7 @@ data:
 
 Figure 3 shows a selection of the benchmarking results.
 
-> ![compression.png](../../static/img/project-xsgrep/compression.png)
+> ![compression.png](/../../img/project-xsgrep/compression.png)
 >
 > _Figure 3: Comparison results of reading and searching compressed data (ZStandard: left, LZ4 HC: mid, LZ4: right)
 > using GNU grep, ripgrep and xs grep. Full raw data are available on GitHub._
