@@ -2,7 +2,7 @@
 title: "xs grep: A GNU grep-like executable built with x-search"
 date: 2023-04-03T11:09:03+02:00
 author: "Leon Freist"
-authorAvatar: "img/ada.jpg"
+authorAvatar: "img/project-xsgrep/author.png"
 tags: [text search, grep, command line tool, C++]
 categories: [project]
 image: "img/project-xsgrep/cover.png"
