@@ -48,7 +48,7 @@ However, what if you could have a GNU grep-like program that is not only faster 
 your time?
 
 Well, that's where xs grep comes into play.
-Inspired by GNU greps functionality, xs grep takes external searches to the next level:
+Inspired by GNU grep's functionality, xs grep takes external searches to the next level:
 Performant, customizable, versatile.
 
 Whether you are a developer, a system administrator or just looking for a search tool, xs grep is worth checking out.
@@ -65,7 +65,7 @@ project.
 
 ### The Executable
 
-xs greps executable (`xs`) provides the basic functionalities of GNU grep (well, it's actually me who decided, what's
+xs grep's executable (`xs`) provides the basic functionalities of GNU grep (well, it's actually me who decided, what's
 basic...).
 
 So let's take a look at what's basic for me:
@@ -100,7 +100,7 @@ Additionally, xs grep supports some config flags:
 | `xs Sherlock sample.txt`      | print all lines within `sample.txt` that contain `Sherlock` | Okay, Sherlock, time for a break, huh?   |
 | `xs Sherlock sample.txt -b`   | print the byte offset of the printed line and the line      | 6:Okay, Sherlock, time for a break, huh? |
 | `xs Sherlock sample.txt -n`   | print the line number of the printed line and the line      | 2:Okay, Sherlock, time for a break, huh? |
-| `xs Sherlock sample.txt -o`   | print the line number of the printed line and the line      | Sherlock                                 |
+| `xs Sherlock sample.txt -o`   | only print the nonempty parts of the matching line          | Sherlock                                 |
 | `xs Sherlock sample.txt -j 1` | only use a single worker thread                             | Okay, Sherlock, time for a break, huh?   |
 
 So far, so good...
@@ -108,7 +108,7 @@ You can see, xs grep can just instantly replace GNU grep for searches on single 
 
 However, xs grep can do even more!
 You may have wondered what the `--metafile` flag is for.
-xs greps specific preprocessing includes compression using the LZ4 and ZStandard compression algorithms.
+xs grep's specific preprocessing includes compression using the LZ4 and ZStandard compression algorithms.
 This preprocessing creates a metafile holding some information in the processed file.
 This is valuable when working on a computer with slow secondary memory, such as HDD.
 In this case, reading compressed files and then decompressing them can be much faster before searching for the pattern.
@@ -324,7 +324,7 @@ The size of the ZStandard compressed data is only 1.5 GB, and since the process 
 size achieves the best speedups.
 
 Using the xs grep-specific preprocessing further increases the overall performance when using ZStandard or LZ4 HC.
-This is due to xs greps ability to utilize multiple threads for decompression.
+This is due to xs grep's ability to utilize multiple threads for decompression.
 For ZStandard and LZ4 HC compressed data, the decompression dominated the I/O (because of the small file sizes). Thus,
 using multiple threads for decompression increases the performance.
 
