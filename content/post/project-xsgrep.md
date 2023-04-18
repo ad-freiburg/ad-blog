@@ -189,53 +189,6 @@ Since xs grep is built using CMake, I'll show you how to include it in your CMak
 A full API description is available on [GitHub](https://github.com/lfreist/xsgrep/wiki/Library#api) and since API docs
 are considered boring, I won't list them here.
 
-## Implementation
-xs grep utilizes x-search, the C++ library for fast external string search developed in the scope of my thesis.
-x-search provides two different types of APIs that are described [here](https://github.com/lfreist/x-search/wiki).
-
-Since xs grep implements custom tasks to increase performance, it uses the
-[advanced API](https://github.com/lfreist/x-search/wiki/Advanced-Usage) of x-search.
-
-Since the advanced API provides base classes that must be inherited by custom task implementations, most of the
-implementations of the tasks used within xs grep are just implementing inherited virtual methods.
-
-I will not bother you with too many details on these implementations since the source code is documented and available
-on GitHub.
-Instead, I will introduce the custom tasks in a more descriptive way:
-
-### The Reader
-xs grep utilizes the default implementations provided by x-search.
-Therefore, no custom implementations are necessary.
-
-### The Processors
-Since xs grep supports searching compressed inputs, tasks that decompress the read data are necessary.
-As with the readers, xs grep utilizes the default implementations for decompressing ZStandard and LZ4 compressed data
-provided by x-search.
-
-### The Searcher
-To support the different grep-like search settings (case-sensitivity, regex, count matches, ...), I have implemented
-a custom searcher (`GrepSearcher`) for xs grep.
-It inherits the `xs::task::base::ReturnProcessor<T>` class and implements the virtual `R process(const T* data)` method.
-`GrepSearcher` is constructed with parameters defining the settings for the searcher.
-A call of `GrepSearcher::process(const T* data)` searches the data considering the provided settings.
-
-### The Result Type
-The default result types provided by x-search aim to return collected results.
-However, a grep-like executable should write results to the console instead of collecting them.
-Therefore, I have implemented a custom result type that writes results to a provided stream instead of collecting them.
-
-xs grep can utilize multiple threads for concurrently searching read chunks.
-However, the printed results should be in the same order the matches occur within the original data.
-Therefore, the result type must implement a solution for the case that a chunk B that is read after chunk A is searched
-faster and thus provided to the result before A.
-
-The solution to this is the following:
-- The searcher does not only return the search results but also the index of the chunk that was searched.
-- The result type to which the search results are provided checks for the index of the chunk of the results:
-    - The results are written to the stream if the index is in order.
-    - If the index is out of order, the partial results are buffered in a map using the index as the key.
-      Using a map allows for fast checking of the buffer for the following result.
-
 ## Benchmarks
 Within my thesis, I have not only presented comparisons of GNU grep, ripgrep and xs grep, but also discussed the
 reasons for the observations concerning the used search algorithms etc.
@@ -349,3 +302,66 @@ excellent choice.
 With its customizable search parameters, flexible output options, and lightning-fast performance, xs grep is sure to
 help streamline your workflow and save you time and effort.
 So why not give it a try and see how it can help you achieve your goals?
+
+
+## Additional Details: Implementation
+For those of you interested in more details on the underlying implementation of xsgrep using x-search...
+Here we are!
+Note that the following information are not relevant for neither, using the executable nor using the library.
+
+xs grep utilizes x-search, the C++ library for fast external string search developed in the scope of my thesis.
+x-search provides two different types of APIs that are described [here](https://github.com/lfreist/x-search/wiki).
+
+Since xs grep implements custom tasks to increase performance, it uses the
+[advanced API](https://github.com/lfreist/x-search/wiki/Advanced-Usage) of x-search.
+
+Since the advanced API provides base classes that must be inherited by custom task implementations, most of the
+implementations of the tasks used within xs grep are just implementing inherited virtual methods.
+
+I will not bother you with too many details on these implementations since the source code is documented and available
+on GitHub.
+Instead, I will introduce the custom tasks in a more descriptive way:
+
+### The Reader
+xs grep utilizes the default implementations provided by x-search.
+Therefore, no custom implementations are necessary.
+
+### The Processors
+Since xs grep supports searching compressed inputs, tasks that decompress the read data are necessary.
+As with the readers, xs grep utilizes the default implementations for decompressing ZStandard and LZ4 compressed data
+provided by x-search.
+
+### The Searcher
+To support the different grep-like search settings (case-sensitivity, regex, count matches, ...), I have implemented
+a custom searcher (`GrepSearcher`) for xs grep.
+It inherits the `xs::task::base::ReturnProcessor<T>` class and implements the virtual `R process(const T* data)` method.
+`GrepSearcher` is constructed with parameters defining the settings for the searcher.
+A call of `GrepSearcher::process(const T* data)` searches the data considering the provided settings.
+
+### The Result Type
+The default result types provided by x-search aim to return collected results.
+However, a grep-like executable should write results to the console instead of collecting them.
+Therefore, I have implemented a custom result type that writes results to a provided stream instead of collecting them.
+
+xs grep can utilize multiple threads for concurrently searching read chunks.
+However, the printed results should be in the same order the matches occur within the original data.
+Therefore, the result type must implement a solution for the case that a chunk B that is read after chunk A is searched
+faster and thus provided to the result before A.
+
+The solution to this is the following:
+- The searcher does not only return the search results but also the index of the chunk that was searched.
+- The result type to which the search results are provided checks for the index of the chunk of the results:
+    - The results are written to the stream if the index is in order.
+    - If the index is out of order, the partial results are buffered in a map using the index as the key.
+      Using a map allows for fast checking of the buffer for the following result.
+
+### Putting the pieces together
+Now that we have all the tasks needed for constructing the `xs::Executor`, we can put the things together.
+For simplicity's sake, xs grep provides a class called `Grep`, that constructs the `xs::Executor` internally.
+However, `Grep`s implementation is pretty simple:
+It provides an interface for setting search and output configurations and when one of the search methods is called,
+a private method is called that constructs the `xs::Executor`, joins it and returns the resullt.
+
+In order to build a command line tool, I have written a file containing the `main()` function.
+Within this main function, the command line arguments stated earlier are parsed using `boost::program_options` and the
+`Grep` class is used for searching.
