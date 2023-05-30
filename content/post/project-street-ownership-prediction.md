@@ -6,7 +6,7 @@ authorAvatar: "img/ada.jpg"
 tags: ["OSM", "OpenStreetMap", "Streets", "Machine Learning"]
 categories: ["project"]
 image: "img/project_street_ownership_prediction/private_streets_heidelberg.png"
-draft: true
+draft: false
 ---
 
 In the Field of Network Infrastructure Planning, having to deploy something on

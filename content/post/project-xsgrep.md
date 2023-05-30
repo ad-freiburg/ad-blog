@@ -6,7 +6,7 @@ authorAvatar: "img/project-xsgrep/author.png"
 tags: [text search, grep, command line tool, C++]
 categories: [project]
 image: "img/project-xsgrep/cover.png"
-draft: true
+draft: false
 ---
 
 xs grep is a GNU grep-like executable.
