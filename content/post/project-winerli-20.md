@@ -54,7 +54,7 @@ The goal is to be able to find out which entity a certain text most likely belon
 
 ### Technical aspects <a id="aliasmap_tech"></a>
 
-Since Wikipedia is written by volunteers, irregularities in the way data is given can occur. Also, many templates, including infoboxes, can have a plethora of aliases which makes it hard to correctly gather all information that is presented in the Wikipedia pages. In the following some differences in the way the data is handled by the previous implementation and by my program will be described. None of the lists in the following table are exhaustive by any means.
+Since Wikipedia is written by volunteers, irregularities in the way data is given can occur. Also, many templates, including infoboxes, can have a plethora of aliases which makes it hard to correctly gather all information that is presented in the Wikipedia pages. In the following some differences in the way the data is handled by the previous implementation and by my program will be described. None of the lists in the following detail descriptions are exhaustive by any means.
 
 **XML parser:**
 The Wikipedia pages are given in a huge XML file which also contains meta data for each page. This file needs to be parsed in order to be able to process the pages.
@@ -301,7 +301,7 @@ For the evaluation of the new Wikipedia dataset (*Wikipedia w/ links*) a current
 
 **Entity detection results:**
 
-(Note: The scoring factors were chosen arbitrarily in an attempt to showcase different possibilities and were not optimized in any way. Approach 5 was evaluated with 2 different as its influence depends on the overlap coefficient in addition to the scoring factor, so it will usually be smaller than the static scoring factors used by the other approaches. If multiple approaches resulted in exactly the same values, the lines were combined into one. This happened here because of the small size of the Wikipedia dataset without links and because approaches 2 and 3 rely on link data. It also happened with the GMB-Walia dataset because it contains none of the Wikipedia-specific information that the additional approaches rely on.)
+(Note: The scoring factors were chosen arbitrarily in an attempt to showcase different possibilities and were not optimized in any way. Approach 5 was evaluated with 2 different values as its influence depends on the overlap coefficient in addition to the scoring factor, so it will usually be smaller than the static scoring factors used by the other approaches. If multiple approaches resulted in exactly the same values, the lines were combined into one. This happened here because of the small size of the Wikipedia dataset without links and because approaches 2 and 3 rely on link data. This also happened with the GMB-Walia dataset because it contains none of the Wikipedia-specific information that the additional approaches rely on.)
 
 | Dataset             | System      | Threshold | Scoring factors                 | Precision | Recall | F1     |
 |---------------------|-------------|-----------|---------------------------------|-----------|--------|--------|
