@@ -1,6 +1,6 @@
 ---
 title: "Semantic SPARQL Templates for Question Answering over Wikidata"
-date: 2023-03-13T12:04:30+01:00
+date: 2023-03-31T12:04:30+01:00
 author: "Christina Davril"
 authorAvatar: "img/project-wikidata-templates/christina_davril.png"
 tags: ["wikidata", "sparql", "templates", "nlp", "natural language processing", "question answering", "knowledge base", "knowledge graph", "kgqa", "kbqa"]
@@ -260,7 +260,7 @@ Another example would be that in this project, <span class="mono">VALUES</span> 
 The QALD datasets were quite <b>inconsistent</b> in all the regards listed above except, possibly, the use of the "subclass of" property. For this property, it is hard to define a reasonable usage. <br>
 Notably, almost all examples access properties using <span class="mono">wdt</span>, unless a qualifier needs to be accessed. Very few examples use <span class="mono">p</span> (and <span class="mono">ps</span>) without having to.<br><br>
 Besides these inconsistencies, some gold SPARQL queries in QALD-9-plus are clearly <b>wrong</b> in the sense that they do not provide the information requested in the NL question.<div class="gap"></div> 
-For example, QALD-9-plus, ID 34, <br><span class="inline-example">Which professional surfers were born in Australia?</span><br> has an integer as (gold) answer, corresponding to the number of Australian-born surfers rather than the set of their URIs. QALD-9-plus, ID 244, has the same problem. <br><div class="gap"></div>
+For example, QALD-9-plus, ID 34, <br><span class="inline-example">Which professional surfers were born in Australia?</span><br> has an integer as (gold) answer, corresponding to the number of Australian-born surfers rather than the set of their URIs. QALD-9-plus, ID 244, has the same problem.<br>The gold query for QALD-9-plus, ID 114, is faulty in the sense that it is taken for granted that Mark Zuckerberg is "the founder of Facebook". In a real system, this information would have to be queried.<br><div class="gap"></div>
 Other, smaller problems with these datasets are the occurrences of unused variables, inconsistent capitalization of SPARQL operators, and syntax errors. For example, QALD-9-plus, ID 332, lacks a <span class="mono">WHERE</span> in the SPARQL gold query. <div class="gap"></div>
 In a few cases, the English and German versions of the NL questions were semantically different. <br> For example, QALD-10, ID 2, has the English question <br><span class="inline-example">among the characters in the witcher, who has two unmarried partners, Yennefer of Vengerberg and Triss Merigold?</span>.<br> In German, this is <br><span class="inline-example">Wer von den Charakteren aus der Geralt-Saga hat zwei unverheiratete Partner, Yennefer of Vengerberg oder Triss Merigold?</span><br> which translates to <br><span class="inline-example">Who among the characters in The Witcher has two unmarried partners &ndash; Yennefer of Vengerberg or Triss Merigold?</span>.<br> <div class="gap"></div>
 Furthermore, it is striking that QALD-9-plus, the training set of the 10<sup>th</sup> QALD challenge, does not contain any <span class="mono">ASK</span> queries or queries including subqueries, while the test set, QALD-10, does. <div class="gap"></div>
@@ -391,7 +391,7 @@ Once again, note that the templates are abstractions, and that a lot of details 
 ## A closer analysis of templates containing subqueries
 
 Having listed the most important syntactic building blocks, their general semantic purposes, and how they can be combined, the templates with the highest syntactic complexity will be looked at more closely: the ones containing subqueries (Variants 1-6 in the <a href="/../../img/project-wikidata-templates/other_files/semantic_sparql_templates.pdf">PDF</a>).<br>
-For that, their semantic purposes are described in more detail. Potential other syntactic means to realize them are discussed briefly. In addition, for each variant, an example from the data is provided to illustrate it.
+For that, their semantic purposes are described in more detail. In addition, for each variant, an example from the data is provided to illustrate it.
 
 **Variant 1** seems to be the most common variant. It retrieves aggregated values across groups (e.g., grouping by the items) in the inner query and outputs tuples matching these values in the outer query. <br>
 Since tuples' values should match aggregated values, <span class="mono">MAX</span> and <span class="mono">MIN</span> are the only generally meaningful aggregation functions to be used here.<br><br>
@@ -407,7 +407,6 @@ Whether a subquery is needed for **superlative queries**, depends on how the inf
 
 **Variant 2** combines an aggregation at group level with an aggregation across all tuples. <br>
 An example for this is QALD-10, ID 23, <span class="inline-example">How many spouses do head of states have on average?</span>. In the query, the <span class="mono">COUNT</span>s for distinct spouse statements for each head of state are extracted. Then, the <span class="mono">AVG</span> (average) value of these counts is calculated.<br>
-There seems to be no other syntactic realization for this concrete semantic purpose.
 
 <figure>
 <img id="variant_2" alt="Example query for Variant 2" src="/../../img/project-wikidata-templates/heads_of_state.svg">
@@ -415,7 +414,6 @@ There seems to be no other syntactic realization for this concrete semantic purp
 </figure>
 
 **Variant 3** contains the same aggregations as Variant 2, but uses the twice-aggregated values to filter the tuples. QALD-10, ID 310, <span class="inline-example">Which NBA teams have won the most seasons?</span>, is an example for this variant. Since the gold query for this example contained redundant structures, unnecessary code repetition, and a wrong answer, an improved version of it was created.<br>
-Here, too, there seems to be no alternative syntactic realization.
 
 <figure>
 <img id="variant_3" alt="Example query for Variant 3" src="/../../img/project-wikidata-templates/nba_winners.svg">
@@ -434,7 +432,7 @@ For **comparison queries**, indicating the relation between values, one can also
 
 **Variant 5** retrieves an aggregated attribute value across a set of tuples (e.g., a set of property statement values for a named entity) to use as a reference value. This reference value is then used in the outer query to filter by attribute values that are aggregated across groups.<br>
 An example for this is <i>Wikipedia Lists</i>, ID 4, <span class="inline-example">Pandemics that were worse than Covid?</span>. 
-From a semantic point of view, this is, again, a **comparison query**. The difference from Variant 4 is that the relation between the values should not just be displayed but is used for filtering. For this variant, there seems to be no alternative syntactic realization.
+From a semantic point of view, this is, again, a **comparison query**. The difference from Variant 4 is that the relation between the values should not just be displayed but is used for filtering.
 
 <figure>
 <img id="variant_5" alt="Example query for Variant 5" src="/../../img/project-wikidata-templates/pandemics.svg">
@@ -444,7 +442,6 @@ From a semantic point of view, this is, again, a **comparison query**. The diffe
 **Variant 6** filters out everything but the top k (k &#8712; &#8469;) tuples according to an ordering by an attribute, and then aggregates over the attribute's values.<br>
 An example for this is given by QALD-10, ID 203, <span class="inline-example">What is the combined total revenue of three largest Big Tech companies ordered by number of employees?</span>.<br>
 Since the gold query of this example in the dataset was faulty, a corrected version of it was created. This version contained Variant 1 twice and Variant 6 once, and is shown in the image below.<br>
-This particular method of filtering, using <span class="mono">ORDER BY</span>, does not seem to have any alternative syntactic realization.
 
 <figure>
 <img id="variant_6" alt="Example query for Variant 6, containing nested subqueries" src="/../../img/project-wikidata-templates/nested_subqueries.svg">
@@ -457,7 +454,8 @@ The inner query of Variant 6 is highlighted by a light blue box. In this subquer
 This project explored the topic of semantic SPARQL templates and identified a set of concrete templates that can be used in practice to improve the performance of KGQA systems &ndash; particularly on examples with high relative complexity. <br>
 The project also highlighted that there is still much room for improving the KGQA benchmarks, both with regard to the variety of their examples, and with regard to the correctness of their gold queries and answers. <br>
 The idea of using Wikipedia lists as a basis and ground truth for creating KGQA benchmarks was introduced and its merits highlighted. With the creation of the <i>Wikipedia Lists</i> dataset published here, it was also applied in practice. <br>
-Future work should tackle a clearer, formal description of the templates that have been identified so far. This includes a clearer description of how the templates can be nested and combined with each other than what was presented here. This formal concretization may then serve as the basis of a semantic-templates-based KGQA system.
+Future work should tackle a clearer, formal description of the templates that have been identified so far. This includes a clearer description of how the templates can be nested and combined with each other than what was presented here. <br>
+All the while, the templates' usefulness needs to be assessed in the light of existing and new data, and adjustments need to be made accordingly. The resulting formal concretization may then serve as the basis of a semantic-templates-based KGQA system. <br>
 Research in this area could also benefit greatly from improving and extending the currently available empirical basis by creating better benchmarks or building onto existing ones. <br> 
 Ideally, the resulting benchmarks would then capture the full spectrum of different syntactic structures needed to adequately answer users' questions, including various types of queries containing subqueries. <br>
 Moreover, these benchmarks would provide the best possible gold query and answer set (with the highest possible F-measures) for each question, as characterized by other sources of information (e.g., Wikipedia lists).
