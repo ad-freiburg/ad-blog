@@ -12,7 +12,6 @@ draft: false
 To make business decisions based on data, the accessibility of information is essential.
 In the current supply chain situation and the resulting shortage of materials, the structure 
 of products has gained importance. Bills of materials (BoMs) govern this structure. At the same time, the complexity of BoMs is constantly increasing due to global production and procurement. 
-
 With classical relational data models and databases, BoM analysis is often time consuming and requires
 expert knowledge.
 To be able to evaluate these structures efficiently and reliably, the Bill of Material Exploration Service was developed based on graph technology.
@@ -41,7 +40,7 @@ components that have a BoM and so on.
 
 For example, let's consider an (oversimplified) BoM for a sensor. The list representing the BoM might include components such as a sensor module, a housing, and electronic circuitry. The sensor module, being a crucial part of the sensor, may have its own BoM, comprising items like lenses, photodetectors, and signal processors. Furthermore, the lenses used in the sensor module might have their own BoMs, including elements such as glass, coatings, and mounting fixtures.
 
-<img src="/../../img/project_bill_of_material_exploration_service/BoM-simple.png" width=80%>
+<img src="/../../img/project_bill_of_material_exploration_service/BOM-simple.png" width=80%>
 
 BoMs provide an important interface between the engineers who develop and design
 the hardware and the production facilities. The engineers need to specify which components
@@ -78,7 +77,7 @@ example in machinery or staff. And they can be located in different countries. T
 necessitates that each plant has its own BoM version of every material produced
 there.
 For example, consider a sensor that has to be assembled by gluing the hull
-together. There are two plants; one plant has advanced machinery which can glue parts
+together. There are two plants; one plant has advanced machinery that can glue parts
 together and in the other plant humans do the same work. Both plants can produce the
 sensor, but the plant with advanced machinery would require less glue than
 the plant operated by humans. So the sensor has effectively two BoMs, one for each plant.
@@ -97,7 +96,7 @@ In the first case, the parallel production is identical and thus the parthood is
 Each BoM entry has a date range associated with it, during which it is considered valid.
 A BoM may change during its lifetime and these changes are recorded using these validity
 time ranges. However, this implies that the parthood connections between materials are
-not static. A material that has been used a year ago might not be used in the current
+not static. A material that was used a year ago might not be used in the current
 version of the BoM.
 
 # 2. Project
@@ -105,7 +104,7 @@ The goal of this project is to answer the question "How often is material X part
 It should be an improvement over the software used typically in industrial manufacturing.
 
 The legacy system has several drawbacks to answer the question above. It can only display the parent
-materials directly above the given materials. Though the system is capable to display all child
+materials directly above the given materials. Though the system is capable of displaying all child
 materials of a given material, it does not take into account parallel production, alternatives, or
 validities. Furthermore, there does not exist an API interface to query parent or child materials of
 some given materials. The functionalities described above are only accessible via the user interface.
@@ -159,7 +158,14 @@ material. Other important attributes of the hasPart relation are the plant where
 parent material is produced, which position the child material has on its parent's BoM,
 and the position type (which is used to mark alternative materials).
 
-To store the data in a regular RDF format, it is necessary to use an n-ary hasPart property. For each hasPart edge between two materials, a node is inserted representing this composition of child and parent material. The additional attributes are stored at the composition node via properties. The following properties have been added to the data model:
+To store the data in a regular RDF format, it is necessary to use an n-ary hasPart
+property. For each hasPart edge between two materials, a node is inserted representing
+this composition of child and parent material. This composition node is connected to
+the parent by the hasComposition object property and to the child by the consistsOf property. The parent material may have one or more compositions while the composition
+has exactly one child material, which it consists of.
+The additional attributes are stored at
+the composition node via properties. The following properties have been added to the
+data model:
 
  - Object properties
    - hasPlant: The plant where the parent material is produced
@@ -171,6 +177,10 @@ To store the data in a regular RDF format, it is necessary to use an n-ary hasPa
    - validFrom (datetime): Timestamp, when this BoM started to be valid
    - validUntil (datetime): Timestamp, when this BoM stops to be valid
    - hasProbability (float, optional): Probability, that this child is used as an alternative (if it is an alternative material)
+
+Additionally, there is another property called hasComponent, which connects the parent
+and the child material directly. This property is used to find all paths starting or 
+ending at some material. 
 
 <img src="/../../img/project_bill_of_material_exploration_service/datamodel.png" width=100%>
 
@@ -207,7 +217,7 @@ Thus a material has an alternative, if and only if:
  1. Both materials are used in the same plant
  1. One of the materials has the position type "alternative"
 
-As mentioned above, alternatives also have a probability associated with it. In theory, it is
+As mentioned above, alternatives also have a probability associated with them. In theory, it is
 possible to determine after production how many of each alternative material was used and from
 that calculate a distribution. With this, it could be possible to determine which alternatives
 are the most important. In practice, however, this probability field at the data source is only
@@ -221,7 +231,7 @@ is not indicated by the position type. There is parallel production between two 
  1. Both materials are used in different plants
 
 Note, that the conditions of parallel production and alternative materials theoretically partition
-the data: If two materials appear on the same position they either are produced in the same plant
+the data: If two materials appear in the same position they either are produced in the same plant
 or they are not. If they are, then one of them should be an alternative material. If they are not,
 then there is parallel production between them. This invariance can be used to ensure proper
 data quality. If there are two materials in the same position and the same plant, but the
@@ -243,7 +253,7 @@ implemented as a microservice. These microservices will run on a Kubernetes clus
 in conjunction with a microservice architecture are easily scalable by simply deploying more instances
 of the microservice in the cluster. So, if one of the microservices proves to be a bottleneck in the
 pipeline, then it is possible to only scale this specific component of the pipeline without affecting
-the rest. If the whole pipeline would be managed by a monolithic architecture, then either the code
+the rest. If the whole pipeline were managed by a monolithic architecture, then either the code
 would need to be changed or the whole monolith deployed multiple times.
 
 The drawback of a microservice architecture is the increased overhead and special importance of the
@@ -259,7 +269,7 @@ The microservices were implemented using a specification-first approach, in whic
 written first and then implemented. For this approach, the connexion package developed by Zalando was
 used. This framework was built on top of the Python Flask web framework and requires an Openapi
 specification, which is a widely used standard. Connexion connects the YAML file of this specification
-directly with the source code of the web server. It is also capable to check whether the server's JSON
+directly with the source code of the web server. It is also capable of checking whether the server's JSON
 responses fit the specification.
 
 <img src="/../../img/project_bill_of_material_exploration_service/architecture.png" width=100%>
@@ -268,14 +278,110 @@ responses fit the specification.
 The origin of the data is a legacy system that stores the BoM data in a relational database. The
 full dataset needs to be downloaded from this legacy system and uploaded into a graph database.
 At the company, the database GraphDB from the vendor Ontotext is used. It provides an RDF-quad store with a SPARQL engine. The
-microservice which does these bulk down- and uploads is called Bulky.
+microservice that does these bulk down- and uploads is called Bulky.
 
-The legacy system provides the data through a SOAP-XML interface. The purpose of the first microservice is to download the XML data, transform it into turtle format and insert it into
-GraphDB. The following services only depend on the data in the GraphDB. So this stage needs to
-ensure the data integrity of the data in the GraphDB. This means checking that the graph is acyclic,
+The legacy system provides the data through a SOAP-XML interface. The purpose of the first microservice
+is to download the XML data, transform it into turtle format, and insert it into
+GraphDB. The following services only depend on the data in the GraphDB, so this stage needs to
+ensure data integrity. This means checking that the graph is acyclic,
 ensuring necessary data fields are filled and all data can be parsed. If one of these checks
-fails, then the data is not uploaded to GraphDB. Thus, if data is present in the GraphDB, it has
+fails, then the data is not uploaded. Thus, if data is present in the GraphDB, it has
 to conform to the quality standards defined in this service.
+
+The XML data is essentially a list of BoM items. Each of these items contains
+information on how a child material is used in the parent material. This information is the
+same as mentioned in the section above, so quantity, unit, plant, etc. The
+conversion of these BoM items into the RDF data model is straightforward: a composition
+node is added between the two nodes representing the materials. At this composition node,
+detailed information about the way in which one material occurs on the BoM of 
+another can be saved.
+
+However, information about parallel production and alternatives is not readily available
+in this data model. So the Bulky service adds the parallelTo object property to
+compositions, which will improve the querying of this data model for the Pathfinder.
+Two compositions are called parallel to each other, if and only if they have the same
+parent material and the child materials appear in the same position on their parent's
+BoM.
+
+<img src="/../../img/project_bill_of_material_exploration_service/parallelTo.png" width=100%>
+
+If two compositions satisfy the conditions for parallel production or
+alternative materials, they are also parallel to each other. The converse does not hold: two child materials may appear in the same position if the validity of one BoM entry
+ends before the
+other entry becomes valid. In this case, there is neither parallel production nor
+alternatives, while the compositions are parallel. It is even possible for the
+validity ranges to overlap. Thus, it is only possible to precisely determine parallel
+production and alternatives within a temporal context. This context is provided by the
+user upon sending a request as a timestamp. But this request is handled by BoMES and/or
+the Pathfinder. Bulky does not receive requests. 
+
+Despite this limitation, the parallelTo property still provides a benefit for the
+Pathfinder and it is explained below.
+
+```
+PREFIX voc-mat: <https://data.com/voc/material/>
+PREFIX res-mat: <https://data.com/res/material/>
+INSERT {
+    GRAPH res-mat: {
+    ?comp1 voc-mat:isParallelTo ?comp2.
+    ?comp2 voc-mat:isParallelTo ?comp1.
+    }
+} WHERE {
+    GRAPH res-mat: {
+    	?mat voc-mat:hasComposition ?comp1.
+    	?comp1 voc-mat:hasPosition ?pos.
+    	?mat voc-mat:hasComposition ?comp2.
+    	?comp2 voc-mat:hasPosition ?pos.
+    	FILTER (?comp1 != ?comp2)
+    }
+}
+```
+
+Another important addition by Bulky is to classify the individual materials as
+ParallelProducedMaterial. This is necessary because of a corner case of parallel 
+production. One plant may require a material that another plant does 
+not. In that case, there is only one child material with one composition and no 
+parallels. This may lead to parallel production going undetected and is explained in
+more detail below. While it is not possible to compare compositions to detect this case,
+parallel production can be identified by examining the parent materials. Aside from the composition
+with missing parallel, the parent material has to have at least two other compositions, one for each
+plant. These two compositions can be used to classify the parent material as being produced in parallel.
+
+However, the problems mentioned above persist: without providing a timestamp, it is
+not possible to determine whether parallel production occurs or not. The current solution
+will interpolate a timestamp of the current day for the `%validAt%` placeholder. Thus,
+parallel production might not be accurately determined in certain corner cases on
+historical data. However, the results by Pathfinder and BoMES will be accurate for currently
+valid data.
+
+```
+PREFIX voc-mat: <https://data.com/voc/material/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX res-mat: <https://data.com/res/material/>
+INSERT {
+    GRAPH res-mat: {
+        ?mat rdf:type voc-mat:ParallelProducedMaterial
+    }
+}
+WHERE {
+    GRAPH res-mat: {
+    	?mat voc-mat:hasComposition ?comp1.
+    	?mat voc-mat:hasComposition ?comp2.
+    	?comp1 voc-mat:hasPlant ?plant1.
+    	?comp2 voc-mat:hasPlant ?plant2.
+    	FILTER (?plant1 != ?plant2 && ?comp1 != ?comp2)
+
+    	?comp1 voc-mat:validFrom ?validFrom1.
+    	?comp1 voc-mat:validUntil ?validUntil1.
+    	?comp2 voc-mat:validFrom ?validFrom2.
+    	?comp2 voc-mat:validUntil ?validUntil2.
+    	BIND(xsd:dateTime("%validAt%") AS ?validAt)
+    	FILTER(?validFrom1 < ?validAt && ?validUntil1 > ?validAt)
+    	FILTER(?validFrom2 < ?validAt && ?validUntil2 > ?validAt)
+    }
+}
+```
 
 ### Finding Paths
 Computing how often one material is part of another material can be done by finding all paths between
@@ -298,6 +404,175 @@ The Pathfinder service can find all parents or all children of a given list of m
 It will download the relevant subgraph from GraphDB, consisting of either all predecessors
 or all successors and the edges between them. Then all paths that end or start on the input materials are
 computed using NetworkX. These paths are converted into JSON and returned by the service.
+
+The following SPARQL query is used to get the subgraph containing all information about the
+children of the given input materials. The result of this query is a list of compositions
+and their connected data. Upon receiving the result, the Pathfinder will convert each
+composition into one edge in a NetworkX directed graph with multi-edges. The associated
+data is stored as key-value pairs at each edge. 
+
+```
+PREFIX voc-mat: <https://data.com/voc/material/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX pt: <https://data.com/res/product/product-type/>
+SELECT ?comp ?startLbl ?endLbl ?plantLbl ?posLbl ?posTypeLbl ?validFrom ?validUntil ?quantity ?unit ?altPosProb WHERE { 
+  VALUES ?inputMat {
+    %mats%
+  }
+  # Structure
+  # Find the start of an edge from an input material
+  ?inputMat voc-mat:hasComponent* ?start.
+  # With the start of an edge, bind the end and the composition between start and end
+  ?start voc-mat:hasComposition ?comp.
+  ?comp voc-mat:consistsOf ?end.
+  # From the composition, find all other object relations
+  ?comp voc-mat:hasPlant ?plant.
+  ?comp voc-mat:hasPosition ?position.
+  ?comp voc-mat:posType ?posType.
+
+  # Data
+  ?start rdfs:label ?startLbl.
+  ?end rdfs:label ?endLbl.
+  ?plant rdfs:label ?plantLbl.
+  ?position rdfs:label ?posLbl.
+  ?posType rdfs:label ?posTypeLbl.
+  ?comp voc-mat:validFrom ?validFrom.
+  ?comp voc-mat:validUntil ?validUntil.
+  ?comp voc-mat:hasQuantity ?quantity.
+  ?comp voc-mat:hasUnit ?unit.
+  OPTIONAL {?comp voc-mat:hasAltPosProbability ?altPosProb}
+
+  # Validity
+  BIND(xsd:dateTime("%validAt%") as ?validAt).
+  FILTER (
+    ?validFrom < ?validAt && ?validUntil > ?validAt
+  )
+}
+```
+
+The placeholder `%mats%` is replaced with a list of the URIs of the input materials.
+Property paths based on the property hasComponent connect the input materials to the
+`?start` variable. This variable matches each of the input materials and their
+components. From there, all compositions of the matched materials are returned, along
+with the associated information.
+
+This query can easily be adapted to return all materials that use the given input
+materials (i.e. their parents). Instead of searching for a property path from `?inputMat`
+to `?start`, the goal is to find a path from `?end` to `?inputMat`. The rest of the query
+remains the same.
+
+Additionally, the data regarding parallels between compositions is also fetched from the
+graph database. Similar to the query which retrieves the subgraph, the query for 
+parallels will utilize property paths based on the `hasComponent` property to find
+compositions that connect the input materials to their components.
+Along with the compositions which are parallel to each other, all relevant information
+about the parallel is queried as well.
+
+This is necessary because it might be the case that not all parallel compositions
+are present in the subgraph. Then, the Pathfinder can not identify that parallel 
+production occurs or that alternatives exist.
+
+```
+PREFIX voc-mat: <https://data.com/voc/material/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX pt: <https://data.com/res/product/product-type/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?comp ?otherComp ?otherMatLbl ?plantLbl ?qty ?posTypeLbl ?altPosProb WHERE {
+    # Use materials to find the relevant composition nodes, similar to the subgraph query
+    {SELECT ?comp WHERE {
+        VALUES ?inputMat {
+          %mats%
+        }
+        ?inputMat voc-mat:hasComponent* ?otherMat.
+        ?otherMat voc-mat:hasComposition ?comp.
+    }}
+
+    # Find other, parallel composition nodes and relevant data
+    ?comp voc-mat:isParallelTo ?otherComp.
+    ?otherComp voc-mat:validUntil ?validUntil.
+    ?otherComp voc-mat:validFrom ?validFrom.
+    ?otherComp voc-mat:consistsOf ?otherMat.
+    ?otherMat rdfs:label ?otherMatLbl.
+    ?otherComp voc-mat:hasPlant ?plant.
+    ?plant rdfs:label ?plantLbl.
+    ?otherComp voc-mat:hasQuantity ?qty.
+    ?otherComp voc-mat:posType ?posType.
+    ?posType rdfs:label ?posTypeLbl.
+    OPTIONAL {?otherComp voc-mat:hasAltPosProbability ?altPosProb}
+
+    BIND(xsd:dateTime("%validAt%") AS ?validAt)
+    FILTER(?validFrom < ?validAt && ?validUntil > ?validAt)
+}
+```
+
+Another problem may occur if the BoMs for different plants have different lengths.
+Then there is a composition that has no parallel. However, the parent material does have
+parallel production. When this fact is ignored, a result may be flagged as precise,
+while in reality, it is possible to use none of the child material to produce the same
+parent material.
+
+This problem is solved by the classification of ParallelProducedMaterials by Bulky.
+The Pathfinder will use this information to add a boolean to each material node in a path,
+indicating whether this material is produced in parallel. This information can then be
+used by BoMES to determine whether the quantity in the result is precise or an approximation.
+
+```
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX voc-mat: <https://data.com/voc/material/>
+SELECT ?matLbl ?hasParallelProduction WHERE { 
+    VALUES ?matLbl {
+        %mats%
+    }
+    ?mat rdfs:label ?matLbl.
+    BIND(IF(EXISTS {?mat rdf:type voc-mat:ParallelProducedMaterial}, true, false) AS ?hasParallelProduction)
+}
+
+```
+
+The paths that were found by the service are then converted into a JSON format.
+
+```
+Node {
+  typeId: str,
+  hasParallelProduction: bool
+}
+
+Parallel {
+  eid: str
+  end: Node
+  plant: str
+  posType: str
+  probability: float
+  quantity: float
+}
+
+Edge {
+  eid: str # The edge id
+  start: Node
+  end: Node
+  quantity: float
+  unit: str
+  plant: str
+  position: str
+  posType: str
+  probability: float
+  validFrom: str
+  validUntil: str
+  parallels: [Parallel]
+}
+
+Path {
+  source: Node
+  dest: Node
+  qty: float
+  unit: str
+  edges: [Edge]
+  hasParallels: bool
+}
+```
+
 
 ### Aggregating Paths
 The next service is called the "Bill of Material Exploration Service", or BoMES for short. Its purpose is
@@ -325,10 +600,75 @@ path quantities should be returned.
 Because of this aggregation, it is necessary to include further information. Firstly, the parallel
 production type, and secondly, whether there are alternatives on one of the paths. This is done in such a way that the user can determine how much information was lost by the aggregation.
 
+The aggregated answers are then returned as a JSON response. This schema is similar to
+the Pathfinder response, aside from the `parallels` attribute. It is replaced by the
+attributes `alternativePositions` and `parallelProductions`, which were computed by 
+BoMES.
+
+```
+Node {
+  typeId: str,
+  hasParallelProduction: bool
+}
+
+Alternative {
+  alternative: Node
+  material: Node
+  parent: Node
+  plant: str
+  position: str
+  probability: float
+}
+
+ParallelProduction {
+  material: Node
+  qty: float
+  plant: str
+  kind: int
+}
+
+Edge {
+  eid: str # The edge id
+  start: Node
+  end: Node
+  quantity: float
+  unit: str
+  plant: str
+  position: str
+  posType: str
+  probability: float
+  validFrom: str
+  validUntil: str
+  alternativePositions: [Alternative]
+  parallelProductions: [ParallelProduction]
+}
+
+Path {
+  source: Node
+  dest: Node
+  qty: float
+  unit: str
+  edge: [Edge]
+  hasAlternativePositions: bool
+  parallelProductionKind: int
+}
+
+Answer {
+  source: Node
+  dest: Node
+  qty: float
+  unit: str
+  paths: [Path]
+  hasAlternativePositions: bool
+  hasNegativePositions: bool
+  parallelProductionKind: int
+}
+```
+
 # 4. Result and Outlook
 
-The software which was developed in this project provides an improvement over the existing
-solution which uses relational databases. It is capable to compute all parent and child materials of a given list of input materials. It can accurately compute how often one material is part of another and in cases where this is not directly possible, it will return the most helpful approximation to the user. It enables new use cases
+The software that was developed in this project provides an improvement over the existing
+solution which uses relational databases. It is capable of computing all parent and child materials of a given list of input materials. It can accurately compute how often one material is part of another and in cases where this is not directly possible, it will return the most helpful approximation to the user. It enables new use cases
 based on the BoM data product and BoMES.
 
 One example is the phase-out process in which the production of a certain material is discontinued in
