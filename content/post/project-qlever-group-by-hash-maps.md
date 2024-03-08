@@ -3,7 +3,7 @@ title: "Optimizing GROUP BY in QLever using Hash Maps"
 date: 2024-03-08T14:23:59+01:00
 author: "Fabian Krause"
 authorAvatar: "img/ada.jpg"
-tags: []
+tags: ["QLever", "SPARQL", "Hashmap", "Optimization", "GROUP BY"]
 categories: []
 image: "img/project-qlever-group-by-hash-maps/header.png"
 draft: false

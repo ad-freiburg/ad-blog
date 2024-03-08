@@ -108,7 +108,7 @@ updates).
 ### Adding Mathematical Formulæ
 For adding math [MathJAX](https://www.mathjax.org) has been added and
 preconfigured for the use with LaTeX. To render a formular simply add it inline
-in a post using double `&` for example `$$x_{1,2} = \frac{-b \pm \sqrt{b^s
+in a post using double `$` for example `$$x_{1,2} = \frac{-b \pm \sqrt{b^s
 -4ac}}{2a}$$`.
 
 ### Adding Static Content
