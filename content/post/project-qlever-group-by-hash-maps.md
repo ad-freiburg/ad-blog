@@ -59,6 +59,9 @@ sorting the keys \\(\mathcal{O}(m \log m)\\) given \\(m\\) groups, producing the
 aggregate data structures
 are constant, yielding
 an overall complexity of $$\mathcal{O}(n + m \log m).$$
+Note that sorting the result is not necessary for this optimization, but is due to a constraint specific to QLever,
+which expects the result of a `GROUP BY` to be sorted on the grouped columns. Without this constraint, the complexity
+becomes \\(\mathcal{O}(n + m)\\).
 
 For \\(m \ll n\\), the optimization should be more time-efficient, as only the small number of groups has to be sorted.
 It does, however, use more space. The Pre-Sorted Group By implementation needs only to store the input. As groups
@@ -67,6 +70,8 @@ a small overhead of keeping an accumulator. For the Hash Map Group By, we need \
 
 In the case that \\(m \approx n\\), sorting the keys of the map can be as expensive as sorting the whole input.
 Because of the non-trivial time and space overhead of map creation, the Pre-Sorted Group By implementation should be used in those cases.
+Even when not sorting the result, there can be cases where sorting the input is more performant than map insertions.
+For example, for small \\(n\\), the averaged constant time for map insertion might be larger than \\(\log n\\).
 
 
 ## 3. Implementation
