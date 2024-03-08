@@ -71,7 +71,7 @@ a small overhead of keeping an accumulator. For the Hash Map Group By, we need \
 In the case that \\(m \approx n\\), sorting the keys of the map can be as expensive as sorting the whole input.
 Because of the non-trivial time and space overhead of map creation, the Pre-Sorted Group By implementation should be used in those cases.
 Even when not sorting the result, there can be cases where sorting the input is more performant than map insertions.
-For example, for small \\(n\\), the averaged constant time for map insertion might be larger than \\(\log n\\).
+For example, for very small \\(n\\), or when the underlying array of the map has to be reallocated often due to a repeatedly high load factor, or when there are many collisions, the averaged constant time for map insertion might be larger than \\(\log n\\).
 
 
 ## 3. Implementation
