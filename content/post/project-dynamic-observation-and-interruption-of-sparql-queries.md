@@ -198,11 +198,11 @@ to see if our connection is still working, unless we had some data ready which w
 this exact data. So we'd have to go a level deeper onto the TCP level. TCP has a keep-alive mechanism for this exact purpose
 but... [it isn't exactly very strict](https://stackoverflow.com/questions/1480236/does-a-tcp-socket-connection-have-a-keep-alive).
 On Linux for example the operating system doesn't start sending keep-alive packets before 2 hours have elapsed, which is
-almost comically late to save computing resources effectively. Different browsers reduce this time down to a couple of
-minutes, so you can't really rely on that either. Also this feature of TCP is entirely optional, so you're not guaranteed
-to have your keep-alive packet relayed all the way to the receiver, if you're using a reverse-proxy or the user is using an
-HTTP proxy, it probably won't even get past that. In other words, there is no good way to detect if a user is no longer
-waiting for a response.
+almost comically late to save computing resources effectively. Different browsers start sending their keep-alive packets
+after couple of minutes, so you can't really rely on that either. But even if all timeouts were in the single digit seconds
+range, turns out this feature of TCP is entirely optional, so you're not guaranteed to have your keep-alive packet relayed
+all the way. If you're using a reverse-proxy or the user is using an HTTP proxy, it probably won't even get past that.
+In other words, there is no good way to detect if a user is no longer waiting for a response.
 
 What we really want is a mechanism that (ideally without having to stricly cooperate) notifies the server when the
 user has navigated away from QLever UI for example. Turns out Websockets can help here too. The idea is very simple.
