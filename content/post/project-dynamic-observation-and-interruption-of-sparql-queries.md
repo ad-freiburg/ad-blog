@@ -31,15 +31,16 @@ observers to interact with complex queries in real-time.
 
 ## Real-Time is more than quality of life
 
-QLever is a SPARQL-compliant knowledge-base engine that allows to execute SPARQL queries blazingly fast on giant RDF data graphs.
-However, even though most common queries run in less than a couple of seconds, of course, more expensive queries exist
-that will take dozens of seconds, minutes or even whole hours to compute. These kinds of queries will eventually be completed but
-generally it's hard to tell how long a novel query will take from an outside perspective. In addition to that, if you had this
-knowledge after starting the query and decide it's not worth the wait it would be nice if you could cancel this query directly.
-Previously there was no mechanism to actually cancel a running query. Instead, it would just compute the query until the very end
-potentially taking up a lot of limited resources in the process, blocking other queries from running for a possibly long time in 
-the process. Also for us as QLever developers it would be nice to see what's going on during a query to be able to identify
-bottlenecks in complicated queries. Obviously, this is a state that's less than ideal. So my job was to improve this.
+QLever is a SPARQL-compliant knowledge-base engine that allows to blazingly fast execution of SPARQL queries on giant RDF
+data graphs. However, even though most common queries run in less than a couple of seconds, of course, more expensive
+queries exist that will take dozens of seconds, minutes or even whole hours to compute. These kinds of queries will
+eventually be completed but generally, it's hard to tell how long a novel query will take from an outside perspective.
+In addition to that, if you had this knowledge after starting the query and decide it's not worth the wait it would be
+nice if you could cancel this query directly. Previously there was no mechanism to actually cancel a running query.
+Instead, it would just compute the query until the very end potentially taking up a lot of limited resources in the process,
+blocking other queries from running for a possibly long time in  the process. Also for us as QLever developers it would be
+nice to see what's going on during a query to be able to identify bottlenecks in complicated queries. Obviously, this is a
+state that's less than ideal. So my job was to improve this.
 
 ## Live query analysis for QLever
 
@@ -101,12 +102,12 @@ all of the information we want in 3 steps:
 3. Add in a new status "in progress" so you can tell which of the suboperations is currently being executed, instead of just
 being notified when they finish.
 
-QLever UI is a convenient web-ui for the QLever backend. It makes it easy to use QLever from your browser. It also already
-rendered this tree in a human-readable form so everyone can easily analyse bottlenecks of individual queries. Needless to
+QLever UI is a convenient web UI for the QLever backend. It makes it easy to use QLever from your browser. It also already
+rendered this tree in a human-readable form so everyone can easily analyse the bottlenecks of individual queries. Needless to
 say it wasn't too difficult to expand this functionality to update this visual representation based on messages coming
-from a newly created WebSocket connection instead of just a plain HTTP response. Of course there are some pitfalls that
-need to be avoided, for example making sure the final HTTP response doesn't get replaced with a delayed WebSocket messages.
-But apart from that this process was rather straight forward.
+from a newly created WebSocket connection instead of just a plain HTTP response. Of course, there are some pitfalls that
+need to be avoided, for example making sure the final HTTP response doesn't get replaced with a delayed WebSocket message.
+But apart from that this process was rather straightforward.
 
 #### `Boost.Beast`, `Boost.Asio` and Concurrent connections
 
@@ -114,23 +115,23 @@ To implement all of this on the backend, the `Boost.Beast` library, built on top
 served as the HTTP backbone for QLever for quite a while now. To be honest, I might be spoiled by HTTP server frameworks
 in a lot of other languages that do almost everything for you out of the box, but I always felt like even though `Boost.Beast`
 comes with a lot of ready-to-use components it still expects you to build the server on your own. It gives you a toolbox
-with all the parts to build an engine when in reality I would've like to order the entire pre-built engine in the first place.
-I don't think I could build a better engine that experts on the matter, even if it isn't tailored to fit my exact use-case.
+with all the parts to build an engine when in reality I would've liked to order the entire pre-built engine in the first place.
+I don't think I could build a better engine than experts on the matter, even if it isn't tailored to fit my exact use case.
 
 Because of this exposing a WebSocket endpoint in the backend was quite a hassle. The concept in itself wasn't really complex.
 When a new connection is being established and the query ID is not yet in use (usually this means the query has not started yet)
 the server just keeps the connection alive without sending anything else until a query with this specific ID starts. There can
 be multiple WebSockets waiting for the exact same query which doesn't really help keeping things simple, mainly to allow
 observations by server administrators in case queries are hogging up a lot of resources for no apparent reason. Once all
-listeners are connected to QLever and a query makes progress it has to broadcast the latest update to all listeners. Of course
-there are some important considerations to be made here. The broadcast operation cannot be blocking in any way, otherwise
+listeners are connected to QLever and a query makes progress it has to broadcast the latest update to all listeners. Of course,
+there are some important considerations to be made here. The broadcast operation cannot be blocking in any way, otherwise,
 a slow WebSocket client can just slow down queries artificially. Also ideally all WebSockets should be able to operate
-independenly of each other for maximum efficiency, but due to technical limitations of `Boost.Asio` we ended up running all
+independently of each other for maximum efficiency, but due to technical limitations of `Boost.Asio` we ended up running all
 io operations in a somewhat synchronized manner to avoid race conditions.
 
 Traditionally handling I/O with multiple threads is always a challenge. The "classic" approach to read input streams of files,
 network traffic and so on dedicates a single thread to read all the data, waiting in a blocking manner until the data finally
-becomes available. This makes the code rather easy to understand, but is typically a very inefficient use of computing resources
+becomes available. This makes the code rather easy to understand but is typically a very inefficient use of computing resources
 because a whole thread is unable to do anything until there's new data to read. While this is not a problem when reading a
 single file from disk, this very much becomes a problem when waiting for incoming connections over the network. Chances are
 there will be more concurrent requests than threads available on your computer so spinning up more and more expensive threads
