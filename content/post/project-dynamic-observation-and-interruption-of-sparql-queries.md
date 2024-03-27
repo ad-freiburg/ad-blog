@@ -59,6 +59,10 @@ some overhead for every single server-side update. This overhead introduces late
 incoming client request before sending anything back to the client and requires an extra mechanism to keep track of the
 state across polls.
 
+![HTTP server-side updates](/img/project-dynamic-observation-and-interruption-of-sparql-queries/HTTP%20Server-Side%20Updates.svg)
+
+<p style="text-align: center; font-size: 0.8em;">Figure 1: Example of Server-initiated communication using different techniques.</p>
+
 To address this issue HTML5 introduced the WebSocket API that works similarly to regular TCP sockets but in a safer
 browser-compatible way. WebSockets are initiated similarly to a regular HTTP request using some special headers and then proceed by taking over the underlying TCP connection and performing all further communication through that.
 
@@ -89,6 +93,10 @@ actual query via HTTP with the `Query-ID: <query-id>` header set. By using a UUI
 across clients becomes almost zero. It also acts as a sort of authentication mechanism for query cancellation, because a
 malicious third party can't simply guess an ID and cancel it as a sort of denial of service attempt.
 
+![Query Lifetime](/img/project-dynamic-observation-and-interruption-of-sparql-queries/Query%20Lifetime.svg)
+
+<p style="text-align: center; font-size: 0.8em;">Figure 2: Request lifecycle with the newly introduced query ID system.</p>
+
 #### The runtime information tree
 
 How is the processing status data serialized? Luckily there was already a mechanism present that could be repurposed for this
@@ -108,6 +116,10 @@ say it wasn't too difficult to expand this functionality to update this visual r
 from a newly created WebSocket connection instead of just a plain HTTP response. Of course, there are some pitfalls that
 need to be avoided, for example making sure the final HTTP response doesn't get replaced with a delayed WebSocket message.
 But apart from that this process was rather straightforward.
+
+![Example of a `RuntimeInformation` tree](/img/project-dynamic-observation-and-interruption-of-sparql-queries/RuntimeInformation%20Tree.png)
+
+<p style="text-align: center; font-size: 0.8em;">Figure 3: Example of how QLever UI would represent the runtime information tree.</p>
 
 #### `Boost.Beast`, `Boost.Asio` and Concurrent connections
 
@@ -243,7 +255,7 @@ will change sooner or later, and it is incredibly easy to just forget adding the
 or refactoring existing code. That's why a Watchdog mechanism was introduced.
 
 The Watchdog mechanism is enabled by default (the code can be compiled without it for maximum performance). After a while
-(25ms) it will set the `CancellationHandle` into a "challenge" state, where it gives the computation code 25ms to check if
+(50ms) it will set the `CancellationHandle` into a "challenge" state, where it gives the computation code 50ms to check if
 the `CancellationHandle` was set into a cancelled state and reset it back to the "not cancelled" state. If this reset
 doesn't happen within the time interval, the watchdog proceeds to print a warning in the console, so developers can
 see it and add more checks to the code accordingly. The "challenge" has to be separate from the "not cancelled" state
@@ -251,6 +263,13 @@ because it turns out that reading an atomic variable is a lot cheaper than actua
 to it exclusively whenever the challenge is active, this greatly improves performance. This approach is of course not
 perfect, mainly because it can be easily ignored in contrast to a failing unit test for example, but it makes it
 simpler to spot those issues even in production, which is a step in the right direction.
+
+![Watchdog diagram](/img/project-dynamic-observation-and-interruption-of-sparql-queries/Watchdog%20Diagram%20QLever.svg)
+
+<p style="text-align: justify; font-size: 0.8em;">Figure 6: Whenever a cancellation check is performed, the query is
+cancelled or the watchdog timer expires (every 50ms by default) the current state of the CancellationHandle is advanced
+according to the figure if there's a corresponding connection. Whenever the state is reset back to "Not cancelled"
+from "Check window missed" a warning is printed in the console.</p>
 
 ### Collateral Benefits
 
