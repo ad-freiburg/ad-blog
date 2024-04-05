@@ -59,9 +59,12 @@ some overhead for every single server-side update. This overhead introduces late
 incoming client request before sending anything back to the client and requires an extra mechanism to keep track of the
 state across polls.
 
+<figure>
+
 ![HTTP server-side updates](/img/project-dynamic-observation-and-interruption-of-sparql-queries/HTTP%20Server-Side%20Updates.svg)
 
-<p style="text-align: center; font-size: 0.75em;">Figure 1: Example of Server-initiated communication using different techniques.</p>
+<figcaption>Figure 1: Example of Server-initiated communication using different techniques.</figcaption>
+</figure>
 
 To address this issue HTML5 introduced the WebSocket API that works similarly to regular TCP sockets but in a safer
 browser-compatible way. WebSockets are initiated similarly to a regular HTTP request using some special headers and then proceed by taking over the underlying TCP connection and performing all further communication through that.
@@ -93,9 +96,12 @@ actual query via HTTP with the `Query-ID: <query-id>` header set. By using a UUI
 across clients becomes almost zero. It also acts as a sort of authentication mechanism for query cancellation, because a
 malicious third party can't simply guess an ID and cancel it as a sort of denial of service attempt.
 
+<figure>
+
 ![Query Lifetime](/img/project-dynamic-observation-and-interruption-of-sparql-queries/Query%20Lifetime.svg)
 
-<p style="text-align: center; font-size: 0.75em;">Figure 2: Request lifecycle with the newly introduced query ID system.</p>
+<figcaption>Figure 2: Request lifecycle with the newly introduced query ID system.</figcaption>
+</figure>
 
 #### The runtime information tree
 
@@ -117,9 +123,12 @@ from a newly created WebSocket connection instead of just a plain HTTP response.
 need to be avoided, for example making sure the final HTTP response doesn't get replaced with a delayed WebSocket message.
 But apart from that this process was rather straightforward.
 
+<figure>
+
 ![Example of a `RuntimeInformation` tree](/img/project-dynamic-observation-and-interruption-of-sparql-queries/RuntimeInformation%20Tree.png)
 
-<p style="text-align: center; font-size: 0.75em;">Figure 3: Example of how QLever UI would represent the runtime information tree.</p>
+<figcaption>Figure 3: Example of how QLever UI would represent the runtime information tree.</figcaption>
+</figure>
 
 #### `Boost.Beast`, `Boost.Asio` and Concurrent connections
 
@@ -164,7 +173,7 @@ async def open_file_async():
             print(line)
 ```
 
-<p style="text-align: center; font-size: 0.75em;">Code snippet 1: Example of the colouring problem in python.</p>
+<p style="text-align: center; font-size: 0.75em; transform: translateY(-1em)">Code snippet 1: Example of the colouring problem in python.</p>
 
 Other options that are often used are callback-based approaches, sometimes wrapped inside so-called promises or futures.
 Basically, instead of blocking a thread until data becomes available, we tell the operating system to run our code we
@@ -200,12 +209,15 @@ before a query can finish. Otherwise opening and closing connections would creat
 course also less than desirable. The naive approach would've been rather straightforward to implement. The actual implementation
 on the other hand not so much.
 
+<figure>
+
 ![Async index structure example](/img/project-dynamic-observation-and-interruption-of-sparql-queries/Async%20Read%20Access.svg)
 
-<p style="text-align: justify; padding: 0 5em; font-size: 0.75em;">Figure 4: Example of how different observers of the query
+<figcaption class="multi-line">Figure 4: Example of how different observers of the query
 keep track of their own index for a specific query so they can all concurrently read the data structure
 at that exact index without a mutex. Queries with an index higher than the amount of currently available
-data are asynchronously put to sleep until there is an update and their index is safe to read.</p>
+data are asynchronously put to sleep until there is an update and their index is safe to read.</figcaption>
+</figure>
 
 ## Embracing Cancel Culture
 
@@ -245,10 +257,13 @@ drops for some unexpected reason we won't notice immediately but our live-update
 during computation, so once a subcomputation is completed the server will notice that a WebSocket packet wasn't received
 by the client and thus detect a disconnected connection way sooner.
 
+<figure>
+
 ![Query decision chart](/img/project-dynamic-observation-and-interruption-of-sparql-queries/Query%20Decision%20Chart.svg)
 
-<p style="text-align: justify; padding: 0 5em; font-size: 0.75em;">Figure 5: A decision chart that illustrates how to use
-the new web API.</p>
+<figcaption class="multi-line">Figure 5: A decision chart that illustrates how to use
+the new web API.</figcaption>
+</figure>
 
 I just described a somewhat cooperative approach. A WebSocket needs to be created, and the client needs to send a keyword
 for everything to work nicely. This is a good option for cases where we control the front end (QLever UI in our case), but
@@ -281,12 +296,15 @@ to it exclusively whenever the challenge is active, this greatly improves perfor
 perfect, mainly because it can be easily ignored in contrast to a failing unit test for example, but it makes it
 simpler to spot those issues even in production, which is a step in the right direction.
 
+<figure>
+
 ![Watchdog diagram](/img/project-dynamic-observation-and-interruption-of-sparql-queries/Watchdog%20Diagram%20QLever.svg)
 
-<p style="text-align: justify; padding: 0 5em; font-size: 0.75em;">Figure 6: Whenever a cancellation check is performed,
+<figcaption class="multi-line">Figure 6: Whenever a cancellation check is performed,
 the query is cancelled or the watchdog timer expires (every 50ms by default) the current state of the CancellationHandle
 is advanced according to the figure if there's a corresponding connection. Whenever the state is reset back to
-"Not cancelled" from "Check window missed" a warning is printed in the console.</p>
+"Not cancelled" from "Check window missed" a warning is printed in the console.</figcaption>
+</figure>
 
 ### Collateral Benefits
 
@@ -311,3 +329,18 @@ cancel it on demand in a rather efficient manner without breaking SPARQL compati
 rewarding journey. I hope you enjoyed the read.
 
 If you're curious feel free to try it out yourself, just head over to https://qlever.cs.uni-freiburg.de and start experimenting.
+
+<style>
+    figure {
+        transform: translateY(-0.5em);
+    }
+    figcaption {
+        text-align: center;
+        font-size: 0.75em;
+        transform: translateY(-1em);
+    }
+    figcaption.multi-line {
+        text-align: justify;
+        padding: 0 5em;
+    }
+</style>
