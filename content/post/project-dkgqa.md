@@ -22,17 +22,19 @@ draft: true
 
     - [Initial experiments](#2-initial-experiments)
 
-        - [The T5 model family](#2-1-the-t5-model-family)
-
-        - [Working with Wikidata IDs](#2-2-working-with-wikidata-ids)
-
     - [Refinements](#3-refinements)
 
         - [Natural language entities](#3-1-natural-language-entities)
 
-        - [Causal language modeling: Phi-2 and Mistral-7B](#3-2-causal-language-modeling-phi-2-and-mistral-7b)
+        - [LoRA and half precision](#3-2-lora-and-half-precision)
 
-        - [LoRA and half precision](#3-3-lora-and-half-precision)
+        - [Phi-2 and Mistral-7B](#3-3-phi-2-and-mistral-7b)
+
+4. [Experiments](#experiments)
+
+    - [Adding more LoRA adapters](#1-adding-more-lora-adapters)
+
+    - [Hyperparameter tuning](#2-hyperparameter-tuning)
 
 5. [Results](#results)
 
@@ -63,15 +65,66 @@ We can then obtain answers to our questions by executing the predicted queries u
 We will now define the task we want to solve more clearly. We are given a  pre-trained LLM and a list of question-query pairs from the Wikidata SimpleQuestions dataset as input. Questions are formulated in natural language and may contain ambiguities and spelling mistakes. Queries are formulated in SPARQL and contain Wikidata IDs (we again omit prefixes): 
 ```python
 qq_pairs = [
-    (question='Who is the president of the USA?', query='SELECT ?target WHERE { wd:Q30 wdt:P6 ?target . }'),
-    (question='wher was neil armstrong born?', query='SELECT ?target WHERE { wd:Q1615 wdt:P19 ?target . }'),
+    (question='Who is the president of the USA?',	query='SELECT ?target WHERE { wd:Q30 wdt:P6 ?target . }'),
+    (question='wher was neil armstrong born?',		query='SELECT ?target WHERE { wd:Q1615 wdt:P19 ?target . }'),
     ...
 ]
 ```
-Our task now is to finetune the weights of the given LLM such that, given a simple question, it generates a corresponding query. We want the model to be able to generalize to new unseen questions while still being as accurate as possible.
+Our task now is to finetune the weights of the given LLM such that, given a simple question, it generates a corresponding query. We want the model to generalize to new unseen questions while being as accurate as possible.
+
+
+## Approach
+
+We will now look at the approach proposed for solving this task. We will discuss the training pipeline, different LLM choices, and some techniques for improving training and model performance.
+
+### Setting up a training pipeline
+
+For this project, we use [PyTorch](https://pytorch.org/), a commonly used deep-learning framework for Python, to finetune our models. Additionally, we also use [Lightning](https://lightning.ai/docs/pytorch/stable/), a framework built on top of PyTorch, which allows building more flexible training pipelines while also avoiding writing a lot of boilerplate code. Lightning offers many improvements, but most importantly, it enables you to scale your training from CPU only to multiple GPUs without any changes to your code.
+
+#### Lightning
+On a high level, a Lightning training pipeline consists of three main components: a `LightningModule`, a `LightningDataModule`, and a `Trainer`. The `LightningModule` class encapsulates all logic related to the model we want to train. The `LightningDataModule` class handles all data loading and preprocessing logic. The `Trainer` class manages the whole training loop and moves the model and all data to the correct device. To create your training pipeline, you implement your own subclasses of `LightningModule` and `LightningDataModule` and configure the `Trainer` by passing your desired arguments. A simple training loop then looks like this:
+```python
+model = MyLightningModule()
+dm = MyLightningDataModule()
+
+trainer = Trainer()
+trainer.fit(model, datamodule=dm)
+```
+
+#### Working with pre-trained LLMs
+As a first step in our Lightning pipeline, we implement a class `TransformerLearner` that inherits from `LightningModule` and will handle everything needed for us to work with pre-trained LLMs from the [🤗 Transformers](https://huggingface.co/docs/transformers/index) library. We use 🤗 Transformers as it provides easy access to a large set of open-source LLMs and their pre-trained weights for us to experiment with. In particular, the `TransformerLearner` will load the pre-trained models and their tokenizers, set up the optimizer, create a learning rate scheduler, and handle other potential hyperparameters. This encapsulation of the underlying model will make it very convenient to switch and try out different LLMs later (TODO: cross-ref phi2). Throughout this project, we use the [AdamW](https://arxiv.org/abs/1711.05101) optimizer and a learning rate schedule consisting of a linear warm-up followed by [cosine annealing](https://arxiv.org/abs/1608.03983). Figure 1 shows an example of such a learning rate schedule. The example uses a maximum learning rate of 1.0, 50 epochs total, and a warm-up for ten epochs.
+<figure>
+    <img src="../../img/project-dkgqa/lr-schedule.svg"/>
+    <center><figcaption>Figure 1 - Illustration of the learning rate schedule.</figcaption></center>
+</figure>
+
+#### Working with the SimpleQuestions dataset
+Next, we implement a class `SPARQLDataModule` that inherits from `LightningModule` and will handle data loading. The Wikidata SimpleQuestions dataset consists of text files where each line contains four tab-separated values. The first three values are the Wikidata IDs of the subject, predicate, and object of the query. The fourth value is the question we want to predict the query for. The object ID is always the target of our query, i.e., the answer to the corresponding question. Our `SPARQLDataModule` now translates this data to question-query pairs. For example, consider the following three lines:
+```
+Q2275923	P106	Q40348		What was Seymour Parker Gilbert's profession?
+Q522966		P106	Q2526255	What job does jamie hewlett have
+Q2568216	R57	Q14949730	What is a film directed by wiebke von carolsfeld?
+```
+Given this data, our data module produces the following question-query pairs:
+```python
+qq_pairs = [   
+	(question='What was Seymour Parker Gilbert\'s profession?', 	query='SELECT ?target WHERE { wd:Q2275923 wdt:P106 ?target . }'),
+	(question='What job does jamie hewlett have', 					query='SELECT ?target WHERE { wd:Q522966 wdt:P106 ?target . }'),
+	(question='What is a film directed by wiebke von carolsfeld?',	query='SELECT ?target WHERE { ?target wdt:P57 wd:Q2568216 . }')
+]
+```
+Note that if the predicate ID starts with a P, the target will be in the object position. Predicate IDs beginning with an R encode the inverse of a property in Wikidata. These inverse properties can occur because the SimpleQuestions dataset was initially based on Freebase and only later translated to Wikidata. In such cases, the target and subject ID will switch positions. Afterward, we replace the R with a P.
+
+As a final step, our data module will use the tokenizer of our pre-trained model to transform our question-query pairs into PyTorch tensors that we can pass to our model. The data module will then return these tensors in a batched format using PyTorch data loaders.
 
 ## References
 
 [1] Wikidata SimpleQuestions: https://github.com/askplatypus/wikidata-simplequestions
+
+[2] Google T5: https://arxiv.org/abs/1910.10683
+
+[3] Cosine Annealing: https://arxiv.org/abs/1608.03983
+
+[4] AdamW: https://arxiv.org/abs/1711.05101
 
 hugo serve -D --bind "::" --baseURL localhost
