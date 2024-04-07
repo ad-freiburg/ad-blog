@@ -22,13 +22,13 @@ draft: true
 
     - [Initial experiments](#2-initial-experiments)
 
-    - [Refinements](#3-refinements)
+    - [Natural language entities](#3-natural-language-entities)
 
-        - [Natural language entities](#3-1-natural-language-entities)
+    - [Scaling to larger models](#4-scaling-to-larger-models)
 
-        - [LoRA and half precision](#3-2-lora-and-half-precision)
+        - [LoRA and half precision](#4-1-lora-and-half-precision)
 
-        - [Phi-2 and Mistral-7B](#3-3-phi-2-and-mistral-7b)
+        - [Phi-2 and Mistral-7B](#4-2-phi-2-and-mistral-7b)
 
 4. [Experiments](#experiments)
 
@@ -58,7 +58,7 @@ This project presents a method to integrate LLMs into a knowledge graph question
 ```sparql
 SELECT ?target WHERE { wd:Q30 wdt:P6 ?target . }
 ```
-We can then obtain answers to our questions by executing the predicted queries using a SPARQL engine that operates on Wikidata, e.g., Qlever. In this project, we use different pre-trained LLMs that are publicly available and finetune them for predicting SPARQL queries on the Wikidata SimpleQuestions dataset [1].
+We can then obtain answers to our questions by executing the predicted queries using a SPARQL engine that operates on Wikidata, e.g., Qlever. In this project, we work with different pre-trained LLMs that are publicly available and finetune them for generating SPARQL queries from natural language questions on the Wikidata SimpleQuestions dataset. The SimpleQuestions dataset offers a training set of around 34,000 question-query pairs and a validation set of around 4,900 question-query pairs.
 
 ## Problem definition
 
@@ -70,18 +70,17 @@ qq_pairs = [
     ...
 ]
 ```
-Our task now is to finetune the weights of the given LLM such that, given a simple question, it generates a corresponding query. We want the model to generalize to new unseen questions while being as accurate as possible.
-
+Our task now is to finetune the weights of the given LLM such that, given a simple question, it generates a corresponding SPARQL query. We want the model to generalize to new unseen questions while being as accurate as possible.
 
 ## Approach
 
 We will now look at the approach proposed for solving this task. We will discuss the training pipeline, different LLM choices, and some techniques for improving training and model performance.
 
-### Setting up a training pipeline
+### 1. Setting up a training pipeline
 
 For this project, we use [PyTorch](https://pytorch.org/), a commonly used deep-learning framework for Python, to finetune our models. Additionally, we also use [Lightning](https://lightning.ai/docs/pytorch/stable/), a framework built on top of PyTorch, which allows building more flexible training pipelines while also avoiding writing a lot of boilerplate code. Lightning offers many improvements, but most importantly, it enables you to scale your training from CPU only to multiple GPUs without any changes to your code.
 
-#### Lightning
+#### 1.1. Lightning
 On a high level, a Lightning training pipeline consists of three main components: a `LightningModule`, a `LightningDataModule`, and a `Trainer`. The `LightningModule` class encapsulates all logic related to the model we want to train. The `LightningDataModule` class handles all data loading and preprocessing logic. The `Trainer` class manages the whole training loop and moves the model and all data to the correct device. To create your training pipeline, you implement your own subclasses of `LightningModule` and `LightningDataModule` and configure the `Trainer` by passing your desired arguments. A simple training loop then looks like this:
 ```python
 model = MyLightningModule()
@@ -90,15 +89,16 @@ dm = MyLightningDataModule()
 trainer = Trainer()
 trainer.fit(model, datamodule=dm)
 ```
+Consequently, the first step for setting our training pipeline is to implement a `LightningModule` and a `LightningDataModule` suitable for our task.
 
-#### Working with pre-trained LLMs
-As a first step in our Lightning pipeline, we implement a class `TransformerLearner` that inherits from `LightningModule` and will handle everything needed for us to work with pre-trained LLMs from the [🤗 Transformers](https://huggingface.co/docs/transformers/index) library. We use 🤗 Transformers as it provides easy access to a large set of open-source LLMs and their pre-trained weights for us to experiment with. In particular, the `TransformerLearner` will load the pre-trained models and their tokenizers, set up the optimizer, create a learning rate scheduler, and handle other potential hyperparameters. This encapsulation of the underlying model will make it very convenient to switch and try out different LLMs later (TODO: cross-ref phi2). Throughout this project, we use the [AdamW](https://arxiv.org/abs/1711.05101) optimizer and a learning rate schedule consisting of a linear warm-up followed by [cosine annealing](https://arxiv.org/abs/1608.03983). Figure 1 shows an example of such a learning rate schedule. The example uses a maximum learning rate of 1.0, 50 epochs total, and a warm-up for ten epochs.
+#### 1.2. Working with pre-trained LLMs
+As a first step in our Lightning pipeline, we implement a class `TransformerLearner` that inherits from `LightningModule` and will handle everything needed for us to work with pre-trained LLMs from the [🤗 Transformers](https://huggingface.co/docs/transformers/index) library. We use 🤗 Transformers as it provides easy access to a large set of open-source LLMs and their pre-trained weights for us to experiment with. In particular, the `TransformerLearner` will load the pre-trained models and their tokenizers, set up the optimizer, create a learning rate scheduler, and handle other potential hyperparameters. This encapsulation of the underlying model will make it very convenient to switch and try out different LLMs later (see [Section 4](#4-scaling-to-larger-models)). Throughout this project, we use the [AdamW](https://arxiv.org/abs/1711.05101) optimizer and a learning rate schedule consisting of a linear warm-up followed by [cosine annealing](https://arxiv.org/abs/1608.03983). Figure 1 shows an example of such a learning rate schedule. The example uses a maximum learning rate of 1.0, 50 epochs total, and a warm-up for ten epochs.
 <figure>
     <img src="../../img/project-dkgqa/lr-schedule.svg"/>
     <center><figcaption>Figure 1 - Illustration of the learning rate schedule.</figcaption></center>
 </figure>
 
-#### Working with the SimpleQuestions dataset
+#### 1.3. Working with the SimpleQuestions dataset
 Next, we implement a class `SPARQLDataModule` that inherits from `LightningModule` and will handle data loading. The Wikidata SimpleQuestions dataset consists of text files where each line contains four tab-separated values. The first three values are the Wikidata IDs of the subject, predicate, and object of the query. The fourth value is the question we want to predict the query for. The object ID is always the target of our query, i.e., the answer to the corresponding question. Our `SPARQLDataModule` now translates this data to question-query pairs. For example, consider the following three lines:
 ```
 Q2275923	P106	Q40348		What was Seymour Parker Gilbert's profession?
@@ -116,6 +116,85 @@ qq_pairs = [
 Note that if the predicate ID starts with a P, the target will be in the object position. Predicate IDs beginning with an R encode the inverse of a property in Wikidata. These inverse properties can occur because the SimpleQuestions dataset was initially based on Freebase and only later translated to Wikidata. In such cases, the target and subject ID will switch positions. Afterward, we replace the R with a P.
 
 As a final step, our data module will use the tokenizer of our pre-trained model to transform our question-query pairs into PyTorch tensors that we can pass to our model. The data module will then return these tensors in a batched format using PyTorch data loaders.
+
+### 2. Initial experiments
+
+Now that we have set up our pipeline for finetuning pre-trained LLMs, we can begin with our first experiments. Before we start, we have to decide on an LLM we want to use. However, we do not need to start with large state-of-the-art models directly. We want to get a good feeling for the task first. Thus, we want a model we can finetune on a single consumer-level GPU. For this reason, we choose the [T5 (Text-To-Text-Transfer Transformer)](https://github.com/google-research/text-to-text-transfer-transformer) model family, which consists of five pre-trained models:
+
+| Model | Parameters |
+|-------|------------|
+| T5-Small | 60 million |
+| T5-Base | 220 million |
+| T5-Large | 770 million |
+| T5-3B | 3 billion |
+| T5-11B | 11 billion |
+
+The T5 models use a classic encoder-decoder transformer architecture for sequence-to-sequence language modeling. We can generate queries with these models by passing the tokenized questions as input to the transformer encoder and an empty sequence to the transformer decoder. After that, we can use the token distributions predicted by the model to generate our query token by token. Therefore, we also finetune our models for next token prediction. In concrete terms, we use cross-entropy loss to train the model to predict the n+1-th token of the query given the tokenized question and the first n tokens of the query. Let's now try to finetune a T5-Small and T5-Base model. We will use a batch size of 32, a maximum learning rate of \\(10^{-4}\\), one warm-up epoch, and finetune for ten epochs. Figure 2 shows the training and validation losses for the two training runs.
+<figure>
+    <img src="../../img/project-dkgqa/initial-experiments-loss-train.svg" width=800 style="margin: 0"/>
+    <img src="../../img/project-dkgqa/initial-experiments-loss-val.svg" width=800 style="margin: 0"/>
+    <center><figcaption>Figure 2 - Training and validation loss of the T5-Small and the T5-Base models.</figcaption></center>
+</figure>
+```
+```
+We can observe multiple things from these plots. First of all, both models are able to learn from the data provided and manage to minimize the training loss. Second, the T5-Base model performs slightly better than T5-Small. Lastly, from the validation loss, we can see that both models start to overfit at some point, but noticeably, the T5-Base overfits more and starts earlier. As overfitting is a common problem when finetuning large models, we do not only keep the checkpoint of the final model but also a checkpoint of the model with the lowest validation loss. The T5-Base model achieved the lowest validation at epoch five in this experiment. Let's see how well it does on the questions from our data module example:
+
+```
+What was Seymour Parker Gilbert's profession?
+What job does jamie hewlett have
+What is a film directed by wiebke von carolsfeld?
+```
+
+Note that these questions are from the validation set of the SimpleQuestions dataset, so the model did not train on these. The T5-Base checkpoint from epoch five generates the following output:
+
+```sparql
+<pad> SELECT?target WHERE <unk> wd:Q7307816 wdt:P106?target. <unk></s>
+<pad> SELECT?target WHERE <unk> wd:Q6123437 wdt:P106?target. <unk></s>
+<pad> SELECT?target WHERE <unk>?target wdt:P57 wd:Q314040. <unk></s></s>
+```
+
+We can see that the model learned the syntax of our simple SPARQL queries. We now post-process the outputs by removing padding and end-of-sentence (eos) tokens and replacing unknown tokens by opening and closing curly braces around the body. We also adjust some spacing for readability:
+
+```sparql
+SELECT ?target WHERE { wd:Q7307816 wdt:P106 ?target . }
+SELECT ?target WHERE { wd:Q6123437 wdt:P106 ?target . }
+SELECT ?target WHERE { ?target wdt:P57 wd:Q314040 . }
+```
+
+At first glance, this looks promising. The model has no problems adapting the syntax of our simple queries. It correctly predicts the properties P106 ("occupation") and P57 ("director"). Furthermore, it handles the positions of the target right even with inverse properties (cross-ref DataModule). However, results look much worse when looking at the predicted entity IDs. None of the IDs match the actual entity mentioned in the question:
+
+| Actual entity | Actual ID | Predicted ID | Predicted entity |
+|---------------|-----------|--------------|------------------|
+| Seymour Parker Gilbert | Q2275923 | Q7307816 | Cerritos, California |
+| Jamie Hewlett | Q522966 | Q6123437 | Jai Paul |
+| Wiebke Carolsfeld | Q2568216 | Q314040 | Joachim Kühn |
+
+From the table, we also see that these are not simple one-digit mistakes. There is no noticeable connection between the predicted and the actual IDs. While this result seems discouraging, it is easy to explain. Remember that we took these three examples from our validation set. A quick text search through our training set reveals that none of these three entities nor their IDs exist in the training data. However, the two properties both occur over 100 times. So, the model performs as we would expect under these circumstances. We cannot expect the model to generalize to Wikidata IDs it has never seen during training. We will discuss a solution to this problem in the next section.
+
+### 3. Natural language entities
+
+In the previous section, we saw one problem of working directly with Wikidata IDs. Namely, the model does not generalize to entities not present in the training set. There are more disadvantages. For instance, we need our model to learn as many Wikidata IDs by heart as possible. Yet, if Wikidata adds new entities or properties after we finetuned our model, it will not be able to deal with them. Another motivation for working with pre-trained LLMs is their ability to reason about semantic relationships between words or entities. However, the Wikidata IDs of semantically related entities share no semantic relationship that the LLM will pick up. For example, most pre-trained LLMs will detect a semantic relationship between "Germany" and "Berlin" but not between "Q183" and "Q64". Meaning our current approach leaves a lot of potential unused.
+
+We deal with these disadvantages by replacing Wikidata IDs with natural language entities. A natural language entity is simply the name of an entity or one of its synonyms. For example, the name of entity Q64 is "Berlin" and has the synonyms "Berlin, Germany" and "Berlin (Germany)". We will also slightly adjust the syntax of queries we want to generate. Consider the again question "Who is the president of the USA?" and the corresponding SPARQL query:
+```sparql
+SELECT ?target WHERE { wd:Q30 wdt:P6 ?target . }
+```
+The query will look like this when using natural language entities:
+```sparql
+SELECT <bov>x<eov> WHERE <bob> <boe>United States of America<eoe> <bop>head of government<eop> <bov>x<eov> . <eob>
+```
+While this arguably looks more complex than before, it is also much more verbose. An LLM will have an easier time relating "president" to "head of state" than to "P6". Natural language entities also generalize better than Wikidata IDs. When asked for the head of government of another country not present in the training data, the model can now make a reasonable attempt by simply using the country name as the entity. By also incorporating synonyms, we can increase the amount of training data. For instance, we can create multiple queries containing different synonyms for a single question. For the above example, we could also have a query with "USA" as the entity instead of "United States of America". We increase our training and validation set size by roughly 20% in this fashion.
+
+We need to implement this in a way that we can reconstruct the original SPARQL query from the adjusted ones. We can solve this with an inverted index that maps from entity or property names to Wikidata IDs. We can then replace the natural language entities with the corresponding IDs. Converting the tag-based syntax back into proper SPARQL is trivial. We will slightly revise our initial problem definition to reflect this adaption: Our task is to finetune the weights of a given LLM such that, given a simple question, it generates a corresponding query containing natural language entities.
+
+Let's now finetune a T5-Base model using natural language entities. We again use a batch size of 32, a maximum learning rate of \\(10^{-4}\\), one warm-up epoch, and finetune for ten epochs. For comparison, we finetune another T5-Base model with the same configuration but using Wikidata IDs. Figure 3 shows the training and validation losses of both training runs.
+<figure>
+    <img src="../../img/project-dkgqa/nle-loss-train.svg" width=800 style="margin: 0"/>
+    <img src="../../img/project-dkgqa/nle-loss-val.svg" width=800 style="margin: 0"/>
+    <center><figcaption>Figure 3 - Training and validation loss of two T5-Base models trained on Wikidata IDs (wid) and natural language entities (nle) respectively.</figcaption></center>
+</figure>
+
+Looking at the plots, we can see that the model trained using natural language entities achieves a much lower loss much quicker. The training and validation losses stay lower throughout the training. These facts suggest that the LLM has an easier time learning to generate our modified queries.
 
 ## References
 
