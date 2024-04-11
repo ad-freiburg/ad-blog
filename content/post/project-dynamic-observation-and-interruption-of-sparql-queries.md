@@ -1,12 +1,12 @@
 ---
 title: "Dynamic Observation and Interruption of SPARQL Queries"
-date: 2024-03-29T03:19:19+01:00
+date: 2024-04-11T17:14:33+02:00
 author: "Robin Textor-Falconi"
 authorAvatar: "img/ada.jpg"
 tags: ["SPARQL", "WebSocket", "HTTP", "Synchronization", "Atomics", "QLever"]
 categories: ["project"]
 image: "img/project-dynamic-observation-and-interruption-of-sparql-queries/teaser.png"
-draft: true
+draft: false
 ---
 
 A dive into the process of designing an architecture that allows
@@ -31,10 +31,10 @@ observers to interact with complex queries in real-time.
 
 ## Real-Time is more than quality of life
 
-QLever is a SPARQL-compliant knowledge-base engine that allows to blazingly fast execution of SPARQL queries on giant RDF
+QLever is a SPARQL-compliant knowledge graph engine that allows for blazingly fast execution of SPARQL queries on giant RDF
 data graphs. However, even though most common queries run in less than a couple of seconds, of course, more expensive
 queries exist that will take dozens of seconds, minutes or even whole hours to compute. These kinds of queries will
-eventually be completed but generally, it's hard to tell how long a novel query will take from an outside perspective.
+eventually be completed but generally, it's hard to tell how long a query will take from an outside perspective.
 In addition to that, if you had this knowledge after starting the query and decide it's not worth the wait it would be
 nice if you could cancel this query directly. Previously there was no mechanism to actually cancel a running query.
 Instead, it would just compute the query until the very end potentially taking up a lot of limited resources in the process,
@@ -147,8 +147,8 @@ observations by server administrators in case queries are hogging up a lot of re
 listeners are connected to QLever and a query makes progress it has to broadcast the latest update to all listeners. Of course,
 there are some important considerations to be made here. The broadcast operation cannot be blocking in any way, otherwise,
 a slow WebSocket client can just slow down queries artificially. Also ideally all WebSockets should be able to operate
-independently of each other for maximum efficiency, but due to technical limitations of `Boost.Asio` we ended up running all
-io operations in a somewhat synchronized manner to avoid race conditions.
+independently of each other for maximum efficiency, but due to technical limitations of `Boost.Asio` we ended up having to 
+run some operations in a somewhat synchronized manner to avoid race conditions.
 
 Traditionally handling I/O with multiple threads is always a challenge. The "classic" approach to read input streams of files,
 network traffic and so on dedicates a single thread to read all the data, waiting in a blocking manner until the data finally
