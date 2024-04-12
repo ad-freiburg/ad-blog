@@ -1,6 +1,6 @@
 ---
 title: "Dynamic Observation and Interruption of SPARQL Queries"
-date: 2024-04-11T17:14:33+02:00
+date: 2024-04-12T16:44:11+02:00
 author: "Robin Textor-Falconi"
 authorAvatar: "img/ada.jpg"
 tags: ["SPARQL", "WebSocket", "HTTP", "Synchronization", "Atomics", "QLever"]
