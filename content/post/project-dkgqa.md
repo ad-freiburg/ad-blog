@@ -89,13 +89,16 @@ dm = MyLightningDataModule()
 trainer = Trainer()
 trainer.fit(model, datamodule=dm)
 ```
-Consequently, the first step for setting our training pipeline is to implement a `LightningModule` and a `LightningDataModule` suitable for our task.
+Consequently, the first step for setting up our training pipeline is to implement a `LightningModule` and a `LightningDataModule` suitable for our task.
 
 #### 1.2. Working with pre-trained LLMs
 As a first step in our Lightning pipeline, we implement a class `TransformerLearner` that inherits from `LightningModule` and will handle everything needed for us to work with pre-trained LLMs from the [🤗 Transformers](https://huggingface.co/docs/transformers/index) library. We use 🤗 Transformers as it provides easy access to a large set of open-source LLMs and their pre-trained weights for us to experiment with. In particular, the `TransformerLearner` will load the pre-trained models and their tokenizers, set up the optimizer, create a learning rate scheduler, and handle other potential hyperparameters. This encapsulation of the underlying model will make it very convenient to switch and try out different LLMs later (see [Section 4](#4-scaling-to-larger-models)). Throughout this project, we use the [AdamW](https://arxiv.org/abs/1711.05101) optimizer and a learning rate schedule consisting of a linear warm-up followed by [cosine annealing](https://arxiv.org/abs/1608.03983). Figure 1 shows an example of such a learning rate schedule. The example uses a maximum learning rate of 1.0, 50 epochs total, and a warm-up for ten epochs.
 <figure>
+    <center>
     <img src="../../img/project-dkgqa/lr-schedule.svg"/>
-    <center><figcaption>Figure 1 - Illustration of the learning rate schedule.</figcaption></center>
+    <figcaption>Figure 1 - Illustration of the learning rate schedule.</figcaption>
+    </center>
+    <br>
 </figure>
 
 #### 1.3. Working with the SimpleQuestions dataset
@@ -122,7 +125,7 @@ As a final step, our data module will use the tokenizer of our pre-trained model
 Now that we have set up our pipeline for finetuning pre-trained LLMs, we can begin with our first experiments. Before we start, we have to decide on an LLM we want to use. However, we do not need to start with large state-of-the-art models directly. We want to get a good feeling for the task first. Thus, we want a model we can finetune on a single consumer-level GPU. For this reason, we choose the [T5 (Text-To-Text-Transfer Transformer)](https://github.com/google-research/text-to-text-transfer-transformer) model family, which consists of five pre-trained models:
 
 | Model | Parameters |
-|-------|------------|
+|-------|-----------:|
 | T5-Small | 60 million |
 | T5-Base | 220 million |
 | T5-Large | 770 million |
@@ -131,9 +134,12 @@ Now that we have set up our pipeline for finetuning pre-trained LLMs, we can beg
 
 The T5 models use a classic encoder-decoder transformer architecture for sequence-to-sequence language modeling. We can generate queries with these models by passing the tokenized questions as input to the transformer encoder and an empty sequence to the transformer decoder. After that, we can use the token distributions predicted by the model to generate our query token by token. Therefore, we also finetune our models for next token prediction. In concrete terms, we use cross-entropy loss to train the model to predict the n+1-th token of the query given the tokenized question and the first n tokens of the query. Let's now try to finetune a T5-Small and T5-Base model. We will use a batch size of 32, a maximum learning rate of \\(10^{-4}\\), one warm-up epoch, and finetune for ten epochs. Figure 2 shows the training and validation losses for the two training runs.
 <figure>
+    <center>
     <img src="../../img/project-dkgqa/initial-experiments-loss-train.svg" width=800 style="margin: 0"/>
     <img src="../../img/project-dkgqa/initial-experiments-loss-val.svg" width=800 style="margin: 0"/>
-    <center><figcaption>Figure 2 - Training and validation loss of the T5-Small and the T5-Base models.</figcaption></center>
+    <figcaption>Figure 2 - Training and validation loss of the T5-Small and the T5-Base models.</figcaption>
+    </center>
+    <br>
 </figure>
 ```
 ```
@@ -153,7 +159,7 @@ Note that these questions are from the validation set of the SimpleQuestions dat
 <pad> SELECT?target WHERE <unk>?target wdt:P57 wd:Q314040. <unk></s></s>
 ```
 
-We can see that the model learned the syntax of our simple SPARQL queries. We now post-process the outputs by removing padding and end-of-sentence (eos) tokens and replacing unknown tokens by opening and closing curly braces around the body. We also adjust some spacing for readability:
+We can see that the model learned the syntax of our simple SPARQL queries. We now post-process the outputs by removing padding (pad) and end-of-sentence (eos) tokens and replacing unknown (unk) tokens by opening and closing curly braces around the body. We also adjust some spacing for readability:
 
 ```sparql
 SELECT ?target WHERE { wd:Q7307816 wdt:P106 ?target . }
@@ -177,9 +183,13 @@ In the previous section, we saw one problem of working directly with Wikidata ID
 
 We deal with these disadvantages by replacing Wikidata IDs with natural language entities. A natural language entity is simply the name of an entity or one of its synonyms. For example, the name of entity Q64 is "Berlin" and has the synonyms "Berlin, Germany" and "Berlin (Germany)". We will also slightly adjust the syntax of queries we want to generate. Consider the again question "Who is the president of the USA?" and the corresponding SPARQL query:
 ```sparql
-SELECT ?target WHERE { wd:Q30 wdt:P6 ?target . }
+SELECT ?x WHERE { wd:Q30 wdt:P6 ?x . }
 ```
 The query will look like this when using natural language entities:
+```sparql
+SELECT ?x WHERE { United States of America  head of government ?x . }
+```
+To prevent ambiguities and to make the syntax even more expressive, we will additionally use a tag-based syntax:
 ```sparql
 SELECT <bov>x<eov> WHERE <bob> <boe>United States of America<eoe> <bop>head of government<eop> <bov>x<eov> . <eob>
 ```
@@ -189,12 +199,71 @@ We need to implement this in a way that we can reconstruct the original SPARQL q
 
 Let's now finetune a T5-Base model using natural language entities. We again use a batch size of 32, a maximum learning rate of \\(10^{-4}\\), one warm-up epoch, and finetune for ten epochs. For comparison, we finetune another T5-Base model with the same configuration but using Wikidata IDs. Figure 3 shows the training and validation losses of both training runs.
 <figure>
+    <center>
     <img src="../../img/project-dkgqa/nle-loss-train.svg" width=800 style="margin: 0"/>
     <img src="../../img/project-dkgqa/nle-loss-val.svg" width=800 style="margin: 0"/>
-    <center><figcaption>Figure 3 - Training and validation loss of two T5-Base models trained on Wikidata IDs (wid) and natural language entities (nle) respectively.</figcaption></center>
+    <figcaption>Figure 3 - Training and validation loss of two T5-Base models trained on Wikidata IDs (wid) and natural language entities (nle) respectively.</figcaption>
+    </center>
+    <br>
 </figure>
 
 Looking at the plots, we can see that the model trained using natural language entities achieves a much lower loss much quicker. The training and validation losses stay lower throughout the training. These facts suggest that the LLM has an easier time learning to generate our modified queries.
+
+### 4. Scaling to larger models
+
+Now that we have established a stable training pipeline and an improved query format, we can start looking into exploiting bigger models. Larger LLMs also come with drastically increased compute and memory requirements. In this section, we will explore techniques to keep training times feasible and discuss good model choices.
+
+#### LoRA and half-precision
+
+[Low-Rank Adaption](https://arxiv.org/abs/2106.09685) (LoRA) is a parameter-efficient finetuning (PEFT) technique. LoRA adds so-called low-rank adapters to the weight matrices of the pre-trained model.
+Let's look at an example. Consider a pre-trained weight matrix \\(W \in \mathbb{R}^{d \times d}\\) and an input vector \\(x \in \mathbb{R}^d\\). Normally, we compute the forward pass as \\(x' = Wx\\).
+<figure>
+    <center>
+    <img src="../../img/project-dkgqa/nolora.svg" style="margin: 0"/>
+    <figcaption>Figure 4 - Classic forward pass of a linear layer (without bias).</figcaption>
+    </center>
+    <br>
+</figure>
+
+When using LoRA, we add two additional weight matrices \\(A \in \mathbb{R}^{d \times r}, B \in \mathbb{R}^{r \times d}\\) where \\(r \ll d\\) is a hyperparameter, the so-called LoRA rank. Then, the forward pass becomes \\(x' = Wx + BAx\\).
+<figure>
+    <center>
+    <img src="../../img/project-dkgqa/lora.svg" style="margin: 0"/>
+    <figcaption>Figure 5 - Forward pass of a linear (without bias) with added low-rank adapters.</figcaption>
+    </center>
+    <br>
+</figure>
+
+During finetuning, we freeze the weights of \\(W\\) and update only \\(A\\) and \\(B\\). Since \\(r\\) is usually much smaller than \\(d\\), this drastically reduces the number of trainable parameters. We can apply low-rank adapters to any subset of weight matrices of the model we want to finetune. This way, we can further control the number of trainable parameters of the model. The most common LoRA configuration applies low-rank adapters only to the query and value matrices of a transformer's self-attention modules.
+
+Let's see how LoRA applies to our T5 models. We perform a quick experiment with the T5-Base model. We again use a batch size of 32, a maximum learning rate of \\(10^{-4}\\), one warm-up epoch, and finetune for ten epochs. We compare a full finetune against LoRA with ranks 8, 16, and 32. We add low-rank adapters to query and value matrices only. However, we also finetune the language modeling head of our models, i.e., the output layer. Figure 6 shows the losses of all training runs.
+<figure>
+    <center>
+    <img src="../../img/project-dkgqa/lora-loss-train.svg" width=800 style="margin: 0"/>
+    <img src="../../img/project-dkgqa/lora-loss-val.svg" width=800 style="margin: 0"/>
+    <figcaption>Figure 6 - Training and validation loss of a fully finetuned T5-Base model compared to three LoRA variants.</figcaption>
+    </center>
+    <br>
+</figure>
+
+We can see that the full finetune achieves a lower validation loss than the LoRA variants. However, the LoRA variants exhibit no signs of overfitting, whereas the full finetune does. When comparing the LoRA variants against each other, we see that large LoRA ranks correlate to a lower validation loss. Let's also compare the number of trainable parameters between the four runs:
+
+| Model variant | Total parameters | Trainable parameters | Trainable parameters (adapters only) |
+|---------------|-----------------:|---------------------:|-------------------------------------:|
+| LoRA r=8 | 248,462,592 | 25,559,040 | 884,736 |
+| LoRA r=16 | 249,347,328 | 26,443,776 | 1,769,472 |
+| LoRA r=32 | 251,116,800 | 28,213,248 | 3,538,944 |
+| Full | 222,903,552 | 222,903,552 | 0 |
+
+Note that the LoRA variants have more total parameters because we added the adapters and a copy of the language modeling head. The language modeling head alone makes up almost 25 million trainable parameters. The added adapters account for less than 1.5% of the total parameters.
+
+In addition to LoRA, we will also explore training our models in half-precision, i.e., using 16-bit instead of 32-bit floats. Using half-precision noticeably reduces VRAM consumption and speeds up training. These advantages of float16 come at the cost of a reduced dynamic range compared to float32. The maximum value representable in float32 is \\((2 - 2^{-23}) \cdot 2^{127} \\approx 3.4 \cdot 10^{38}\\) whereas the maximum value representable in float16 is \\(65,504\\). This reduced precision can theoretically also lead to a decline in model performance. However, in practice, we almost always prefer a larger model with less precision to a smaller model with higher precision. Sometimes float16 computations can under- or overflow during training, causing instabilities or NaN values. This is especially true for older transformer models that were not designed with half-precision in mind. Sadly, this also applies to our T5 model family. We will discuss other, more modern model choices that do not have this problem in the next section.
+
+#### Phi-2 and Mistral-7B
+
+As mentioned in the previous section, our T5 model family does not work well when finetuned in half-precision. Furthermore, the T5 family is also quite old by now. Many more capable models have been released since. We will focus on two recent LLMs: Microsoft's [Phi-2](https://www.microsoft.com/en-us/research/blog/phi-2-the-surprising-power-of-small-language-models/) and Mistral AI's [Mistral-7B](https://mistral.ai/news/announcing-mistral-7b/). The Phi-2 model comes with roughly 2.7 billion parameters. Mistral-7B comes with around 7 billion parameters (who would've guessed?). Both models are by no means huge for modern standards, e.g., compare [GPT-3's](https://en.wikipedia.org/wiki/GPT-3) 175 billion parameters. However, they both show good performance compared to models of similar size. Both of these models are pre-trained in half-precision.
+
+In contrast to the T5 models, Phi-2 and Mistral-7B are decoder-only transformers. To generate text with a decoder-only model, we pass the input sequence directly to the decoder and append the predicted tokens to the input. This generation method is also called causal language modeling.
 
 ## References
 
