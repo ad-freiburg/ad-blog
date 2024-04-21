@@ -332,6 +332,12 @@ Note that we also investigated lowering the learning rate and batch size for Phi
 
 ## Results
 
+In this section, we discuss the final models we finetuned. We also provide our evaluation results.
+
+### Finetuned models
+
+Throughout this project, we did a lot of experimentation and tuning. We ended up with four model configurations. A LoRA and a full finetune variant for Phi-2 and Mistral-7B. We finetuned the Phi-2 models using a batch size of 32, a maximum learning rate of \\(10^{-5}\\), five warm-up epochs, and 50 epochs in total. For Mistral-7B, we used a batch size of 16, a maximum learning rate of \\(2 \cdot 10^{-6}\\), three warm-up epochs, and 30 epochs in total. Both LoRA variants used a rank of 32 and applied adapters to all linear layers. We finetuned Phi-2 in full-precision, i.e., float32, and Mistral-7B in half-precision. This decision might be surprising at first but the reasoning is quite simple. We can finetune Phi-2 stably using half-precision but did not achieve comparable performance to full-precision. Figure 10 shows the loss curves of our final models.
+
 <figure>
     <center>
     <img src="../../img/project-dkgqa/final-models-train.svg" width=800 style="margin: 0"/>
@@ -340,5 +346,16 @@ Note that we also investigated lowering the learning rate and batch size for Phi
     </center>
     <br>
 </figure>
+
+We can observe multiple things from the figure. Mistral-7B outperforms Phi-2 noticeably. Also, the full finetune variants achieve a lower validation loss than the LoRA variants. Finally, the full finetune variants start overfitting quickly, whereas the LoRA variants overfit significantly less.
+
+The following table compares the hardware, resources, and time used to finetune our final models.
+
+| Model variant | Total parameters | Trainable parameters | GPUs | VRAM usage (per GPU) | Duration |
+|---------------|-----------------:|---------------------:|-----:|---------------------:|---------:|
+| Phi-2 LoRA | 2,957,992,960 | 178,309,120 | 1x A100 | ~51 GiB | 7.9 hours |
+| Phi-2 Full | 2,779,683,840 | 2,779,683,840 | 2x A100 | ~67 GiB | 3.6 hours |
+| Mistral-7B LoRA | 7,456,690,176 | 214,958,080 | 1x A100 | ~38 GiB | 5.8 hours |
+| Mistral-7B Full | 7,241,732,096 | 7,241,732,096 | 1x A100 | ~76 GiB | 4.2 hours |
 
 hugo serve -D --bind "::" --baseURL localhost
