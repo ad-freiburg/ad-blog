@@ -9,6 +9,7 @@ image: "img/writing.jpg"
 draft: true
 ---
 
+Question answering systems automatically provide answers to questions posed in natural language. Such systems typically rely on translating a question into a query over a knowledge graph. These systems often generate many possible queries at once and rank them according to some heuristic. In this project, we want to investigate the use of LLMs to generate queries directly from given natural language questions.
 
 ## Content
 
@@ -18,35 +19,27 @@ draft: true
 
 3. [Approach](#approach)
 
-    - [Training pipeline](#1-training-pipeline)
+   - [Setting up a training pipeline](#setting-up-a-training-pipeline)
 
-    - [Initial experiments](#2-initial-experiments)
+   - [Initial experiments](#initial-experiments)
 
-    - [Natural language entities](#3-natural-language-entities)
+   - [Natural language entities](#natural-language-entities)
 
-    - [Scaling to larger models](#4-scaling-to-larger-models)
-
-        - [LoRA and half precision](#4-1-lora-and-half-precision)
-
-        - [Phi-2 and Mistral-7B](#4-2-phi-2-and-mistral-7b)
+   - [Scaling to larger models](#scaling-to-larger-models)
 
 4. [Experiments](#experiments)
 
-    - [Adding more LoRA adapters](#1-adding-more-lora-adapters)
+   - [Adding more LoRA adapters](#adding-more-lora-adapters)
 
-    - [Hyperparameter tuning](#2-hyperparameter-tuning)
+   - [Hyperparameter tuning](#hyperparameter-tuning)
 
 5. [Results](#results)
 
-    - [Finetuned models](#1-finetuned-models)
+   - [Finetuned models](#finetuned-models)
 
-    - [Evaluation](#2-evaluation)
+   - [Evaluation](#evaluation)
 
-        - [Text-based evaluation](#2-1-text-based-evaluation)
-
-        - [SPARQL-based evaluation](#2-2-sparql-based-evaluation)
-
-6. [Limitations and future work](#limitations-and-future-work)
+6. [Conclusion and future work](#conclusion-and-future-work)
 
 ## Introduction
 
@@ -74,11 +67,11 @@ Our task now is to finetune the weights of the given LLM such that, given a simp
 
 We will now look at the approach proposed for solving this task. We will discuss the training pipeline, different LLM choices, and some techniques for improving training and model performance.
 
-### 1. Setting up a training pipeline
+### Setting up a training pipeline
 
 For this project, we use [PyTorch](https://pytorch.org/), a commonly used deep-learning framework for Python, to finetune our models. Additionally, we also use [Lightning](https://lightning.ai/docs/pytorch/stable/), a framework built on top of PyTorch, which allows building more flexible training pipelines while also avoiding writing a lot of boilerplate code. Lightning offers many improvements, but most importantly, it enables you to scale your training from CPU only to multiple GPUs without any changes to your code.
 
-#### 1.1. Lightning
+#### Lightning
 On a high level, a Lightning training pipeline consists of three main components: a `LightningModule`, a `LightningDataModule`, and a `Trainer`. The `LightningModule` class encapsulates all logic related to the model we want to train. The `LightningDataModule` class handles all data loading and preprocessing logic. The `Trainer` class manages the whole training loop and moves the model and all data to the correct device. To create your training pipeline, you implement your own subclasses of `LightningModule` and `LightningDataModule` and configure the `Trainer` by passing your desired arguments. A simple training loop then looks like this:
 ```python
 model = MyLightningModule()
@@ -89,7 +82,7 @@ trainer.fit(model, datamodule=dm)
 ```
 Consequently, the first step for setting up our training pipeline is to implement a `LightningModule` and a `LightningDataModule` suitable for our task.
 
-#### 1.2. Working with pre-trained LLMs
+#### Working with pre-trained LLMs
 As a first step in our Lightning pipeline, we implement a class `TransformerLearner` that inherits from `LightningModule` and will handle everything needed for us to work with pre-trained LLMs from the [🤗 Transformers](https://huggingface.co/docs/transformers/index) library. We use 🤗 Transformers as it provides easy access to a large set of open-source LLMs and their pre-trained weights for us to experiment with. In particular, the `TransformerLearner` will load the pre-trained models and their tokenizers, set up the optimizer, create a learning rate scheduler, and handle other potential hyperparameters. This encapsulation of the underlying model will make it very convenient to switch and try out different LLMs later (see [Section 4](#4-scaling-to-larger-models)). Throughout this project, we use the [AdamW](https://arxiv.org/abs/1711.05101) optimizer and a learning rate schedule consisting of a linear warm-up followed by [cosine annealing](https://arxiv.org/abs/1608.03983). Figure 1 shows an example of such a learning rate schedule. The example uses a maximum learning rate of 1.0, 50 epochs total, and a warm-up for ten epochs.
 <figure>
     <center>
@@ -99,7 +92,7 @@ As a first step in our Lightning pipeline, we implement a class `TransformerLear
     <br>
 </figure>
 
-#### 1.3. Working with the SimpleQuestions dataset
+#### Working with the SimpleQuestions dataset
 Next, we implement a class `SPARQLDataModule` that inherits from `LightningModule` and will handle data loading. The Wikidata SimpleQuestions dataset consists of text files where each line contains four tab-separated values. The first three values are the Wikidata IDs of the subject, predicate, and object of the query. The fourth value is the question we want to predict the query for. The object ID is always the target of our query, i.e., the answer to the corresponding question. Our `SPARQLDataModule` now translates this data to question-query pairs. For example, consider the following three lines:
 ```
 Q2275923	P106	Q40348		What was Seymour Parker Gilbert's profession?
@@ -118,7 +111,7 @@ Note that if the predicate ID starts with a P, the target will be in the object 
 
 As a final step, our data module will use the tokenizer of our pre-trained model to transform our question-query pairs into PyTorch tensors that we can pass to our model. The data module will then return these tensors in a batched format using PyTorch data loaders.
 
-### 2. Initial experiments
+### Initial experiments
 
 Now that we have set up our pipeline for finetuning pre-trained LLMs, we can begin with our first experiments. Before we start, we have to decide on an LLM we want to use. However, we do not need to start with large state-of-the-art models directly. We want to get a good feeling for the task first. Thus, we want a model we can finetune on a single consumer-level GPU. For this reason, we choose the [T5 (Text-To-Text-Transfer Transformer)](https://github.com/google-research/text-to-text-transfer-transformer) model family, which consists of five pre-trained models:
 
@@ -175,7 +168,7 @@ At first glance, this looks promising. The model has no problems adapting the sy
 
 From the table, we also see that these are not simple one-digit mistakes. There is no noticeable connection between the predicted and the actual IDs. While this result seems discouraging, it is easy to explain. Remember that we took these three examples from our validation set. A quick text search through our training set reveals that none of these three entities nor their IDs exist in the training data. However, the two properties both occur over 100 times. So, the model performs as we would expect under these circumstances. We cannot expect the model to generalize to Wikidata IDs it has never seen during training. We will discuss a solution to this problem in the next section.
 
-### 3. Natural language entities
+### Natural language entities
 
 In the previous section, we saw one problem of working directly with Wikidata IDs. Namely, the model does not generalize to entities not present in the training set. There are more disadvantages. For instance, we need our model to learn as many Wikidata IDs by heart as possible. Yet, if Wikidata adds new entities or properties after we finetuned our model, it will not be able to deal with them. Another motivation for working with pre-trained LLMs is their ability to reason about semantic relationships between words or entities. However, the Wikidata IDs of semantically related entities share no semantic relationship that the LLM will pick up. For example, most pre-trained LLMs will detect a semantic relationship between "Germany" and "Berlin" but not between "Q183" and "Q64". Meaning our current approach leaves a lot of potential unused.
 
@@ -207,7 +200,7 @@ Let's now finetune a T5-Base model using natural language entities. We again use
 
 Looking at the plots, we can see that the model trained using natural language entities achieves a much lower loss much quicker. The training and validation losses stay lower throughout the training. These facts suggest that the LLM has an easier time learning to generate our modified queries.
 
-### 4. Scaling to larger models
+### Scaling to larger models
 
 Now that we have established a stable training pipeline and an improved query format, we can start looking into exploiting bigger models. Larger LLMs also come with drastically increased compute and memory requirements. In this section, we will explore techniques to keep training times feasible and discuss good model choices.
 
@@ -298,7 +291,7 @@ Again, the language modeling head makes up most of the trainable parameters, aro
 
 The overhead of applying LoRA to all linear layers is small enough, considering the increase in performance. Thus, from now on, we will add adapters to all linear layers when using LoRA.
 
-### Hyperparameter Tuning
+### Hyperparameter tuning
 
 During our first experiments with the T5-Small and T5-Base models, we usually used a maximum learning rate of \\(10^{-4}\\) which seemed to provide good results. However, when experimenting with Phi-2 and Mistral-7B, we quickly noticed that these models require lower learning rates to achieve good performance. For Phi-2, reducing the learning rate to \\(10^{-5}\\) was enough.
 
@@ -349,7 +342,7 @@ Throughout this project, we did a lot of experimentation and tuning. We ended up
 
 We can observe multiple things from the figure. Mistral-7B outperforms Phi-2 noticeably. Also, the full finetune variants achieve a lower validation loss than the LoRA variants. Finally, the full finetune variants start overfitting quickly, whereas the LoRA variants overfit significantly less.
 
-The following table compares the hardware, resources, and time used to finetune our final models.
+We trained all our models on the [bwUniCluster 2.0](https://wiki.bwhpc.de/e/BwUniCluster2.0). The following table compares the hardware, resources, and time needed to finetune our final models.
 
 | Model variant | Total parameters | Trainable parameters | GPUs | VRAM usage (per GPU) | Duration |
 |---------------|-----------------:|---------------------:|-----:|---------------------:|---------:|
@@ -408,4 +401,8 @@ We achieve the following results on the Wikidata SimpleQuestions test set:
 | Mistral-7B LoRA | TBD | TBD |
 | Mistral-7B Full | TBD | TBD |
 
-hugo serve -D --bind "::" --baseURL localhost
+## Conclusion and future work
+
+With this project, we demonstrate the potential of LLMs for query generation in question answering systems. We build a flexible and extensible training pipeline for finetuning LLMs on the Wikidata SimpleQuestions dataset. We achieve promising results on this task using two recent models, Phi-2 and Mistral-7B.
+
+Still, our approach has some limitations. Our models can only deal with simple questions, i.e., they only generate queries consisting of a single triple. Furthermore, we only consider the Wikidata knowledge graph. However, these limitations are not inherent to our approach. We use a full deep-learning setup that can be used to generate arbitrary text. Therefore, it is straightforward to extend our approach to different datasets and other types of knowledge graphs. In particular, applying our approach to more complex questions and queries is a promising direction for future work.
