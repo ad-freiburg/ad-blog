@@ -358,4 +358,54 @@ The following table compares the hardware, resources, and time used to finetune 
 | Mistral-7B LoRA | 7,456,690,176 | 214,958,080 | 1x A100 | ~38 GiB | 5.8 hours |
 | Mistral-7B Full | 7,241,732,096 | 7,241,732,096 | 1x A100 | ~76 GiB | 4.2 hours |
 
+### Evaluation
+
+We group the evaluation of our models into two parts: a text-based and a SPARQL-based evaluation. The first part of the evaluation consists of text-based metrics that only compare the predicted and expected NLE queries. The second part of the evaluation tries to execute the predicted queries using [QLever](https://qlever.cs.uni-freiburg.de/wikidata) and compares the results to the results of the expected queries.
+
+#### Text-based evaluation
+
+The first step in our text-based evaluation is a simple query parser that converts a NLE query into a named tuple. For example, consider the query:
+```sparql
+SELECT <bov>x<eov> WHERE <bob> <boe>Jamie Hewlett<eoe> <bop>occupation<eop> <bov>x<eov>. <eob>
+```
+
+The parser produces the named tuple:
+```python
+(variable='x', triple=(subject='Jamie Hewlett', predicate='occupation', object='x'))
+```
+
+On top of this parser, we build three metrics: SyntaxCheck, VariablePlacement, and QueryMatching.
+
+The SyntaxCheck metric verifies that the predicted query follows our pre-defined tag-based syntax. If any syntax violations occur in the prediction, the parser throws an exception, and the metric will count the query as failed.
+
+The VariablePlacement metric checks if the variable is in the correct place in the predicted query. For instance, if the variable is in the object position in the expected query, the check will pass if and only if the variable in the predicted query is also in the object position.
+
+The QueryMatching metric checks if the predicted query contains the same natural language entities as the expected query. We realize this check using string comparison on the predicate and subject or object (we exclude the variable name). Note that this is quite a strict check. Nevertheless, it was useful during development because it is straightforward to compute and yields quick results.
+
+We achieved the following results on the Wikidata SimpleQuestions test set:
+
+| Model variant | SyntaxCheck | QueryMatching | VariablePlacement |
+|---------------|------------:|--------------:|------------------:|
+| Phi-2 LoRA | TBD | TBD | TBD |
+| Phi-2 Full | TBD | TBD | TBD |
+| Mistral-7B LoRA | TBD | TBD | TBD |
+| Mistral-7B Full | TBD | TBD | TBD |
+
+#### SPARQL-based Evaluation
+
+This evaluation is much closer to our actual goal of question answering. However, as it requires executing queries over Wikidata, it is also more expensive to compute. As a first step, we pre-compute the results of the ground truth SPARQL queries from the Wikidata SimpleQuestions test set using QLever. We then convert the predicted NLE queries into SPARQL and execute them against QLever. This yields a set of expected and a set of retrieved entities for each query. We then compute a per-query [F1 score](https://en.wikipedia.org/wiki/F-score) from these two sets. Finally, we average these scores over all queries. We compare two ways of converting the NLE queries into SPARQL.
+
+First, we use a basic replacement approach based on an inverted index. We build an inverted index that maps from natural language entities to Wikidata IDs. This approach does not use any fuzzing to deal with typos or other similar mistakes. Therefore, it can happen that we cannot map a natural language entity back to a Wikidata ID. In such cases, we return an F1 score of \\(0\\). We also return a score of \\(0\\)  if the NLE query has an invalid syntax.
+
+The second way uses so-called constrained decoding, developed by Walter (ref?). With this approach, we do not generate the full NLE query at once, but we restrict the decoding to only produce valid tokens in each step. We determine if a token is valid using QLever's autocompletion functionality (stimmt das?). This way, we can ensure that the queries we decode always translate to a valid SPARQL query.
+
+We achieve the following results on the Wikidata SimpleQuestions test set:
+
+| Model variant | Inverted Index | Constraint decoding |
+|---------------|---------------:|--------------------:|
+| Phi-2 LoRA | TBD | TBD |
+| Phi-2 Full | TBD | TBD |
+| Mistral-7B LoRA | TBD | TBD |
+| Mistral-7B Full | TBD | TBD |
+
 hugo serve -D --bind "::" --baseURL localhost
