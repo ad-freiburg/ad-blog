@@ -6,7 +6,7 @@ authorAvatar: "img/project-dkgqa/gopher.png"
 tags: ["wikidata", "sparql", "kgqa", "question-answering", "llms", "transformer", "nlp", "deep-learning"]
 categories: []
 image: "/img/project-dkgqa/title.svg"
-draft: true
+draft: false
 ---
 
 Question answering systems automatically provide answers to questions posed in natural language. A more specific type of question answering is knowledge graph question answering (KGQA). Such systems rely on translating a given question into a query over a knowledge graph. These systems often generate many possible queries at once and rank them according to some heuristic. There also exist LLM-based systems that try to directly generate the desired queries. In this project, we want to finetune and evaluate pre-trained LLMs for SPARQL query generation using the Wikidata SimpleQuestions dataset.
@@ -51,7 +51,7 @@ SELECT ?target WHERE { wd:Q30 wdt:P6 ?target . }
 ```
 In this query, the identifier wd:Q30 represents the entity "United States of America" in Wikidata. Similarly, wdt:P6 represents the property "head of government". When we evaluate this query on Wikidata, it will return all entities that occur as an object in a triple with the subject "United States of America" and the predicate "head of government". 
 
-Our goal is to obtain answers to our questions by executing our predicted queries using a SPARQL engine that operates on Wikidata, e.g., QLever. In this project, we work with different pre-trained LLMs that are publicly available and finetune them for generating SPARQL queries from natural language questions on the [Wikidata SimpleQuestions](https://github.com/askplatypus/wikidata-simplequestions) dataset. The following table provides an overview of the number of question-query pairs in the training, validation, and test set of the SimpleQuestions dataset. Note that the dataset was translated to Wikidata from Freebase, and thus not all of the questions have answers in Wikidata.
+Our goal is to obtain answers to our questions by executing our predicted queries using a SPARQL engine that operates on Wikidata, e.g., [QLever](https://qlever.cs.uni-freiburg.de/wikidata). In this project, we work with different pre-trained LLMs that are publicly available and finetune them for generating SPARQL queries from natural language questions on the [Wikidata SimpleQuestions](https://github.com/askplatypus/wikidata-simplequestions) dataset. The following table provides an overview of the number of question-query pairs in the training, validation, and test set of the SimpleQuestions dataset. Note that the dataset was translated to Wikidata from Freebase, and thus not all of the questions have answers in Wikidata.
 
 |  | Training set | Validation set | Test set |
 |--|-------------:|---------------:|---------:|
@@ -90,10 +90,10 @@ trainer.fit(model, datamodule=dm)
 Consequently, the first step for setting up our training pipeline is to implement a `LightningModule` and a `LightningDataModule` suitable for our task.
 
 #### Working with pre-trained LLMs
-As a first step in our Lightning pipeline, we implement a class `TransformerLearner` that inherits from `LightningModule` and will handle everything needed for us to work with pre-trained LLMs from the [🤗 Transformers](https://huggingface.co/docs/transformers/index) library. We use 🤗 Transformers as it provides easy access to a large set of open-source LLMs and their pre-trained weights for us to experiment with. In particular, the `TransformerLearner` will load the pre-trained models and their tokenizers, set up the optimizer, create a learning rate scheduler, and handle other potential hyperparameters. This encapsulation of the underlying model will make it very convenient to switch and try out different LLMs later (see [Section 4](#4-scaling-to-larger-models)). Throughout this project, we use the [AdamW](https://arxiv.org/abs/1711.05101) optimizer and a learning rate schedule consisting of a linear warm-up followed by [cosine annealing](https://arxiv.org/abs/1608.03983). Figure 1 shows an example of such a learning rate schedule. The example uses a maximum learning rate of 1.0, 50 epochs total, and a warm-up for ten epochs.
+As a first step in our Lightning pipeline, we implement a class `TransformerLearner` that inherits from `LightningModule` and will handle everything needed for us to work with pre-trained LLMs from the [🤗 Transformers](https://huggingface.co/docs/transformers/index) library. We use 🤗 Transformers as it provides easy access to a large set of open-source LLMs and their pre-trained weights for us to experiment with. In particular, the `TransformerLearner` will load the pre-trained models and their tokenizers, set up the optimizer, create a learning rate scheduler, and handle other potential hyperparameters. This encapsulation of the underlying model will make it very convenient to switch and try out different LLMs later (see [here](#scaling-to-larger-models)). Throughout this project, we use the [AdamW](https://arxiv.org/abs/1711.05101) optimizer and a learning rate schedule consisting of a linear warm-up followed by [cosine annealing](https://arxiv.org/abs/1608.03983). Figure <a href="#fig1">1</a> shows an example of such a learning rate schedule. The example uses a maximum learning rate of 1.0, 50 epochs total, and a warm-up for ten epochs.
 <figure>
     <center>
-    <img src="/img/project-dkgqa/lr-schedule.svg"/>
+    <img id='fig1' src="/img/project-dkgqa/lr-schedule.svg"/>
     <figcaption>Figure 1 - Illustration of the learning rate schedule.</figcaption>
     </center>
     <br>
@@ -114,7 +114,7 @@ qq_pairs = [
 	(question='What is a film directed by wiebke von carolsfeld?',	query='SELECT ?target WHERE { ?target wdt:P57 wd:Q2568216 . }')
 ]
 ```
-Note that if the predicate ID starts with a P, the target will be in the object position. Predicate IDs beginning with an R encode the inverse of a property in Wikidata. These inverse properties can occur because the SimpleQuestions dataset was initially based on Freebase and only later translated to Wikidata. In such cases, the target and subject ID will switch positions. Afterwards, we replace the R with a P.
+Note that if the predicate ID starts with a P, the target will be in the object position. Predicate IDs beginning with an R encode the inverse of a property in Wikidata. These inverse properties can occur because the SimpleQuestions dataset was initially based on Freebase and only later translated to Wikidata. In such cases, the target and subject ID will switch positions. Afterwards, we replace the R with a P (e.g., the third query in the above example).
 
 As a final step, our data module will use the tokenizer of our pre-trained model to transform our question-query pairs into PyTorch tensors that we can pass to our model. The data module will then return these tensors in a batched format using PyTorch data loaders.
 
@@ -130,11 +130,11 @@ Now that we have set up our pipeline for finetuning pre-trained LLMs, we can beg
 | T5-3B | 3 billion |
 | T5-11B | 11 billion |
 
-The T5 models use a classic encoder-decoder transformer architecture for sequence-to-sequence language modeling. We can generate queries with these models by passing the tokenized questions as input to the transformer encoder and an empty sequence to the transformer decoder. After that, we can use the token distributions predicted by the model to generate our query token by token. Therefore, we also finetune our models for next token prediction. In concrete terms, we use cross-entropy loss to train the model to predict the n+1-th token of the query given the tokenized question and the first n tokens of the query. Let's now try to finetune a T5-Small and T5-Base model. We will use a batch size of 32, a maximum learning rate of \\(10^{-4}\\), one warm-up epoch, and finetune for ten epochs. Figure 2 shows the training and validation losses for the two training runs.
+The T5 models use a classic [encoder-decoder transformer](https://arxiv.org/abs/1706.03762) architecture for sequence-to-sequence language modeling. We can generate queries with these models by passing the tokenized questions as input to the transformer encoder and an empty sequence to the transformer decoder. After that, we can use the token distributions predicted by the model to generate our query token by token. Therefore, we also finetune our models for next token prediction. In concrete terms, we use cross-entropy loss to train the model to predict the \\(n+1\\)-th token of the query given the tokenized question and the first \\(n\\) tokens of the query. Let's now try to finetune a T5-Small and T5-Base model. We will use a batch size of 32, a maximum learning rate of \\(10^{-4}\\), one warm-up epoch, and finetune for ten epochs. Figure <a href="#fig2">2</a> shows the training and validation losses for the two training runs.
 <figure>
     <center>
-    <img src="../../img/project-dkgqa/initial-experiments-loss-train.svg" width=800 style="margin: 0"/>
-    <img src="../../img/project-dkgqa/initial-experiments-loss-val.svg" width=800 style="margin: 0"/>
+    <img id='fig2' src="/img/project-dkgqa/initial-experiments-loss-train.svg" width=800 style="margin: 0"/>
+    <img src="/img/project-dkgqa/initial-experiments-loss-val.svg" width=800 style="margin: 0"/>
     <figcaption>Figure 2 - Training and validation loss of the T5-Small and the T5-Base models.</figcaption>
     </center>
     <br>
@@ -157,7 +157,7 @@ Note that these questions are from the validation set of the SimpleQuestions dat
 <pad> SELECT?target WHERE <unk>?target wdt:P57 wd:Q314040. <unk></s></s>
 ```
 
-We can see that the model learned the syntax of our simple SPARQL queries. We now post-process the outputs by removing padding (pad) and end-of-sentence (eos) tokens and replacing unknown (unk) tokens by opening and closing curly braces around the body. We also adjust some spacing for readability:
+We can see that the model learned the syntax of our simple SPARQL queries. We now post-process the outputs by removing padding (pad) and end-of-sentence (/s) tokens and replacing unknown (unk) tokens by opening and closing curly braces around the body. We also adjust some spacing for readability:
 
 ```sparql
 SELECT ?target WHERE { wd:Q7307816 wdt:P106 ?target . }
@@ -165,7 +165,7 @@ SELECT ?target WHERE { wd:Q6123437 wdt:P106 ?target . }
 SELECT ?target WHERE { ?target wdt:P57 wd:Q314040 . }
 ```
 
-At first glance, this looks promising. The model has no problems adapting the syntax of our simple queries. It correctly predicts the properties P106 ("occupation") and P57 ("director"). Furthermore, it handles the positions of the target right even with inverse properties (cross-ref DataModule). However, results look much worse when looking at the predicted entity IDs. None of the IDs match the actual entity mentioned in the question:
+At first glance, this looks promising. The model has no problems adapting the syntax of our simple queries. It correctly predicts the properties P106 ("occupation") and P57 ("director"). Furthermore, it handles the positions of the target right even with inverse properties (see [here](#working-with-the-simplequestions-dataset)). However, results look much worse when looking at the predicted entity IDs. None of the IDs match the actual entity mentioned in the question:
 
 | Actual entity | Actual ID | Predicted ID | Predicted entity |
 |---------------|-----------|--------------|------------------|
@@ -195,17 +195,17 @@ While this arguably looks more complex than before, it is also much more verbose
 
 We need to implement this approach in a way that we can reconstruct the original SPARQL query with the Wikidata IDs from the ones with NLEs. We can solve this with an inverted index that maps from entity or property names to Wikidata IDs. We can then replace the natural language entities with the corresponding IDs. Converting the tag-based syntax back into proper SPARQL is trivial. We will slightly revise our initial problem definition to reflect this adaption: Our task is to finetune the weights of a given LLM such that, given a simple question, it generates a corresponding query containing natural language entities.
 
-Let's now finetune a T5-Base model using natural language entities. We again use a batch size of 32, a maximum learning rate of \\(10^{-4}\\), one warm-up epoch, and finetune for ten epochs. For comparison, we finetune another T5-Base model with the same configuration but using Wikidata IDs. Figure 3 shows the training and validation losses of both training runs.
+Let's now finetune a T5-Base model using natural language entities. We again use a batch size of 32, a maximum learning rate of \\(10^{-4}\\), one warm-up epoch, and finetune for ten epochs. For comparison, we finetune another T5-Base model with the same configuration but using Wikidata IDs. Figure <a href="#fig3">3</a> shows the training and validation losses of both training runs.
 <figure>
     <center>
-    <img src="../../img/project-dkgqa/nle-loss-train.svg" width=800 style="margin: 0"/>
-    <img src="../../img/project-dkgqa/nle-loss-val.svg" width=800 style="margin: 0"/>
-    <figcaption>Figure 3 - Training and validation loss of two T5-Base models trained on Wikidata IDs (wid) and natural language entities (nle) respectively.</figcaption>
+    <img id='fig3' src="/img/project-dkgqa/nle-loss-train.svg" width=800 style="margin: 0"/>
+    <img src="/img/project-dkgqa/nle-loss-val.svg" width=800 style="margin: 0"/>
+    <figcaption>Figure 3 - Training and validation loss of two T5-Base models trained on Wikidata IDs (WID) and natural language entities (NLE) respectively.</figcaption>
     </center>
     <br>
 </figure>
 
-Looking at the plots, we can see that the model trained using natural language entities achieves a much lower loss much quicker. The training and validation losses stay lower throughout the training. These facts suggest that the LLM has an easier time learning to generate our modified queries.
+Looking at the plots, we can see that the model trained using natural language entities achieves a much lower loss much quicker. The training and validation losses stay lower throughout the training. These facts suggest that the LLM has an easier time learning to generate our modified queries. We can partially attribute this to the easy-to-predict tokens we introduced with the tag-based syntax. On the other hand, the model can also mostly copy the natural language entities from the question to the query.
 
 ### Scaling to larger models
 
@@ -217,7 +217,7 @@ Now that we have established a stable training pipeline and an improved query fo
 Let's look at an example. Consider a pre-trained weight matrix \\(W \in \mathbb{R}^{d \times d}\\) and an input vector \\(x \in \mathbb{R}^d\\). Normally, we compute the forward pass as \\(x' = Wx\\).
 <figure>
     <center>
-    <img src="../../img/project-dkgqa/nolora.svg" style="margin: 0"/>
+    <img id='fig4' src="/img/project-dkgqa/nolora.svg" style="margin: 0"/>
     <figcaption>Figure 4 - Classic forward pass of a linear layer (without bias).</figcaption>
     </center>
     <br>
@@ -226,8 +226,8 @@ Let's look at an example. Consider a pre-trained weight matrix \\(W \in \mathbb{
 When using LoRA, we add two additional weight matrices \\(A \in \mathbb{R}^{d \times r}, B \in \mathbb{R}^{r \times d}\\) where \\(r \ll d\\) is a hyperparameter, the so-called LoRA rank. Then, the forward pass becomes \\(x' = Wx + BAx\\).
 <figure>
     <center>
-    <img src="../../img/project-dkgqa/lora.svg" style="margin: 0"/>
-    <figcaption>Figure 5 - Forward pass of a linear (without bias) with added low-rank adapters.</figcaption>
+    <img id='fig5' src="/img/project-dkgqa/lora.svg" style="margin: 0"/>
+    <figcaption>Figure 5 - Forward pass of a linear layer (without bias) with added low-rank adapters.</figcaption>
     </center>
     <br>
 </figure>
@@ -236,11 +236,11 @@ The matrix \\(A\\) is initialized randomly, whereas \\(B\\) is initially set to 
 
 We can apply low-rank adapters to any subset of weight matrices of the model we want to finetune. This way, we can further control the number of trainable parameters of the model. The most common LoRA configuration applies low-rank adapters only to the query and value matrices of a transformer's self-attention modules.
 
-Let's see how LoRA applies to our T5 models. We perform a quick experiment with the T5-Base model. We again use a batch size of 32, a maximum learning rate of \\(10^{-4}\\), one warm-up epoch, and finetune for ten epochs. We compare a full finetune against LoRA with ranks 8, 16, and 32. We add low-rank adapters to query and value matrices only. However, we also finetune the language modeling head of our models, i.e., the output layer. Figure 6 shows the losses of all training runs.
+Let's see how LoRA applies to our T5 models. We perform a quick experiment with the T5-Base model. We again use a batch size of 32, a maximum learning rate of \\(10^{-4}\\), one warm-up epoch, and finetune for ten epochs. We compare a full finetune against LoRA with ranks 8, 16, and 32. We add low-rank adapters to query and value matrices only. However, we also finetune the language modeling head of our models, i.e., the output layer of our transformer. Figure <a href="#fig6">6</a> shows the losses of all training runs.
 <figure>
     <center>
-    <img src="../../img/project-dkgqa/lora-loss-train.svg" width=800 style="margin: 0"/>
-    <img src="../../img/project-dkgqa/lora-loss-val.svg" width=800 style="margin: 0"/>
+    <img id='fig6' src="/img/project-dkgqa/lora-loss-train.svg" width=800 style="margin: 0"/>
+    <img src="/img/project-dkgqa/lora-loss-val.svg" width=800 style="margin: 0"/>
     <figcaption>Figure 6 - Training and validation loss of a fully finetuned T5-Base model compared to three LoRA variants.</figcaption>
     </center>
     <br>
@@ -273,14 +273,14 @@ In this section, we summarize some interesting experiments we did while tuning t
 
 ### Adding more LoRA adapters
 
-When playing around with LoRA, we quickly noticed that larger ranks yield better performance. This fact is not surprising, as larger ranks mean more trainable parameters. However, there still was a gap in performance between high-rank LoRA, e.g., \\(r=32\\), and a full finetune (see Figure 6).
+When playing around with LoRA, we quickly noticed that larger ranks yield better performance. This fact is not surprising, as larger ranks mean more trainable parameters. However, there still was a gap in performance between high-rank LoRA, e.g., \\(r=32\\), and a full finetune (see Figure <a href="#fig6">6</a>).
 
-So, we experimented with adding LoRA adapters to more than just the query and value matrices. We trained three different configurations of the Phi-2 model: a LoRA variant (SA) with adapters added to all weight matrices of the self-attention modules, a LoRA variant (AL) with adapters added to all linear layers of the model (including the MLPs), and a fully finetuned variant. Both LoRA variants used a rank of 32. We used a batch size of 32, a maximum learning rate of \\(10^{-5}\\), five warm-up epochs, and finetune for 50 epochs. Finally, we also used early stopping with ten epochs, i.e., after ten epochs without improvement in validation loss, we stop the training. Figure 7 shows the loss curves of this experiment.
+So, we experimented with adding LoRA adapters to more than just the query and value matrices. We trained three different configurations of the Phi-2 model: a LoRA variant (SA) with adapters added to all weight matrices of the self-attention modules, a LoRA variant (AL) with adapters added to all linear layers of the model (including the MLPs), and a fully finetuned variant. Both LoRA variants used a rank of 32. We used a batch size of 32, a maximum learning rate of \\(10^{-5}\\), five warm-up epochs, and finetune for 50 epochs. Finally, we also used early stopping with ten epochs, i.e., after ten epochs without improvement in validation loss, we stop the training. Figure <a href="#fig7">7</a> shows the loss curves of this experiment.
 
 <figure>
     <center>
-    <img src="../../img/project-dkgqa/lora-adapters-train.svg" width=800 style="margin: 0"/>
-    <img src="../../img/project-dkgqa/lora-adapters-val.svg" width=800 style="margin: 0"/>
+    <img id='fig7' src="/img/project-dkgqa/lora-adapters-train.svg" width=800 style="margin: 0"/>
+    <img src="/img/project-dkgqa/lora-adapters-val.svg" width=800 style="margin: 0"/>
     <figcaption>Figure 7 - Training and validation loss of a fully finetuned Phi-2 model compared two LoRA variants.</figcaption>
     </center>
     <br>
@@ -302,25 +302,25 @@ The overhead of applying LoRA to all linear layers is small enough, considering 
 
 During our first experiments with the T5-Small and T5-Base models, we usually used a maximum learning rate of \\(10^{-4}\\) which seemed to provide good results. However, when experimenting with Phi-2 and Mistral-7B, we quickly noticed that these models require lower learning rates to achieve good performance. For Phi-2, reducing the learning rate to \\(10^{-5}\\) was enough.
 
-Mistral-7B, however, seemed to profit more from even lower learning rates. So, we deducted another experiment to compare different learning rates. We used LoRA with \\(r=32\\), a batch size of 32, and four learning rates \\(10^{-4}, 10^{-5}, 5 \cdot 10^{-6}\\), and \\(2 \cdot 10^{-6}\\). We have to note that the runs used slightly different numbers of warm-up epochs. The first run used five, the second 2, and the last two runs used three warm-up epochs. This could potentially slightly skew our results. However, the change in maximum learning rate has a much greater effect on the learning rate schedule than the number of warm-up epochs. So, the results are still valid. Figure 8 shows the comparison of the loss curves of the four runs.
+Mistral-7B, however, seemed to profit more from even lower learning rates. So, we deducted another experiment to compare different learning rates. We used LoRA with \\(r=32\\), a batch size of 32, and four learning rates \\(10^{-4}, 10^{-5}, 5 \cdot 10^{-6}\\), and \\(2 \cdot 10^{-6}\\). We have to note that the runs used slightly different numbers of warm-up epochs. The first run used five, the second two, and the last two runs used three warm-up epochs. This could potentially slightly skew our results. However, the change in maximum learning rate has a much greater effect on the learning rate schedule than the number of warm-up epochs. So, our results are still valid. Figure <a href="#fig8">8</a> shows the comparison of the loss curves of the four runs.
 
 <figure>
     <center>
-    <img src="../../img/project-dkgqa/mistral7b-lr-train.svg" width=800 style="margin: 0"/>
-    <img src="../../img/project-dkgqa/mistral7b-lr-val.svg" width=800 style="margin: 0"/>
+    <img id='fig8' src="/img/project-dkgqa/mistral7b-lr-train.svg" width=800 style="margin: 0"/>
+    <img src="/img/project-dkgqa/mistral7b-lr-val.svg" width=800 style="margin: 0"/>
     <figcaption>Figure 8 - Training and validation loss of four Mistral-7B models finetuned with LoRA and different learning rates.</figcaption>
     </center>
     <br>
 </figure>
 
-The lower learning rates seem to decrease the model's ability to fit the training data, as seen in the higher training loss. On the other hand, this seemingly also provides some regularization because we see lower validation losses with lower learning rates. We can see a big difference in performance between \\(10^{-4}\\) and \\(10^{-5}\\) whereas between \\(5 \cdot 10^{-6}\\) and \\(2 \cdot 10^{-6}\\) there is almost no visible difference anymore. However, the lowest learning rate still marginally outperforms the next higher learning rate by approximately 0.2%. Considering also the increased regularization effect, we will continue to use \\(2 \cdot 10^{-6}\\) as a learning rate from here on out.
+The lower learning rates seem to decrease the model's ability to fit the training data, as seen in the higher training loss. On the other hand, this seemingly also provides some regularization because we see lower validation losses with lower learning rates. We can see a big difference in performance between \\(10^{-4}\\) and \\(10^{-5}\\) whereas between \\(5 \cdot 10^{-6}\\) and \\(2 \cdot 10^{-6}\\) there is almost no visible difference anymore. However, the lowest learning rate still marginally outperforms the next higher learning rate by approximately 0.2%. Considering also the increased regularization effect, we will continue to use \\(2 \cdot 10^{-6}\\) as a learning rate for Mistral-7B from here on out.
 
-Our last experiment also aims at an increased regularization effect. We investigate what effect decreasing the batch size from 32 to 16 has. Except for the batch size, we use the exact same configuration as in the previous experiment with a learning rate of \\(2 \cdot 10^{-6}\\). Figure 9 shows the results of this experiment.
+Our last experiment also aims at an increased regularization effect. We investigate what effect decreasing the batch size from 32 to 16 has. Except for the batch size, we use the exact same configuration as in the previous experiment with a learning rate of \\(2 \cdot 10^{-6}\\). Figure <a href="#fig9">9</a> shows the results of this experiment.
 
 <figure>
     <center>
-    <img src="../../img/project-dkgqa/mistral7b-bs-train.svg" width=800 style="margin: 0"/>
-    <img src="../../img/project-dkgqa/mistral7b-bs-val.svg" width=800 style="margin: 0"/>
+    <img id='fig9' src="/img/project-dkgqa/mistral7b-bs-train.svg" width=800 style="margin: 0"/>
+    <img src="/img/project-dkgqa/mistral7b-bs-val.svg" width=800 style="margin: 0"/>
     <figcaption>Figure 9 - Training and validation loss two Mistral-7B models finetuned with LoRA and different batch sizes.</figcaption>
     </center>
     <br>
@@ -336,12 +336,12 @@ In this section, we discuss the final models we finetuned. We also provide our e
 
 ### Finetuned models
 
-Throughout this project, we did a lot of experimentation and tuning. We ended up with four model configurations. A LoRA and a full finetune variant for Phi-2 and Mistral-7B. We finetuned the Phi-2 models using a batch size of 32, a maximum learning rate of \\(10^{-5}\\), five warm-up epochs, and 50 epochs in total. For Mistral-7B, we used a batch size of 16, a maximum learning rate of \\(2 \cdot 10^{-6}\\), three warm-up epochs, and 30 epochs in total. Both LoRA variants used a rank of 32 and applied adapters to all linear layers. We finetuned Phi-2 in full-precision, i.e., float32, and Mistral-7B in half-precision. This decision might be surprising at first but the reasoning is quite simple. We can finetune Phi-2 stably using half-precision but did not achieve comparable performance to full-precision. Figure 10 shows the loss curves of our final models.
+Throughout this project, we did a lot of experimentation and tuning. We ended up with four model configurations. A LoRA and a full finetune variant for Phi-2 and Mistral-7B. We finetuned the Phi-2 models using a batch size of 32, a maximum learning rate of \\(10^{-5}\\), five warm-up epochs, and 50 epochs in total. For Mistral-7B, we used a batch size of 16, a maximum learning rate of \\(2 \cdot 10^{-6}\\), three warm-up epochs, and 30 epochs in total. Both LoRA variants used a rank of 32 and applied adapters to all linear layers. We finetuned Phi-2 in full-precision, i.e., float32, and Mistral-7B in half-precision. This decision might be surprising at first but the reasoning is quite simple. We can finetune Phi-2 stably using half-precision but did not achieve performance comparable to full-precision. Figure <a href="#fig10">10</a> shows the loss curves of our final models.
 
 <figure>
     <center>
-    <img src="../../img/project-dkgqa/final-models-train.svg" width=800 style="margin: 0"/>
-    <img src="../../img/project-dkgqa/final-models-val.svg" width=800 style="margin: 0"/>
+    <img id='fig10' src="/img/project-dkgqa/final-models-train.svg" width=800 style="margin: 0"/>
+    <img src="/img/project-dkgqa/final-models-val.svg" width=800 style="margin: 0"/>
     <figcaption>Figure 10 - Training and validation loss of our four final models: a LoRA and a full finetune variant for Phi-2 and Mistral-7B respectively.</figcaption>
     </center>
     <br>
@@ -360,7 +360,7 @@ We trained all our models on the [bwUniCluster 2.0](https://wiki.bwhpc.de/e/BwUn
 
 ### Evaluation
 
-We group the evaluation of our models into two parts: a text-based and a SPARQL-based evaluation. The first part of the evaluation consists of text-based metrics that only compare the predicted and expected NLE queries. The second part of the evaluation tries to execute the predicted queries using [QLever](https://qlever.cs.uni-freiburg.de/wikidata) and compares the results to the results of the expected queries.
+We group the evaluation of our models into two parts: a text-based and a SPARQL-based evaluation. The first part of the evaluation consists of text-based metrics that only compare the predicted and expected NLE queries. The second part of the evaluation tries to execute the predicted queries using [QLever](https://qlever.cs.uni-freiburg.de/wikidata) and compares the results to the results of the expected queries. Note that we evaluate all models in half-precision regardless of what precision we trained them in. Also, we generate queries using beam search with five beams.
 
 #### Text-based evaluation
 
@@ -382,7 +382,7 @@ The QueryMatching metric checks if the predicted query contains the same natural
 
 The VariablePlacement metric checks if the variable is in the correct place in the predicted query. For instance, if the variable is in the object position in the expected query, the check will pass if and only if the variable in the predicted query is also in the object position.
 
-We achieved the following results on the Wikidata SimpleQuestions test set:
+All these metrics yield a binary "pass or fail" result. Thus, for each metric, we compute the percentage of passing queries. We achieve the following results on the Wikidata SimpleQuestions test set:
 
 | Model variant | SyntaxCheck | QueryMatching | VariablePlacement |
 |---------------|------------:|--------------:|------------------:|
@@ -410,6 +410,6 @@ We achieve the following F1 scores on the Wikidata SimpleQuestions test set:
 
 ## Conclusion and future work
 
-With this project, we demonstrate the potential of LLMs for query generation in knowledge graph question answering systems. We build a flexible and extensible training pipeline for finetuning LLMs on the Wikidata SimpleQuestions dataset. We apply two recent models on this task, Phi-2 and Mistral-7B. We achieve promising evaluation results even with basic conversion techniques. Finally, we show that using constrained prefix decoding improves results even further.
+With this project, we demonstrate the potential of LLMs for query generation in knowledge graph question answering systems. We build a flexible and extensible training pipeline for finetuning LLMs on the Wikidata SimpleQuestions dataset. We apply two recent models on this task, Phi-2 and Mistral-7B. We achieve promising evaluation results even with basic conversion techniques. Finally, we show that using constrained prefix decoding improves results even further. Overall, our fully finetuned Mistral-7B yields the best results.
 
 Still, our approach has some limitations. Our models can only deal with simple questions, i.e., they only generate queries consisting of a single triple. Furthermore, we only consider the Wikidata knowledge graph. However, these limitations are not inherent to our approach. We use a full deep-learning setup that can be used to generate arbitrary text. Therefore, it is straightforward to extend our approach to different datasets and other types of knowledge graphs. In particular, applying our approach to more complex questions and queries is a promising direction for future work.
