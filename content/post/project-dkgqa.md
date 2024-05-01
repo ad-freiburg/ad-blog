@@ -386,10 +386,10 @@ All these metrics yield a binary "pass or fail" result. Thus, for each metric, w
 
 | Model variant | SyntaxCheck | QueryMatching | VariablePlacement |
 |---------------|------------:|--------------:|------------------:|
-| Phi-2 LoRA | \\(\mathbf{100.0\\%}\\) | \\(68.0\\%\\) | \\(98.6\\%\\) |
+| Phi-2 LoRA | \\(100.0\\%\\) | \\(68.0\\%\\) | \\(98.6\\%\\) |
 | Phi-2 Full | \\(99.9\\%\\) | \\(66.2\\%\\) | \\(98.8\\%\\) |
-| Mistral-7B LoRA | \\(\mathbf{100.0\\%}\\) | \\(68.2\\%\\) | \\(99.0\\%\\) |
-| Mistral-7B Full | \\(\mathbf{100.0\\%}\\) | \\(\mathbf{74.1\\%}\\) | \\(\mathbf{99.1\\%}\\) |
+| Mistral-7B LoRA | \\(\mathbf{100.0\\%}\\) | \\(68.1\\%\\) | \\(99.0\\%\\) |
+| Mistral-7B Full | \\(100.0\\%\\) | \\(\mathbf{74.1\\%}\\) | \\(\mathbf{99.1\\%}\\) |
 
 #### SPARQL-based Evaluation
 
@@ -403,10 +403,10 @@ We achieve the following F1 scores on the Wikidata SimpleQuestions test set:
 
 | Model variant | Inverted Index conversion | Constrained prefix decoding |
 |---------------|---------------:|--------------------:|
-| Phi-2 LoRA | \\(75.0\\%\\) | \\(77.2\\%\\) |
-| Phi-2 Full | \\(76.5\\%\\) | \\(79.1\\%\\) |
-| Mistral-7B LoRA | \\(78.0\\%\\) | \\(87.8\\%\\) |
-| Mistral-7B Full | \\(\mathbf{79.4\\%}\\) | \\(\mathbf{88.2\\%}\\) |
+| Phi-2 LoRA | \\(76.7\\%\\) | \\(77.2\\%\\) |
+| Phi-2 Full | \\(78.3\\%\\) | \\(79.1\\%\\) |
+| Mistral-7B LoRA | \\(79.9\\%\\) | \\(87.8\\%\\) |
+| Mistral-7B Full | \\(\mathbf{81.2\\%}\\) | \\(\mathbf{88.2\\%}\\) |
 
 ## Conclusion and future work
 
