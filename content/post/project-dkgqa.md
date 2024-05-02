@@ -60,11 +60,11 @@ Our goal is to obtain answers to our questions by executing our predicted querie
 
 ## Problem definition
 
-We will now define the task we want to solve more clearly. We are given a  pre-trained LLM and a list of question-query pairs from the Wikidata SimpleQuestions dataset as input. Questions are formulated in natural language and may contain ambiguities and spelling mistakes. Queries are formulated in SPARQL and contain Wikidata IDs (we again omit prefixes): 
+We will now define the task we want to solve more clearly. We are given a  pre-trained LLM and a list of question-query pairs from the Wikidata SimpleQuestions dataset as input. Questions are formulated in natural language and may contain ambiguities. Queries are formulated in SPARQL and contain Wikidata IDs (we again omit prefixes): 
 ```python
 qq_pairs = [
     (question='Who is the president of the USA?',	query='SELECT ?target WHERE { wd:Q30 wdt:P6 ?target . }'),
-    (question='wher was neil armstrong born?',		query='SELECT ?target WHERE { wd:Q1615 wdt:P19 ?target . }'),
+    (question='where was neil armstrong born?',		query='SELECT ?target WHERE { wd:Q1615 wdt:P19 ?target . }'),
     ...
 ]
 ```
@@ -378,7 +378,7 @@ On top of this parser, we build three metrics: SyntaxCheck, QueryMatching, and V
 
 The SyntaxCheck metric verifies that the predicted query follows our pre-defined tag-based syntax. If any syntax violations occur in the prediction, the parser throws an exception, and the metric will count the query as failed.
 
-The QueryMatching metric checks if the predicted query contains the same natural language entities as the expected query. We realize this check using string comparison on the predicate and subject or object (we exclude the variable name). Note that this is quite a strict check. Nevertheless, it was useful during development because it is straightforward to compute and yields quick results.
+The QueryMatching metric checks if the predicted query contains the same natural language entities as the expected query. We realize this check using string comparison on the predicate and subject or object (we exclude the variable name). Note that this is quite a strict check and does not consider synonyms. Nevertheless, it was useful during development because it is straightforward to implement and compute. For a better assessment of the question answering capabilities, see the next section on SPARQL-based evaluation.
 
 The VariablePlacement metric checks if the variable is in the correct place in the predicted query. For instance, if the variable is in the object position in the expected query, the check will pass if and only if the variable in the predicted query is also in the object position.
 
@@ -397,7 +397,7 @@ This evaluation is much closer to our actual goal of question answering. However
 
 First, we use a basic conversion approach based on an inverted index. We build an inverted index that maps from natural language entities to Wikidata IDs. This approach does not use any fuzzing to deal with typos or other similar mistakes. Therefore, it can happen that we cannot map a natural language entity back to a Wikidata ID. In such cases, we return an F1 score of \\(0\\). We also return a score of \\(0\\)  if the NLE query has an invalid syntax.
 
-The second way uses so-called constrained prefix decoding, developed and implemented by Walter. With this approach, the decoding process is restricted to only predicting valid natural language entities. These are exactly those entities that are contained in our inverted index. This is implemented using a prefix index that can check if a token is a prefix of a valid natural language entity. This way, we can ensure that the queries we decode always translate to a valid SPARQL query.
+The second way uses so-called constrained prefix decoding, developed and implemented by Walter. With this approach, the decoding process is restricted to only predicting valid natural language entities. These are exactly those entities that are contained in our inverted index. This is implemented using a prefix index that can check if a token is a prefix of a valid natural language entity. This way, we can ensure that the queries we decode always translate to a valid SPARQL query. Furthermore, a feature called subgraph constraining is used. Subgraph constraining prevents predicting combinations of natural language entities that do not occur in Wikidata. For example, if we predict Albert Einstein as a query subject, subgraph constraining would only allow predicting predicates that occur with Albert Einstein in Wikidata.
 
 We achieve the following F1 scores on the Wikidata SimpleQuestions test set:
 
@@ -407,6 +407,18 @@ We achieve the following F1 scores on the Wikidata SimpleQuestions test set:
 | Phi-2 Full | \\(78.3\\%\\) | \\(79.1\\%\\) |
 | Mistral-7B LoRA | \\(79.9\\%\\) | \\(87.8\\%\\) |
 | Mistral-7B Full | \\(\mathbf{81.2\\%}\\) | \\(\mathbf{88.2\\%}\\) |
+
+We see that the full-finetune variants outperform their respective LoRA counterparts and that Mistral-7B performs better than Phi-2. We also notice that using constrained prefix decoding yields significant improvements for the Mistral-7B models and almost none for Phi-2. A brief investigation showed that even with constrained prefix decoding, the Phi-2 models sometimes fail to predict a valid entity. This suggests that in those cases where the Phi-2 models fail, they will also fail to choose the correct entity when given a restricted set of tokens.
+
+We also want to briefly compare the results of our best model, Mistral-7B Full, against a previous project at this chair. David Otte worked on question answering on Wikidata using the Wikidata SimpleQuestions dataset (see his [blog post](https://ad-blog.informatik.uni-freiburg.de/post/question-answering-on-wikidata/)). His approach was based on matching the entities in the question, generating candidate queries, and filtering and ranking the candidates. We compare the average F1 score and the average durations for query generation of our Mistral-7B Full model with and without constrained prefix decoding to his results on the Wikidata SimpleQuestions test set. Since his project, 13 questions from the test set became not answerable due to changes to the Wikidata knowledge graph. Thus, he evaluated his approach on 5,622 questions, whereas we only evaluated 5,609 questions.
+
+| | Average F1 score | Average duration per query |
+|---------------|---------------:|--------------------:|
+| David Otte (Project) | \\(80.0\\%\\) | ~1.60 seconds |
+| Mistral-7B Full (Inverted Index Conversion) | \\(81.2\\%\\) | ~0.17 seconds |
+| Mistral-7B Full (Constrained Prefix Decoding) | \\(88.2\\%\\) | ~2.80 seconds |
+
+This comparison illustrates that using a full deep-learning approach can improve both accuracy and speed. However, there are a few things to consider with this comparison. David Otte followed up his project with a thesis where he improved his approach in both accuracy and speed. Among other things, he also incorporated deep-learning-based methods to achieve this. However, he reported the average F1 score only in his project, and thus, we can only compare our results against his project. For the speed comparison, we measured the average duration per query of our approach on a NVIDIA RTX 4090 GPU using batched generation with a batch size of 16.
 
 ## Conclusion and future work
 
