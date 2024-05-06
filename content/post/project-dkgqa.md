@@ -193,7 +193,7 @@ SELECT <bov>x<eov> WHERE <bob> <boe>United States of America<eoe> <bop>head of g
 ```
 While this arguably looks more complex than before, it is also much more verbose. An LLM will have an easier time relating "president" to "head of state" than to "P6". Natural language entities also generalize better than Wikidata IDs. When asked for the head of government of another country not present in the training data, the model can now make a reasonable attempt by simply using the country name as the entity. By also incorporating synonyms, we can increase the amount of training data. For instance, we can create multiple queries containing different synonyms for a single question. For the above example, we could also have a query with "USA" as the entity instead of "United States of America". We increase our training and validation set size by roughly 20% in this fashion.
 
-We need to implement this approach in a way that we can reconstruct the original SPARQL query with the Wikidata IDs from the ones with NLEs. We can solve this with an inverted index that maps from entity or property names to Wikidata IDs. We can then replace the natural language entities with the corresponding IDs. Converting the tag-based syntax back into proper SPARQL is trivial. We will slightly revise our initial problem definition to reflect this adaption: Our task is to finetune the weights of a given LLM such that, given a simple question, it generates a corresponding query containing natural language entities.
+We need to implement this approach in a way that we can reconstruct the original SPARQL query with the Wikidata IDs from the ones with NLEs. We can solve this with an inverted index that maps from entity or property names to Wikidata IDs. We can then replace the natural language entities with the corresponding IDs. Converting the tag-based syntax back into proper SPARQL is not too difficult. We discuss two approaches for solving this in a later [section](#sparql-based-evaluation). We will slightly revise our initial problem definition to reflect this adaption: Our task is to finetune the weights of a given LLM such that, given a simple question, it generates a corresponding query containing natural language entities.
 
 Let's now finetune a T5-Base model using natural language entities. We again use a batch size of 32, a maximum learning rate of \\(10^{-4}\\), one warm-up epoch, and finetune for ten epochs. For comparison, we finetune another T5-Base model with the same configuration but using Wikidata IDs. Figure <a href="#fig3">3</a> shows the training and validation losses of both training runs.
 <figure>
@@ -246,7 +246,7 @@ Let's see how LoRA applies to our T5 models. We perform a quick experiment with 
     <br>
 </figure>
 
-We can see that the full finetune achieves a lower validation loss than the LoRA variants. However, the LoRA variants exhibit no signs of overfitting, whereas the full finetune does. When comparing the LoRA variants against each other, we see that large LoRA ranks correlate to a lower validation loss. Let's also compare the number of trainable parameters between the four runs:
+We can see that the full finetune achieves a lower validation loss than the LoRA variants. However, the LoRA variants exhibit no signs of overfitting, whereas the full finetune does. When comparing the LoRA variants against each other, we see that larger LoRA ranks correlate to a lower validation loss. Let's also compare the number of trainable parameters between the four runs:
 
 | Model variant | Total parameters | Trainable parameters | Trainable parameters (adapters only) |
 |---------------|-----------------:|---------------------:|-------------------------------------:|
@@ -360,7 +360,7 @@ We trained all our models on the [bwUniCluster 2.0](https://wiki.bwhpc.de/e/BwUn
 
 ### Evaluation
 
-We group the evaluation of our models into two parts: a text-based and a SPARQL-based evaluation. The first part of the evaluation consists of text-based metrics that only compare the predicted and expected NLE queries. The second part of the evaluation tries to execute the predicted queries using [QLever](https://qlever.cs.uni-freiburg.de/wikidata) and compares the results to the results of the expected queries. Note that we evaluate all models in half-precision regardless of what precision we trained them in. Also, we generate queries using beam search with five beams.
+We group the evaluation of our models into two parts: a text-based and a SPARQL-based evaluation. The first part of the evaluation consists of text-based metrics that only compare the predicted and expected NLE queries. The second part of the evaluation tries to execute the predicted queries using [QLever](https://qlever.cs.uni-freiburg.de/wikidata) and compares the results to the results of the expected queries. Note that we evaluate all models in half-precision regardless of what precision we trained them in. Also, we always generate queries using beam search with five beams.
 
 #### Text-based evaluation
 
@@ -393,32 +393,33 @@ All these metrics yield a binary "pass or fail" result. Thus, for each metric, w
 
 #### SPARQL-based Evaluation
 
-This evaluation is much closer to our actual goal of question answering. However, as it requires executing queries over Wikidata, it is also more expensive to compute. As a first step, we pre-compute the results of the ground truth SPARQL queries from the Wikidata SimpleQuestions test set using QLever. We then convert the predicted NLE queries into SPARQL and execute them against QLever. This yields a set of expected and a set of retrieved entities for each query. We then compute a per-query [F1 score](https://en.wikipedia.org/wiki/F-score) from these two sets. Finally, we average these scores over all queries. We compare two ways of converting the NLE queries into SPARQL.
+This evaluation is much closer to our actual goal of question answering. However, as it requires executing queries over Wikidata, it is also more expensive to compute. As a first step, we pre-compute the results of the ground truth SPARQL queries from the Wikidata SimpleQuestions test set using QLever. We then convert the predicted NLE queries into SPARQL and execute them against QLever. This yields a set of expected and a set of retrieved entities for each query. We then compute a per-query [F1 score](https://en.wikipedia.org/wiki/F-score) from these two sets. Finally, we average these scores over all queries. We also compute the accuracy, i.e., the fraction of questions for which the set of expected and the set of retrieved entities are equal. For both metrics, we ignore questions that have no answers in Wikidata, i.e., that have an empty set of expected entities. We compare two ways of converting the NLE queries into SPARQL.
 
-First, we use a basic conversion approach based on an inverted index. We build an inverted index that maps from natural language entities to Wikidata IDs. This approach does not use any fuzzing to deal with typos or other similar mistakes. Therefore, it can happen that we cannot map a natural language entity back to a Wikidata ID. In such cases, we return an F1 score of \\(0\\). We also return a score of \\(0\\)  if the NLE query has an invalid syntax.
+First, we use a basic conversion approach based on an inverted index. We refer to this approach as inverted index conversion (IIC). We build an inverted index that maps from natural language entities to Wikidata IDs. This approach does not use any fuzzing to deal with typos or other similar mistakes. Therefore, it can happen that we cannot map a natural language entity back to a Wikidata ID. In such cases, we return a score of \\(0\\). We also return a score of \\(0\\) if the NLE query has an invalid syntax.
 
-The second way uses so-called constrained prefix decoding, developed and implemented by Walter. With this approach, the decoding process is restricted to only predicting valid natural language entities. These are exactly those entities that are contained in our inverted index. This is implemented using a prefix index that can check if a token is a prefix of a valid natural language entity. This way, we can ensure that the queries we decode always translate to a valid SPARQL query. Furthermore, a feature called subgraph constraining is used. Subgraph constraining prevents predicting combinations of natural language entities that do not occur in Wikidata. For example, if we predict Albert Einstein as a query subject, subgraph constraining would only allow predicting predicates that occur with Albert Einstein in Wikidata.
+The second way uses so-called constrained prefix decoding (CPD), developed and implemented by Walter. With this approach, the decoding process is restricted to only predicting valid natural language entities. These are exactly those entities that are contained in our inverted index. This is implemented using a prefix index. This way, we can ensure that the queries we decode always translate to a valid SPARQL query. Furthermore, a feature called subgraph constraining is used. Subgraph constraining prevents predicting combinations of natural language entities that do not occur in Wikidata. For example, if we predict Albert Einstein as a query subject, subgraph constraining would only allow predicting predicates that occur with Albert Einstein in Wikidata.
 
-We achieve the following F1 scores on the Wikidata SimpleQuestions test set:
+We achieve the following results on the Wikidata SimpleQuestions test set:
 
-| Model variant | Inverted Index conversion | Constrained prefix decoding |
-|---------------|---------------:|--------------------:|
-| Phi-2 LoRA | \\(76.7\\%\\) | \\(77.2\\%\\) |
-| Phi-2 Full | \\(78.3\\%\\) | \\(79.1\\%\\) |
-| Mistral-7B LoRA | \\(79.9\\%\\) | \\(87.8\\%\\) |
-| Mistral-7B Full | \\(\mathbf{81.2\\%}\\) | \\(\mathbf{88.2\\%}\\) |
+| Model variant | F1 score (IIC) | F1 score (CPD) | Accuracy (IIC) | Accuracy (CPD) |
+|---------------|---------:|---------:|---------------:|---------------:|
+| Phi-2 LoRA | \\(76.7\\%\\) | \\(77.2\\%\\) | \\(76.4\\%\\) | \\(76.3\\%\\) |
+| Phi-2 Full | \\(78.4\\%\\) | \\(79.1\\%\\) | \\(78.1\\%\\) | \\(78.2\\%\\) |
+| Mistral-7B LoRA | \\(79.9\\%\\) | \\(87.8\\%\\) | \\(79.7\\%\\) | \\(86.7\\%\\) |
+| Mistral-7B Full | \\(\mathbf{81.2\\%}\\) | \\(\mathbf{88.2\\%}\\) | \\(\mathbf{81.0\\%}\\) | \\(\mathbf{87.1\\%}\\) |
 
 We see that the full-finetune variants outperform their respective LoRA counterparts and that Mistral-7B performs better than Phi-2. We also notice that using constrained prefix decoding yields significant improvements for the Mistral-7B models and almost none for Phi-2. A brief investigation showed that even with constrained prefix decoding, the Phi-2 models sometimes fail to predict a valid entity. This suggests that in those cases where the Phi-2 models fail, they will also fail to choose the correct entity when given a restricted set of tokens.
 
-We also want to briefly compare the results of our best model, Mistral-7B Full, against a previous project at this chair. David Otte worked on question answering on Wikidata using the Wikidata SimpleQuestions dataset (see his [blog post](https://ad-blog.informatik.uni-freiburg.de/post/question-answering-on-wikidata/)). His approach was based on matching the entities in the question, generating candidate queries, and filtering and ranking the candidates. We compare the average F1 score and the average durations for query generation of our Mistral-7B Full model with and without constrained prefix decoding to his results on the Wikidata SimpleQuestions test set. Since his project, 13 questions from the test set became not answerable due to changes to the Wikidata knowledge graph. Thus, he evaluated his approach on 5,622 questions, whereas we only evaluated 5,609 questions.
+We also want to briefly compare the results of our best model, Mistral-7B Full, against a previous work at this chair. David Otte worked on question answering on Wikidata using the Wikidata SimpleQuestions dataset (see his [blog post](https://ad-blog.informatik.uni-freiburg.de/post/question-answering-on-wikidata/) or his [thesis](https://ad-publications.cs.uni-freiburg.de/theses/Bachelor_David_Otte_2023.pdf)). His approach was based on matching the entities in the question, generating candidate queries, and finally filtering and ranking the candidates. We compare the average F1 score, the accuracy, and the average duration for query generation of our Mistral-7B Full model with and without constrained prefix decoding to his results on the Wikidata SimpleQuestions test set. Since his work, 13 questions from the test set became not answerable due to changes to the Wikidata knowledge graph. Thus, he evaluated his approach on 5,622 questions, whereas we only evaluated 5,609 questions.
 
-| | Average F1 score | Average duration per query |
-|---------------|---------------:|--------------------:|
-| David Otte (Project) | \\(80.0\\%\\) | ~1.60 seconds |
-| Mistral-7B Full (Inverted Index Conversion) | \\(81.2\\%\\) | ~0.17 seconds |
-| Mistral-7B Full (Constrained Prefix Decoding) | \\(88.2\\%\\) | ~2.80 seconds |
+| Approach | F1 score | Accuracy | Average duration per query |
+|----------|---------:|---------:|---------------------------:|
+| David Otte (Project) | \\(80.0\\%\\) | \\(79.0\\%\\) | 1.60 seconds |
+| David Otte (Thesis) | - | \\(81.6\\%\\) | 0.49 seconds |
+| Mistral-7B Full (IIC) | \\(81.2\\%\\) | \\(81.0\\%\\)  | 2.03 / 0.41 seconds |
+| Mistral-7B Full (CPD) | \\(88.2\\%\\) | \\(87.1\\%\\) | 8.82 / 8.16 seconds |
 
-This comparison illustrates that using a full deep-learning approach can improve both accuracy and speed. However, there are a few things to consider with this comparison. David Otte followed up his project with a thesis where he improved his approach in both accuracy and speed. Among other things, he also incorporated deep-learning-based methods to achieve this. However, he reported the average F1 score only in his project, and thus, we can only compare our results against his project. For the speed comparison, we measured the average duration per query of our approach on a NVIDIA RTX 4090 GPU using batched generation with a batch size of 16.
+For the speed comparison, we measured the average generation duration per query of our model on an NVIDIA RTX 3090 GPU. Since we do not know what batch size Otte used for evaluation, we report the duration for our approach using batch sizes 1 and 8 (first and second duration respectively). In his thesis, David Otte did not report an average F1 score, but we see that the accuracy metric yields similar results and still allows for a comparison. We can see that our full deep-learning approach can achieve comparable accuracy while using inverted index conversion. When using constrained prefix decoding, we can noticeably improve accuracy over Otte's results. In terms of speed, inverted index conversion is comparably fast to Otte's approach when using batched inference but slower when processing questions one by one. Constrained prefix decoding is significantly slower in both cases. Note that we only report the average generation time per query. If we also want to execute the predicted query against QLever, the duration increases by approximately 0.1 seconds for both conversion methods. Finally, we assume that our approach should be easier to extend to complex queries consisting of more than a single triple due to its fully deep-learning-based nature.
 
 ## Conclusion and future work
 
