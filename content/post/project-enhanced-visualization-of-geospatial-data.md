@@ -6,7 +6,6 @@ authorAvatar: "img/ada.jpg"
 tags: [QLever, petrimaps, GeoJson, progressbar, UI]
 categories: ["project"]
 image: "/img/project-enhanced-visualization-of-geospatial-data/title.png"
-draft: true
 ---
 
 [Petrimaps](https://qlever.cs.uni-freiburg.de/mapui-petri/ "Petrimaps") is a powerful tool for visualizing geospatial data on a map. So far it has exclusively been using the results of [QLever](https://qlever.cs.uni-freiburg.de/ "QLever"), a tool for processing SPARQL queries. In this project we will see how we can add support for reading geospatial data from a GeoJson file, display a progress bar, and create a UI that reuses parts of the existing QLever UI for consistency. 
