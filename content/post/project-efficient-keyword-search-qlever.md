@@ -9,21 +9,6 @@ image: "img/project-efficient-keyword-search-qlever/designer.jpeg"
 draft: false
 ---
 
-<style>
-    figure {
-        transform: translateY(-0.5em);
-    }
-    figcaption {
-        text-align: center;
-        font-size: 0.75em;
-        transform: translateY(-1em);
-    }
-    figcaption.multi-line {
-        text-align: justify;
-        padding: 0 5em;
-    }
-</style>
-
 The QLever search engine is a powerful tool for searching both structured and textual data simultaneously. However, the initial implementation of text search in QLever had poor maintainability and readability. In this blog post, we will demonstrate how a simple change in the code structure significantly improved the code quality and facilitated the implementation of new features.
 
 <!--more-->
@@ -100,7 +85,7 @@ TEXTLIMIT 2 # text search keyword introduced by QLever
 
 <style>
 /* Work around because otherwise the syntax highlighter messes up the coloring of the TEXTLIMIT keyword. */
-#site-main > div > article > section > div > div:nth-child(18) > pre > code > span:nth-child(23) {
+#site-main > div > article > section > div > div:nth-child(17) > pre > code > span:nth-child(23) {
   color: #66d9ef !important;
 }
 </style>
@@ -142,7 +127,7 @@ TEXTLIMIT 2 # text search keyword introduced by QLever
 
 <style>
 /* Work around because otherwise the syntax highlighter messes up the coloring of the TEXTLIMIT keyword. */
-#site-main > div > article > section > div > div:nth-child(27) > pre > code > span:nth-child(24) {
+#site-main > div > article > section > div > div:nth-child(26) > pre > code > span:nth-child(24) {
   color: #66d9ef !important;
 }
 </style>
@@ -150,13 +135,13 @@ TEXTLIMIT 2 # text search keyword introduced by QLever
 The results now include variations like "astrophysicist" along with the previously retrieved "astrophysics".
 But what the new feature does is not only to return results for the prefix search but also to return the completed keywords that were used for the result. Here we can see the first five results we get if we run the query on the Wikidata data set (note the new column `?ql_matchingword_text_astrophy`):
 
-?name |	?text |	?ql_matchingword_text_astrophy
+?ql_matchingword_text_astrophy | ?name |	?text
 --- | --- | ---
-John C. Mather |	John Cromwell Mather (born August 7, 1946, Roanoke, Virginia) is an American astrophysicist, cosmologist and Nobel Prize in Physics laureate for his work on the Cosmic Background Explorer Satellite (COBE) with George Smoot. |	astrophysicist
-John C. Mather |	Mather is a senior astrophysicist at the NASA Goddard Space Flight Center (GSFC) in Maryland and adjunct professor of physics at the University of Maryland College of Computer, Mathematical, and Natural Sciences. |	astrophysicist
-Vitaly Ginzburg |	He also headed the Academic Department of Physics and Astrophysics Problems, which Ginzburg founded at the Moscow Institute of Physics and Technology in 1968. |	astrophysics
-Vitaly Ginzburg	| Soviet astrophysicist Vitaly Ginzburg said that ideologically the "Bolshevik communists were not merely atheists, but, according to Lenin's terminology, militant atheists" in excluding religion from the social mainstream, from education and from government. |	astrophysicist
-Adam Riess | Adam Guy Riess (born December 16, 1969) is an American astrophysicist and Bloomberg Distinguished Professor at Johns Hopkins University and the Space Telescope Science Institute.	| astrophysicist
+astrophysicist | John C. Mather |	John Cromwell Mather (born August 7, 1946, Roanoke, Virginia) is an American astrophysicist, cosmologist and Nobel Prize in Physics laureate for his work on the Cosmic Background Explorer Satellite (COBE) with George Smoot.
+astrophysicist | John C. Mather |	Mather is a senior astrophysicist at the NASA Goddard Space Flight Center (GSFC) in Maryland and adjunct professor of physics at the University of Maryland College of Computer, Mathematical, and Natural Sciences.
+astrophysics | Vitaly Ginzburg |	He also headed the Academic Department of Physics and Astrophysics Problems, which Ginzburg founded at the Moscow Institute of Physics and Technology in 1968.
+astrophysicist | Vitaly Ginzburg	| Soviet astrophysicist Vitaly Ginzburg said that ideologically the "Bolshevik communists were not merely atheists, but, according to Lenin's terminology, militant atheists" in excluding religion from the social mainstream, from education and from government.
+astrophysicist | Adam Riess | Adam Guy Riess (born December 16, 1969) is an American astrophysicist and Bloomberg Distinguished Professor at Johns Hopkins University and the Space Telescope Science Institute.
 
 But what why is this feature useful? First of all it allows the user to use the completed keywords on just like a normal variable. This makes many functionalities possible. From just adding the completed keywords to the result, to filtering, sorting and grouping by them. Another application could be to use the completed keywords to perform a sort of auto-completion in a search application. Suggesting the user possible keywords that he could be looking for.
 
@@ -197,3 +182,19 @@ With the new structure, adding the prefix search completion feature became strai
 
 ## Conclusion
 The restructuring of QLever's text search functionality has significantly improved the maintainability, readability, and modularity of the code. The new prefix search completion feature exemplifies how these improvements facilitate the implementation of new features. Overall, the enhancements made to QLever demonstrate the importance of a well-structured codebase in supporting ongoing development and feature expansion.
+
+
+<style>
+    figure {
+        transform: translateY(-0.5em);
+    }
+    figcaption {
+        text-align: center;
+        font-size: 0.75em;
+        transform: translateY(-1em);
+    }
+    figcaption.multi-line {
+        text-align: justify;
+        padding: 0 5em;
+    }
+</style>
