@@ -76,7 +76,7 @@ Data is typically provided in form of string values by databases or the typed qu
 - `T`: separates the date and time components
 - `hh` and `mm`: hours and minutes
 - `ss.sss`: seconds with fractional seconds
-- `Z`: optional timezone value (or typically from `"-14:00"` to `"+14:00"`) <br>
+- `Z`: optional timezone value (typically from `"-14:00"` to `"+14:00"`) <br>
 
 An explicit example following this structure with added corresponding IRI:<br>
 `"2000-11-28T03:33:10.000-05:00"^^<http://www.w3.org/2001/XMLSchema#dateTime>`
@@ -165,7 +165,7 @@ Example query using `STRLANG`: See Query 4.
 The expression `LANG` can be functionally considered the inverse to `STRLANG`. `LANG` simply returns the language tag as a string to a passed literal. For `LANG(STRLANG(“Freiburg”, “de-LATN-DE”))`, the result would be a simple literal that contains `“de-LATN-DE”`. If the provided literal has no underlying language tag, it is resolved as `""`. <br>
 
 `LANGMATCHES` checks if a provided language tag is contained within a specified language range, this procedure follows concept of [Basic Filtering](https://www.ietf.org/rfc/rfc4647.txt "Basic Filtering") (Section 3.3.1). If the language tag is contained within the defined range, `LANGMATCHES` returns `true`, else `false`. Given that a boolean value is returned, `LANGMATCHES` is quite handy because it can be easily used within the expression `FILTER` (see Query 2).<br>
-It is important to note, that `FILTER(LANGMATCHES(LANG(?x), “en”))` is not equivalent to `FILTER(LANG(?x) = “en”)`. This is because we resolve with respect to a language range. If `?x` would represent here the literal `“Freiburg”@en-EN`,  `FILTER(LANG(?x) =  “en”)` would drop `“Freiburg”@en-EN`  for the output, while with `FILTER(LANGMATCHES(LANG(?x), “en”))` it would be kept.<br>
+It is important to note, that `FILTER(LANGMATCHES(LANG(?x), “en”))` is not equivalent to `FILTER(LANG(?x) = “en”)`. This is because we resolve with respect to a language range. If `?x` would represent here the literal `“Freiburg”@en-US`,  `FILTER(LANG(?x) =  “en”)` would drop `“Freiburg”@en-US`  for the output, while with `FILTER(LANGMATCHES(LANG(?x), “en”))` it would be kept.<br>
 
 ```sparql
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
@@ -204,7 +204,7 @@ The expression `NOW`, as the name already suggests, returns the point in time at
 Example query using `NOW`: See Query 3.
 
 ## <a id="timezone-and-tz-expression"></a>3.5 TIMEZONE and TZ
-The expression `TIMEZONE` takes a `xsd:dateTime` value as an argument, and returns the extracted timezone from this object in the corresponding string format of a `xsd:dayTimeDuration` value. `Xsd:dateTime` objects do not necessarily contain a timezone, e.g. `”2024-01-01T00:01:11.12.435”^^xsd:dateTime`. For such datetime values without a timezone,  the `undefined` value is returned. <br>
+The expression `TIMEZONE` takes a `xsd:dateTime` value as an argument, and returns the extracted timezone from this object in the corresponding string format of a `xsd:dayTimeDuration` value. `Xsd:dateTime` objects don't necessarily contain a timezone, e.g. `”2024-01-01T00:01:11.12.435”^^xsd:dateTime`. For such datetime values without a timezone,  the `undefined` value is returned. <br>
 For `xsd:dateTime` objects containing a timezone value,  we return a `xsd:dayTimeDuration`. Concrete example: `TIMEZONE(”2024-01-01T00:01:11.12.435-10:00”^^xsd:dateTime)` returns `-PT10H`, a `xsd:dayTimeDuration` value. <br>
 There is in addition a special timezone value `Z` which represents `UTC+0`. For provided `xsd:dateTime` objects with timezone `Z`, `PT0S` is returned. <br>
 
