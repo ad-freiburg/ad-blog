@@ -6,12 +6,12 @@ authorAvatar: "img/ada.jpg"
 tags: ["Qlever", "SPARQL", "docker", "automation", "webapplication"]
 categories: []
 image: "img/tags.jpg"
-draft: true
+draft: false
 ---
 
 <style>body {text-align: justify}</style>
 
-[QLever](https://qlever.cs.uni-freiburg.de/) is a SPARQL engine that can efficiently index and query very large knowledge graphs with over 100 billion triples on a single standard PC or server. In particular, QLever is supposed to be fast for queries that involve large intermediate or final results, which are notoriously hard for other prominent engines on the market.
+[QLever](https://qlever.cs.uni-freiburg.de/) is a SPARQL engine that can efficiently index and query very large knowledge graphs with over 100 billion triples on a single standard PC or server. In particular, QLever is supposed to be fast for queries that involve large intermediate or final results, which are notoriously hard for other engines on the market.
 To quantify Qlever’s performance advantage, in this project we design and implement a comparison tool to compare Qlever with other prominent SPARQL engines by executing a set of pre-defined SPARQL queries on multiple datasets and benchmarks and visualising the performance metrics with the help of a web application.
 
 ## Content
@@ -104,7 +104,7 @@ Now, we will look at the 3 benchmarks mentioned above in detail and how to autom
 ### Automating SPARQL endpoint generation {#automation_engine}
 
 As the process of manually setting up a SPARQL endpoint for each SPARQL engine and each dataset is extremely tedious and risks introducing inconsistencies, automating it with the help of Docker and bash scripts is extremely essential.
-Taking inspiration from the ease of setup of Qlever, the end goal must be to have a docker container for each SPARQL engine as it provides an isolated, standardised environment for each engine, ensuring consistent behaviour. Users should be able to define some basic parameters in a configuration file and using that a bash script should provide some neat functions to do the tasks of downloading/finding the dataset, loading the dataset into the docker container for the engine and starting the server.
+Taking inspiration from the ease of setup of Qlever, the end goal must be to have a docker container for each SPARQL engine as it provides an isolated, standardised environment for each engine, ensuring consistent behaviour. Users should be able to define some basic parameters in a configuration file and a bash script utilising this should provide some neat functions to do the tasks of downloading/finding the dataset, loading the dataset into the docker container for the engine and starting the server.
 
 I have created a docker containerized environment for Jena and Blazegraph and used existing docker images for Oxigraph and Virtuoso. Interaction with the docker image can be abstracted away in the bash script accompanying each SPARQL engine.
 Upon execution, the script generates a configuration file in the working directory with default parameters that can be tailored to specific datasets. The config file looks like:
