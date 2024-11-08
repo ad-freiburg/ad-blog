@@ -207,19 +207,60 @@ The web application was built using HTML, CSS, JavaScript and Bootstrap for addi
 
 On the main page of the web app, the results are grouped by the dataset and some common performance metrics are compared for the different SPARQL engines. The web app automatically reads the files present in the output directory and groups them and displays the results from results.tsv file.
 
-![Main page with the results](/img/project-qlever-queries-mode-webapp/main_page.jpg)
+<!-- ![Main page with the results](/img/project-qlever-queries-mode-webapp/main_page.jpg) -->
+### SPARQL Engine Comparison
+| SPARQL Engine | Queries Failed | Avg Runtime (s) | Median Runtime (s) | Runtime <= 1.0s | (1.0s, 5.0s) | Runtime > 5s |
+|---|---|---|---|---|---|---|
+| blazegraph | 25.00% | 1.99 | 2.08 | 25.00% | 50.00% | 0.00% |
+| jena | 25.00% | 2.47 | 1.95 | 0.00% | 50.00% | 25.00% |
+| oxigraph | 25.00% | 1.30 | 1.11 | 25.00% | 50.00% | 0.00% |
+| qlever | 0.00% | 0.02 | 0.02 | 100.00% | 0.00% | 0.00% |
+| virtuoso | 25.00% | 0.35 | 0.25 | 75.00% | 0.00% | 0.00% |
+
+| SPARQL Engine | Queries Failed | Avg Runtime (s) | Median Runtime (s) | Runtime <= 1.0s | (1.0s, 5.0s) | Runtime > 5s |
+|---|---|---|---|---|---|---|
+| blazegraph | 66.67% | 20.58 | 30.06 | 33.33% | 0.00% | 0.00% |
+| jena | 83.33% | 50.41 | 60.11 | 0.00% | 16.67% | 0.00% |
+| oxigraph | 0.00% | 0.82 | 0.06 | 85.71% | 7.14% | 7.14% |
+| qlever | 7.14% | 0.19 | 0.07 | 85.71% | 7.14% | 0.00% |
+| virtuoso | 14.29% | 13.38 | 3.68 | 28.57% | 28.57% | 28.57% |
 
 <center style="margin-top:-35px;margin-bottom:35px;">Figure 1: Main page displaying the results for each SPARQL engine grouped by the dataset</center>
 
 Clicking on the column sorts that particular column in ascending and descending order and by holding shift and clicking on a column preserves the previous sort selected. Clicking on the rows showing the performance of each SPARQL engine takes the user to a page that displays all the queries that were executed and individual runtimes for that particular SPARQL engine and dataset.
 
-![Query Details tab 1](/img/project-qlever-queries-mode-webapp/query_details_tab1.jpg)
+<!-- ![Query Details tab 1](/img/project-qlever-queries-mode-webapp/query_details_tab1.jpg) -->
+### SPARQL Engine - qlever
+
+**<u>Query runtimes</u> | Full query | Execution tree | Query result**
+
+| Query | Runtime (s) |
+|---|---|
+| All predicates with their absolute and relative size | 0.03 |
+| Athletes ranked by number of gold medals | 0.01 |
+| All athletes whose name contains the given keyword | 0.01 |
+| Total count of triples | 0.03 |
 
 <center style="margin-top:-35px;margin-bottom:35px;">Figure 2: Page displaying the runtime for every query for a given SPARQL engine and dataset</center>
 
 Clicking on one of the query rows selects it and displays the second tab with the full SPARQL query. The third tab displays the execution tree for the selected query (only for Qlever). The execution tree tab supports zoom in, zoom out and drag to move functionality. The final tab displays the results returned by executing the query. As the number of results can be quite large, the tab only displays the first 1000 results if it exceeds that. The user can click on the show more button to display the next 1000 results.
 
-![Query Details tab 2](/img/project-qlever-queries-mode-webapp/query_details_tab2.jpg)
+<!-- ![Query Details tab 2](/img/project-qlever-queries-mode-webapp/query_details_tab2.jpg) -->
+**SPARQL Engine - qlever**
+
+**Query runtimes | <u>Full query</u> | Execution tree | Query result**
+
+PREFIX rdfs: http://www.w3.org/2000/01/rdf-schema#<br>
+PREFIX olympics: http://wallscope.co.uk/ontology/olympics/<br>
+PREFIX medal: http://wallscope.co.uk/resource/olympics/medal/<br>
+<br>
+SELECT ?athlete ?athlete_label (COUNT(?medal) as ?count) WHERE {<br>
+  ?medal olympics:medal medal:Gold .<br>
+  ?medal olympics:athlete ?athlete .<br>
+  ?athlete rdfs:label ?athlete_label<br>
+}<br>
+GROUP BY ?athlete ?athlete_label<br>
+ORDER BY DESC(?count)<br><br>
 
 <center style="margin-top:-35px;margin-bottom:35px;">Figure 3: Tab displaying the full SPARQL query for the selected query</center>
 
@@ -227,21 +268,44 @@ Clicking on one of the query rows selects it and displays the second tab with th
 
 <center style="margin-top:-35px;margin-bottom:35px;">Figure 4: Tab displaying the runtime execution tree for the selected query</center>
 
-![Query Details tab 4](/img/project-qlever-queries-mode-webapp/query_details_tab4.jpg)
+<!-- ![Query Details tab 4](/img/project-qlever-queries-mode-webapp/query_details_tab4.jpg) -->
+### SPARQL Engine - qlever
+
+**Query runtimes | Full query | Execution tree | Query result**
+
+| Athlete URI                                                                                               | Athlete Name                                    | Medal Count |
+|----------------------------------------------------------------------------------------------------------|-------------------------------------------------|-------------|
+| `<http://wallscope.co.uk/resource/olympics/athlete/MichaelFredPhelpsII>`                                  | "Michael Fred Phelps, II"@en                    | "23"        |
+| `<http://wallscope.co.uk/resource/olympics/athlete/RaymondClarenceRayEwry>`                               | "Raymond Clarence 'Ray' Ewry"@en                | "10"        |
+| `<http://wallscope.co.uk/resource/olympics/athlete/FrederickCarltonCarlLewis>`                            | "Frederick Carlton 'Carl' Lewis"@en             | "9"         |
+| `<http://wallscope.co.uk/resource/olympics/athlete/PaavoJohannesNurmi>`                                   | "Paavo Johannes Nurmi"@en                       | "9"         |
+
 
 <center style="margin-top:-35px;margin-bottom:35px;">Figure 5: Tab displaying the results of executing the selected query</center>
 
 Going back to the main page, we see that there is a compare button for each dataset. Clicking on it takes the user to a screen where each SPARQL engine is compared on performance on an individual query basis. The failed queries are maked in red. The columns are sortable in the same way as on the main screen. Hovering over the query ID displays the full SPARQL query.
 
-![Comparison Modal](/img/project-qlever-queries-mode-webapp/comparison_modal.jpg)
+<!-- ![Comparison Modal](/img/project-qlever-queries-mode-webapp/comparison_modal.jpg) -->
+
+### Performance Comparison <br><br>
+
+**Olympics** <br>
+
+| Query                                           | blazegraph runtime | jena runtime | oxigraph runtime | qlever runtime | virtuoso runtime |
+|-------------------------------------------------|--------------------|--------------|------------------|----------------|------------------|
+| All predicates with their absolute and relative size | 3.24 s             | 0.54 s       | 0.08 s           | 0.03 s         | 0.06 s           |
+| Athletes ranked by number of gold medals        | 0.57 s             | 5.42 s       | 0.83 s           | 0.01 s         | 0.83 s           |
+| All athletes whose name contains the given keyword | 1.57 s             | 1.74 s       | 2.90 s           | 0.01 s         | 0.34 s           |
+| Total count of triples                          | 2.59 s             | 2.17 s       | 1.39 s           | 0.03 s         | 0.15 s           |
+
 
 <center style="margin-top:-35px;margin-bottom:35px;">Figure 6: Page showing the runtime comparison table for all SPARQL engines for a given dataset</center>
 
-There is also the section for Comparing Execution trees here (Only for Qlever). The dropdown boxes are automatically populated with all the different versions of Qlever found in the output directory. The user can select a query and the Qlever versions to compare from the dropdown and click on Compare. This takes the user to the Compare Execution trees screen, which looks like:
+There is also the section for Comparing Execution trees here (Only for Qlever). The dropdown boxes are automatically populated with all the different versions of Qlever found in the output directory. The user can select a query and the Qlever versions to compare from the dropdown and click on Compare. This takes the user to the Compare Execution trees screen, which looks similar to the Execution tree screen above, but with two of them side by side for easy comparison.
 
-![Compare exec trees](/img/project-qlever-queries-mode-webapp/compare_exec_trees.jpg)
+<!-- ![Compare exec trees](/img/project-qlever-queries-mode-webapp/compare_exec_trees.jpg)
 
-<center style="margin-top:-35px;margin-bottom:35px;">Figure 7: Page showing runtime execution tree comparison for 2 versions of Qlever given a query and a dataset</center>
+<center style="margin-top:-35px;margin-bottom:35px;">Figure 7: Page showing runtime execution tree comparison for 2 versions of Qlever given a query and a dataset</center> -->
 
 The execution trees are automatically sized to fit on the screen as much as possible. Nonetheless, the user can set the zoom level as they please by clicking on the + and - buttons. Drag to move is also supported on the execution trees. Hovering over the query ID on top also shows the full SPARQL query.
 
