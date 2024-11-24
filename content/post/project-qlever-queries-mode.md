@@ -209,21 +209,16 @@ On the main page of the web app, the results are grouped by the dataset and some
 
 <!-- ![Main page with the results](/img/project-qlever-queries-mode-webapp/main_page.jpg) -->
 ### SPARQL Engine Comparison
-| SPARQL Engine | Queries Failed | Avg Runtime (s) | Median Runtime (s) | Runtime <= 1.0s | (1.0s, 5.0s) | Runtime > 5s |
-|---|---|---|---|---|---|---|
-| blazegraph | 25.00% | 1.99 | 2.08 | 25.00% | 50.00% | 0.00% |
-| jena | 25.00% | 2.47 | 1.95 | 0.00% | 50.00% | 25.00% |
-| oxigraph | 25.00% | 1.30 | 1.11 | 25.00% | 50.00% | 0.00% |
-| qlever | 0.00% | 0.02 | 0.02 | 100.00% | 0.00% | 0.00% |
-| virtuoso | 25.00% | 0.35 | 0.25 | 75.00% | 0.00% | 0.00% |
 
-| SPARQL Engine | Queries Failed | Avg Runtime (s) | Median Runtime (s) | Runtime <= 1.0s | (1.0s, 5.0s) | Runtime > 5s |
-|---|---|---|---|---|---|---|
-| blazegraph | 66.67% | 20.58 | 30.06 | 33.33% | 0.00% | 0.00% |
-| jena | 83.33% | 50.41 | 60.11 | 0.00% | 16.67% | 0.00% |
-| oxigraph | 0.00% | 0.82 | 0.06 | 85.71% | 7.14% | 7.14% |
-| qlever | 7.14% | 0.19 | 0.07 | 85.71% | 7.14% | 0.00% |
-| virtuoso | 14.29% | 13.38 | 3.68 | 28.57% | 28.57% | 28.57% |
+### DBLP
+| SPARQL Engine | Queries Failed | Avg Runtime (s) | Median Runtime (s) | Runtime <= 1.0s | (1.0s, 5.0s] | Runtime > 5s |
+|---------------|----------------|------------------|---------------------|-----------------|--------------|--------------|
+| blazegraph    | 0.00%          | 4.27             | 0.80                | 50.00%          | 33.33%       | 16.67%       |
+| jena          | 16.67%         | 92.47            | 54.80               | 33.33%          | 0.00%        | 50.00%       |
+| oxigraph      | 0.00%          | 65.80            | 39.33               | 33.33%          | 16.67%       | 50.00%       |
+| qlever        | 0.00%          | 0.12             | 0.12                | 100.00%         | 0.00%        | 0.00%        |
+| virtuoso      | 0.00%          | 7.89             | 2.34                | 16.67%          | 66.67%       | 16.67%       |
+
 
 <center style="margin-top:-35px;margin-bottom:35px;">Figure 1: Main page displaying the results for each SPARQL engine grouped by the dataset</center>
 
@@ -231,15 +226,18 @@ Clicking on the column sorts that particular column in ascending and descending 
 
 <!-- ![Query Details tab 1](/img/project-qlever-queries-mode-webapp/query_details_tab1.jpg) -->
 ### SPARQL Engine - qlever
+### Knowledge graph - DBLP
 
 **<u>Query runtimes</u> | Full query | Execution tree | Query result**
 
-| Query | Runtime (s) |
-|---|---|
-| All predicates with their absolute and relative size | 0.03 |
-| Athletes ranked by number of gold medals | 0.01 |
-| All athletes whose name contains the given keyword | 0.01 |
-| Total count of triples | 0.03 |
+| Query                                   | Runtime (s) |
+|-----------------------------------------|-------------|
+| All papers published in SIGIR           | 0.02        |
+| Number of papers by venue               | 0.00        |
+| Author names matching REGEX             | 0.02        |
+| All papers in DBLP until 1940           | 0.02        |
+| <u>All papers with their title</u>      | <u>0.01</u> |
+| All predicates ordered by size          | 0.01        |
 
 <center style="margin-top:-35px;margin-bottom:35px;">Figure 2: Page displaying the runtime for every query for a given SPARQL engine and dataset</center>
 
@@ -250,35 +248,28 @@ Clicking on one of the query rows selects it and displays the second tab with th
 
 **Query runtimes | <u>Full query</u> | Execution tree | Query result**
 
-PREFIX rdfs: http://www.w3.org/2000/01/rdf-schema#<br>
-PREFIX olympics: http://wallscope.co.uk/ontology/olympics/<br>
-PREFIX medal: http://wallscope.co.uk/resource/olympics/medal/<br>
-<br>
-SELECT ?athlete ?athlete_label (COUNT(?medal) as ?count) WHERE {<br>
-  ?medal olympics:medal medal:Gold .<br>
-  ?medal olympics:athlete ?athlete .<br>
-  ?athlete rdfs:label ?athlete_label<br>
+PREFIX dblp: <https://dblp.org/rdf/schema#><br>
+SELECT ?paper ?title WHERE {<br>
+  ?paper dblp:title ?title .<br>
 }<br>
-GROUP BY ?athlete ?athlete_label<br>
-ORDER BY DESC(?count)<br><br>
 
 <center style="margin-top:-35px;margin-bottom:35px;">Figure 3: Tab displaying the full SPARQL query for the selected query</center>
 
-![Query Details tab 3](/img/project-qlever-queries-mode-webapp/query_details_tab3.jpg)
+![Query Details tab 3](/img/project-qlever-queries-mode-webapp/query-details-3.png)
 
 <center style="margin-top:-35px;margin-bottom:35px;">Figure 4: Tab displaying the runtime execution tree for the selected query</center>
 
 <!-- ![Query Details tab 4](/img/project-qlever-queries-mode-webapp/query_details_tab4.jpg) -->
 ### SPARQL Engine - qlever
 
-**Query runtimes | Full query | Execution tree | Query result**
+**Query runtimes | Full query | Execution tree | <u>Query result</u>**
 
-| Athlete URI                                                                                               | Athlete Name                                    | Medal Count |
-|----------------------------------------------------------------------------------------------------------|-------------------------------------------------|-------------|
-| `<http://wallscope.co.uk/resource/olympics/athlete/MichaelFredPhelpsII>`                                  | "Michael Fred Phelps, II"@en                    | "23"        |
-| `<http://wallscope.co.uk/resource/olympics/athlete/RaymondClarenceRayEwry>`                               | "Raymond Clarence 'Ray' Ewry"@en                | "10"        |
-| `<http://wallscope.co.uk/resource/olympics/athlete/FrederickCarltonCarlLewis>`                            | "Frederick Carlton 'Carl' Lewis"@en             | "9"         |
-| `<http://wallscope.co.uk/resource/olympics/athlete/PaavoJohannesNurmi>`                                   | "Paavo Johannes Nurmi"@en                       | "9"         |
+| URL                                               | Title                                                                                   |
+|---------------------------------------------------|-----------------------------------------------------------------------------------------|
+| <https://dblp.org/rec/books/acm/0082477>          | The no-nonsense guide to computing careers.                                             |
+| <https://dblp.org/rec/books/acm/17/CohenO17>      | Multimodal speech and pen interfaces.                                                  |
+| <https://dblp.org/rec/books/acm/17/FreemanWVNPB17>| Multimodal feedback in HCI: haptics, non-speech audio, and their applications.          |
+| <https://dblp.org/rec/books/acm/17/Hinckley17>    | A background perspective on touch as a multimodal (and multisensor) construct.          |
 
 
 <center style="margin-top:-35px;margin-bottom:35px;">Figure 5: Tab displaying the results of executing the selected query</center>
@@ -291,15 +282,15 @@ Going back to the main page, we see that there is a compare button for each data
 
 **Olympics** <br>
 
-| Query                                           | blazegraph runtime | jena runtime | oxigraph runtime | qlever runtime | virtuoso runtime |
+| Query                                           | blazegraph runtime (s)| jena runtime (s)| oxigraph runtime (s)| qlever runtime (s)| virtuoso runtime (s)|
 |-------------------------------------------------|--------------------|--------------|------------------|----------------|------------------|
-| All predicates with their absolute and relative size | 3.24 s             | 0.54 s       | 0.08 s           | 0.03 s         | 0.06 s           |
-| Athletes ranked by number of gold medals        | 0.57 s             | 5.42 s       | 0.83 s           | 0.01 s         | 0.83 s           |
-| All athletes whose name contains the given keyword | 1.57 s             | 1.74 s       | 2.90 s           | 0.01 s         | 0.34 s           |
-| Total count of triples                          | 2.59 s             | 2.17 s       | 1.39 s           | 0.03 s         | 0.15 s           |
-
-
-<center style="margin-top:-35px;margin-bottom:35px;">Figure 6: Page showing the runtime comparison table for all SPARQL engines for a given dataset</center>
+| All papers published in SIGIR                   |  0.10         |  0.27            |  0.36                |  0.11       |  2.55     |
+| Number of papers by venue                       |  1.31         |  56.37           |  1.84                |  0.14       |  3.98     |
+| Author names matching REGEX                     |  0.29         |  0.32            |  0.56                |  0.13       |  1.41     |
+| All papers in DBLP until 1940                   |  2.69         |  53.22           |  204.88              |  0.19       |  0.22     |
+| All papers with their title                     |  21.17        |  144.57          |  76.82               |  0.08       |  37.04    |
+| All predicates ordered by size                  |  0.04         | failed (timeout) |  110.32              |  0.08       |  2.12     | 
+<center style="margin-top:-35px;margin-bottom:35px;">Figure 6: Page showing the runtime comparison table for all SPARQLngines for given dataset</center>
 
 There is also the section for Comparing Execution trees here (Only for Qlever). The dropdown boxes are automatically populated with all the different versions of Qlever found in the output directory. The user can select a query and the Qlever versions to compare from the dropdown and click on Compare. This takes the user to the Compare Execution trees screen, which looks similar to the Execution tree screen above, but with two of them side by side for easy comparison.
 
