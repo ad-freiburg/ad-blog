@@ -26,15 +26,19 @@ The [osm-live-updates](https://github.com/nicolano/osm-live-updates) (`olu`) too
 
 2. <a href="#implementation">Implementation</a>
  
-    2.1. <a href="#process_osc">Processing of ChangeFile</a>
+    2.1. <a href="#problem_def">Problem Definition</a>
 
-    2.2. <a href="#fetching_refs">Fetching References</a>
+    2.2. <a href="#provide_osc">Providing Change Files</a>
 
-    2.3. <a href="#dummies">Creating Dummy Objects</a>
+    2.3. <a href="#process_osc">Processing Change File</a>
 
-    2.4. <a href="#conversion">Conversion to RDF</a>
+    2.4. <a href="#fetching_refs">Fetching References</a>
 
-    2.5. <a href="#updating">Updating the Database</a> 
+    2.5. <a href="#dummies">Creating Dummy Objects</a>
+
+    2.6. <a href="#conversion">Conversion to RDF</a>
+
+    2.7. <a href="#updating">Updating the Database</a> 
 
 3. <a href="#testing">Testing</a>
  
@@ -50,7 +54,7 @@ The [osm-live-updates](https://github.com/nicolano/osm-live-updates) (`olu`) too
 
 ## <a id="osm"></a>1.1. Open Street Map (OSM)
 
-[*OpenStreetMap*](https://www.openstreetmap.org/about) (OSM) is a collaborative geospatial database that provides free, editable, openly licensed geographic data contributed by a global community of volunteers. The OSM data consists of three core structures: nodes, ways, and relations. Nodes are points on the map with locations given in latitude and longitude coordinates. Ways are an ordered collection of nodes that logically connect them with a line. They can represent roads, rivers, or the boundaries of an area, for example. Relations are collections of nodes, ways or/and other relations. They represent logical or geographical relationships between these elements. Each of these three structures can contain tags. A tag is a key-value pair that adds information to the object. For example, a node might have a tag indicating that there is a shop at that location, or a way might have a tag indicating that it is a freeway. Relations are the only of the three structures that must have at least one tag that defines the type of relation. Each OSM object has a unique ID and a timestamp that describes when the element was created or last modified.
+[*OpenStreetMap*](https://www.openstreetmap.org/about) (OSM) is a collaborative geospatial database that provides free, editable, openly licensed geographic data contributed by a global community of volunteers. The OSM data consists of three core structures: nodes, ways, and relations. Nodes are points on the map with locations given in latitude and longitude coordinates. Ways are an ordered collection of nodes that logically connect them with a line. They can represent roads, rivers, or the boundaries of an area, for example. Relations are collections of nodes, ways or/and other relations. They represent logical or geographical relationships between these elements. Each of these three structures can contain tags. A tag is a key-value pair that adds information to the object. For example, a node might have a tag indicating that there is a shop at that location, or a way might have a tag indicating that it is a freeway. Relations are the only of the three structures that must have at least one tag that defines the type of relation. Each OSM object has a version (which is incremented when an object is modified), a unique ID and a timestamp that describes when the element was created or last modified.
 
 Nodes are the only OSM objects that explicitly contain geographic information. Ways and relations derive their geography from their references. So to know the geometry of a way, you also need to know the nodes it references. The same is true for relations, but with the difference that you need not only the direct references of nodes, but also the nodes that are referenced by ways that are members of the relation, and since relations can be members of other relations, you would also need their references. 
 
@@ -73,6 +77,8 @@ While nodes represent simple point geometry, ways can represent lines or polygon
 The tag that encloses the OSM object indicates the type of change that has been made to it, e.g. `create` for creating a new object, `modify` for modifying an existing object, or `delete` for deleting an object. The OSM element inside the tag always represents the complete state of the object with all attributes and tags, at the moment the file is created. However, this also makes it impossible to find out what changes have been made to an element in a modify tag without further information. Multiple elements are ordered by their IDs, with nodes appearing first, followed by ways, and then relations.
 
 As ways and relations inherit their geometry from their references, they do not have to appear explicitly in the *OsmChange* file if their geometry changes. For example, if a node, which is referenced by a way, changes its position, only this node would appear in the file.  
+
+
 
 ## <a id="sparql"></a>1.3. SPARQL and RDF
 
@@ -162,15 +168,44 @@ There are tools available for SQL-like databases with similar functionality to `
 
 # <a id="implementation"></a>2. Implementation
 
-In this section we will show how we have implemented our tool \texttt{olu} in \texttt{C++}. We will show how we read and process the OsmChange files that are in XML format, how we communicate with the SPARQL endpoint that manages the graph storage, and finally how we can convert the contents of the changesets into SPARQL queries.
+In this section we will show how we have implemented our tool `olu` in \texttt{C++}. We will show how we read and process the OsmChange files that are in XML format, how we communicate with the SPARQL endpoint that manages the graph storage, and finally how we can convert the contents of the changesets into SPARQL queries.
 
-## <a id="process_osc"></a>2.1. Processing of ChangeFile
+We start with determining the start sequence number. It can either be user specified or automatically detected by using the timepoint of the newest node as a point of reference. We then doaenload all change files up to the newest one and merge them with the osmmium-tool .
+The tool also ensures that the OSM objects in the chang file are sorted and do not appear multiple times in different versions.
 
-We process the OsmChange file by iterating to times over it. The first time we store the ids of all OSM elements inside a set for their tag. Subsequently we have nine sets that contain all created, modified, and deleted nodes, ways and relations.
+## <a id="problem_def"></a>2.1. Problem Definition
 
-The second time we only iterate over elements that where inside a modify or create tag. The XML object for each element is stored in a temporary file. We also take a look at the members of the ways and relations that where in a modify or create tag. We store the id of the member if it was not already in the OSMChange file depending on which type it is in a set we call `referencedNodes`, `referencedWays` or `referencedRelations`. 
+In Section 1, we introduced the concept of OpenStreetMap (OSM), osm2rdf. Together they can be used to create a SPARQL endpoint, that allows to query the OSM data. 
 
-This already allows us to process all members of the change file. However, we also want to update the geometry of ways or relations that reference a node or way that was modified. For this purpose we send a query to the SPARQL endpoint that asks for each way that reference a modified node:
+However, the dynamic nature of the OSM database, which is constantly modified by millions of registered OpenStreetMap users, presents significant challenges. Re-converting the entire OSM dataset into RDF triples and reinitializing the SPARQL endpoint for every change or at regular intervals would be highly inefficient. Instead, a more practical approach involves updating only the objects in the SPARQL endpoint that have actually changed.
+
+As described in Chapter 1.2, the *OsmChange* file format provides a mechanism to describe incremental changes made to the OSM data. OpenStreetMap also provides these files for their complete data <a href="#osm_wiki"> [3]</a>. However, before this information can be used, the objects in these change files must first be converted into RDF triples.
+
+Updating also the geometries requires not only the objects explicitly mentioned in the OsmChange file but also all members of these objects. This is because ways and relations in OSM do not have location information, and their geometries depend on the nodes and other objects they reference. Additionally, changes to a node—such as its position—may indirectly affect the geometries of other objects that are not explicitly mentioned in the *OsmChange* file but reference the modified node.
+
+The objective, therefore, is to identify and process the following OSM objects:
+
+- All objects that are created or modified in the *OsmChange* file.
+- All objects from the database that reference the modified objects as members.
+- All ways and nodes that are referenced by the aforementioned objects.
+
+Once these objects are identified, the relevant data can be converted into RDF triples and used to update the SPARQL endpoint. The subsequent chapters detail how this update process is implemented within `olu`.
+
+## <a id="providing_osc"></a>2.2. Providing Change Files
+
+The update process is managed by the `OsmUpdater` class. The user can either provide *OsmChange* files locally or use a replication server such as the one for the full OSM data. If the user has chosen to use a replication server and has not specified a sequence number, it must be determined from which sequence number on the change files should be retrieved. This is done by querying the SPARQL endpoint for the node with the most recent timestamp, i.e., the node that was last modified or created. From this timestamp, the sequence number of the change file containing the creation or modification of this node can be determined.
+
+OsmChange files are usually provided in a defined time frame (e.g., minutely, hourly, or daily), so there are likely to be several change files to process, between that change file and the latest one. We merge these change files to avoid unnecessary insertion of objects that, for example, are modified multiple times in a timeframe, or insertion of objects that are then deleted in a later change file.
+
+The C++ library [`libosmium`](https://osmcode.org/libosmium/), which provides tools for working with OSM data, is used to merge the change files. The library provides functions to read the objects in the change files into a buffer and sort them by type (node, way, or relation), ID, version, and timestamp. Since deleting objects does not increase the version number, we also need to consider whether the object appeared in a delete-tag in the change files and sort them so that the deleted object appears last. We then simply copy only the latest version of each object in the cache and write it to an output file, resulting in a single change file to process.
+
+## <a id="process_osc"></a>2.3. Processing Change File
+
+The OsmChange file is processed by a class called `OsmChangeHandler`. The processing begins with two iterations over the objects in the change file. In the first iteration, the IDs of all OSM elements are stored in separate sets based on their tag. This results in nine sets containing all created, modified, and deleted nodes, ways, and relations.
+
+In the second iteration, the handler processes only the elements within a "modify" or "create" tag. The XML object for each element is stored in a temporary file. Additionally, the handler examines the members of ways and relations within these tags. If a member is not already present in the *OsmChange* file, its ID is stored in one of three sets: `referencedNodes`, `referencedWays`, or `referencedRelations`, depending on its type.
+
+At this point we could update all objects in the change file. However, as mentioned before, we also have to update the geometry of ways or relations referencing a modified node or way. To retrieve all ways that reference a modified node, the following query is sent to the SPARQL endpoint:
 
 ```SQL
 SELECT ?way WHERE {
@@ -181,11 +216,13 @@ SELECT ?way WHERE {
 GROUP BY ?way
 ```
 
-We do the same again for each modified node and way to fetch all relations that reference one of them. If the ways and relations are not already in the OsmChange file we store their id in a set we call `waysToUpdateGeometry` and `relationsToUpdateGeometry`. We now have the ID of each OSM element that we need to update. However, the sets for the referenced nodes, ways and relations are incomplete because they contain only the ID's of elements that where members of ways and relation which where already in the ChangeFile.
+Similar queries are executed to fetch all relations that reference modified nodes or ways. If these ways or relations are not already present in the change file, their IDs are added to two additional sets: `waysToUpdateGeometry` and `relationsToUpdateGeometry`.
 
-## <a id="fetching_refs"></a>2.2. Fetching References
+At this point, the IDs of all OSM elements that need to be updated are available. However, the sets for `referencedNodes`, `referencedWays`, and `referencedRelations` remain incomplete, as they only include IDs of elements that were members of ways and relations already present in the *OsmChange* file.
 
-We start with fetching all members for relations in the `referencedRealtions` or `relationsToUpdateGeometry` set with the following query:
+## <a id="fetching_refs"></a>2.4. Fetching References and Creating Dummy Objects
+
+We start with fetching all members for relations in the `referencedRelations` or `relationsToUpdateGeometry` set with the following query:
 
 ```sql
 SELECT ?uri WHERE {
@@ -196,13 +233,9 @@ SELECT ?uri WHERE {
 GROUP BY ?uri
 ```
 
-This gives us each referenced node and way which we can then store in the `referencedWays` and `referencedNodes` set. We do the same no for each way in the `referencedWays` and `waysToUpdateGeometry` set to get each node that was referenced.
+This query retrieves each referenced node and way, which we subsequently store in the `referencedWays` and `referencedNodes` sets. The same process is repeated for each way in the `referencedWays` and `waysToUpdateGeometry` sets.
 
-We now have the ID's of each referenced OSM object. We now need to create a dummy object to store it in the responding file for the conversion with osm2rdf.
-
-## <a id="dummies"></a>2.3. Creating Dummy Objects
-
-We start with creating a dummy objects for each node that was referenced. The only information we need to create a node dummy is the location of the node. Since the location is stored in a triple with the subject `osm2rdfgeom:osm_node_`, we can fetch them with the following query:
+At this stage, we have the IDs of all referenced OSM objects. To proceed, we start with creating a dummy objects for each node that was referenced. Since references are only there to provide the geometric information for the referencing objects, we only need to add the location of the node. As the location is stored in a triple with the subject `osm2rdfgeom:osm_node_`, we can fetch them with the following query:
 
 ```sql
 SELECT ?nodeGeo ?location WHERE {
@@ -211,13 +244,13 @@ SELECT ?nodeGeo ?location WHERE {
 }
 ```
 
-The returned location is a point in WKT format, from which we can extract langitude and longitude of the location. Consequential we can create an XML element for each node 
+The returned location is a point in WKT format, from which we can extract the latitude and longitude of the location. Consequently, we can create an XML element for each referenced node that looks as follows:
 
 ```xml
-<node id="..." lat="..." lon="..."/>
+<node id="NODE_ID" lat="LATITUDE" lon="LONGITUDE"/>
 ```
 
-For ways and relations we need to fetch all members, whereby it is important to maintain the correct order of the members. This information is stored in a triple with the predicate `osm2rdfmember:pos`. For ways the query looks like this:
+For referenced ways and relations we need to fetch information about all members, whereby it is important to maintain the correct order of the members. This information is stored in a triple with the predicate `osm2rdfmember:pos`. For ways the query looks like this:
 
 ```sql
 SELECT ?way 
@@ -232,13 +265,13 @@ WHERE {
 GROUP BY ?way
 ```
 
-For relations we also have to fetch the type with the predicate `osmkey:type`. This is important, because osm2rdf only calculates geometries for relations with type *multipolygon* or *boundary*.
+For relations we also have to fetch the type with the predicate `osmkey:type`, and the role of each member. This is important, because only relations of type *multipolygon* or *boundary* have a defined geometry that can be described by a polygon or multipolygon. The role a member describes if it is part of an inner or outer edge of the (Multi)-polygon. 
 
-For ways and relations we need to make a distinction between objects that are simply there because they are a reference (`referencedWays` and `referencedRelations`) and objects which need to be updated in the database (`waysToUpdateGeometry` and `relationsToUpdateGeometry`). Since referenced elements are not updated in the database we do not need to know their tags or timestamp. However, for the ways and relations we update the geometry for we do need this information.
+We now have created a dummy for each referenced object. Therefore, we can start to convert the objects to RDF triples.
 
-## <a id="conversion"></a> 2.4. Conversion to RDF
+## <a id="conversion"></a> 2.6. Conversion to RDF
 
-As we have an XML object containing all relevant information for each OSM element, we can now convert the OSM data to RDF using the *osm2rdf* tool. For testing purposes, we use a (fork)[https://github.com/nicolano/osm-live-updates] of the tool that avoids the use of blank nodes in member relationships, by using unique identifier by combining the ID of the parent object with the ID of the member and his position using the `osm2rdf:member` namespace. 
+As we have now XML objects containing all relevant information for each OSM element, we can now convert the OSM data to RDF using the *osm2rdf* tool. For testing purposes, we use a (fork)[https://github.com/nicolano/osm-live-updates] of the tool that avoids the use of blank nodes in member relationships, by using unique identifier by combining the ID of the parent object with the ID of the member and his position using the `osm2rdf:member` namespace. 
 
 ```
 osmrel:1189 osmrel:member _:6_0 .
@@ -251,7 +284,7 @@ osmrel:1189 osmrel:member osm2rdfmember:osmrel_1189_osmway_1096 .
 osm2rdfmember:osmrel_1189_osmway_1096 osm2rdfmember:id osmway:1069 .
 ```
 
-This makes it much easier for us to find out later whether the results are correct. 
+This makes it much easier for us to find out later whether the results are correct, as blank nodes would have an arbitrary identifier. 
 
 Before we start the conversion of the OSM data we have to order the nodes, ways and relations after their ID's. We use the (Osmium Tool)[https://osmcode.org/osmium-tool/] for this purpose:
 
@@ -261,7 +294,7 @@ osmium sort PATH_TO_NODE_FILE PATH_TO_WAY_FILE PATH_TO_RELATION_FILE -o PATH_TO_
 
 After performing this, we have a single ordered `.osm` which we can now convert to RDF. We have now a file that contains all triple that we need to update the database.
 
-## <a id="updating"></a> 2.5. Updating the Database
+## <a id="updating"></a> 2.7. Updating the Database
 
 We start the update process with deleting all elements from the database that we want to update by using the following query, which will also delete all linked triples, like for example geometries of member nodes.
 
@@ -350,6 +383,7 @@ We have shown how we have implemented our tool `olu` to perform the update proce
     <h2 id="footnote-label"> References </h2>
     <ol>
         <li id="osm_wiki"> OpenStreetMap Wiki, "OsmChange", https://wiki.openstreetmap.org/wiki/OsmChange, accessed on 11.12.2024. </li>
+        <li id="osm_wiki_diffs"> OpenStreetMap Wiki, "Planet.osm/diffs", https://wiki.openstreetmap.org/wiki/Planet.osm/diffs, accessed on 13.12.2024. </li>
         <li id="osm2rdf_paper"> Hannah Bast, Patrick Brosi, Johannes Kalmbach, and Axel Lehmann. 2021.
         An Efficient RDF Converter and SPARQL Endpoint for the Complete Open-
         StreetMap Data. In <i>29th International Conference on Advances in Geographic
