@@ -2,14 +2,14 @@
 title: "Osm Live Updates for SPARQL Endpoints"
 date: 2024-12-05T13:30:48+01:00
 author: "Nicolas von Trott"
-authorAvatar: "img/ada.jpg"
-tags: []
+authorAvatar: ""
+tags: [osm, osc, sparql, updates]
 categories: []
-image: "img/writing.jpg"
+image: "img/project_osm_live_updates.png"
 draft: true
 ---
 
-The [osm-live-updates](https://github.com/nicolano/osm-live-updates) (`olu`) tool is designed to keep SPARQL endpoints containing [*OpenStreetMap*](https://www.openstreetmap.org) (OSM) data, which has been converted to RDF triples with [`osm2rdf`](https://github.com/ad-freiburg/osm2rdf), up to date by processing [*OsmChange*](https://wiki.openstreetmap.org/wiki/OsmChange) files. Since `osm2rdf` retains the complete object geometry of the OSM data, `olu` also preserves the correctness of this geometries by updating the geometry of OSM objects in the database that reference a changed object in the *OsmChange* file.
+The [osm-live-updates](https://github.com/nicolano/osm-live-updates) (`olu`) tool is designed to keep SPARQL endpoints containing [*OpenStreetMap*](https://www.openstreetmap.org) (OSM) data up to date. It processes [*OsmChange*](https://wiki.openstreetmap.org/wiki/OsmChange) files and works with OSM data that has been converted into RDF triples using `osm2rdf`. `olu` aims to preserve the correctness of the complete object geometry of the OSM data. The tool is open-source and available on Github.
 
 # Content
 1. <a href="#introduction">Introduction</a>
@@ -66,11 +66,11 @@ In this chapter, we introduce the foundational concepts necessary to understand 
   
 Each OSM object can include tags, which are key-value pairs that provide descriptive information. For instance, a node might have a tag indicating it's a shop, or a way might have a tag designating it as a freeway. Among the three structures, relations are the only ones that must include at least one tag defining their type. 
 
-Every OSM object has a unique ID, a version number (which is increased each time the object is modified), and a timestamp indicating when it was created or last edited. While only nodes directly contain geographic coordinates, ways and relations derive their geometry from their references. For example, a way's geometry is determined by its constituent nodes, and a relation's geometry depends on its members, which can include nodes, ways, and other relations. This hierarchical referencing means interpreting a relation's geometry can require tracing through multiple levels of references.
+Every OSM object has a unique ID, a version number (which is increased each time the object is modified), and a timestamp indicating when it was created or last edited. While only nodes directly contain geographic coordinates, ways and relations derive their geometry from their references. For example, a way's geometry is determined by its referenced nodes, and a relation's geometry depends on its members, which can include nodes, ways, and other relations. This hierarchical referencing means interpreting an objects geometry can require tracing through multiple levels of references.
 
 ## <a id="osc"></a>1.2. OsmChange Files
 
-[*OsmChange*](https://wiki.openstreetmap.org/wiki/OsmChange) (`.osc`) is an XML file format used to describe incremental updates to the OpenStreetMap (OSM) database. It contains information about newly created, modified, or deleted OSM objects within a specific timeframe. Below is an example of an *OsmChange* file for the modification of a single node <a href="#osm_wiki"> [1]</a>:
+[*OsmChange*](https://wiki.openstreetmap.org/wiki/OsmChange) (`.osc`) is an XML file format used to describe incremental updates to the OpenStreetMap (OSM) database. It contains information about newly created, modified, or deleted OSM objects within a specific timeframe. Below is an example of an OsmChange file for the modification of a single node <a href="#osm_wiki"> [1]</a>:
 
 ```xml
 <osmChange version="0.6" generator="acme osm editor">
@@ -88,13 +88,13 @@ The tag that encloses the OSM object indicates the type of change to the databas
 - `modify`: Modifying an existing object
 - `delete`: Deleting an object
   
-The OSM element within these tags represents its complete state, including all attributes and tags, at the time the change file was created. This also makes it impossible to find out what changes have been made to an element in a `modify` tag without further information. Since ways and relations derive their geometry from referenced nodes, they may not need to be explicitly included in the file if their geometry changes. For example, if a node referenced by a way changes its position, only the node would appear in the change file.
+The OSM element within these tags represents its complete state, including all attributes and tags, at the time the change file was created. This also makes it impossible to find out what changes have been made to an element in a modify-tag without further information. Since ways and relations derive their geometry from referenced nodes, they may not need to be explicitly included in the file if their geometry changes. For example, if a node referenced by a way changes its position, only the node would appear in the change file.
 
 OpenStreetMap provides change files at minute, hour, and day intervals through its [replication server](https://planet.openstreetmap.org/replication/). Each change file is accompanied by a state file, which includes the timestamp of the file's creation and a running sequence number, ensuring updates can be processed in sequence.
 
 ## <a id="sparql"></a>1.3. SPARQL and RDF
 
-[SPARQL](https://www.w3.org/TR/sparql11-query/) (SPARQL Protocol and RDF Query Language) is a standardized query language specifically designed for querying and manipulating data stored in RDF (Resource Description Framework) format. It allows users to perform complex and flexible queries on RDF datasets. RDF represents data as a collection of subject-predicate-object statements, known as triples, where each component is identified by a Uniform Resource Identifier (URI). To simplify repeated URIs, prefixes can be defined and reused throughout queries. 
+[*SPARQL*](https://www.w3.org/TR/sparql11-query/) (SPARQL Protocol and RDF Query Language) is a standardized query language specifically designed for querying and manipulating data stored in [*RDF*](https://www.w3.org/TR/WD-rdf-syntax-971002/) (Resource Description Framework) format. It allows users to perform complex and flexible queries on RDF datasets. RDF represents data as a collection of subject-predicate-object statements, known as triples, where each component is identified by a Uniform Resource Identifier (URI). To simplify repeated URIs, prefixes can be defined and reused throughout queries. 
 
 **Example SPARQL Query**
 
@@ -109,7 +109,7 @@ SELECT * WHERE {
 
 **Communication with SPARQL Endpoints**
 
-SPARQL queries are submitted to SPARQL endpoints via [HTTP](https://datatracker.ietf.org/doc/html/rfc2616) requests, following the [SPARQL 1.1 Protocol](https://www.w3.org/TR/2013/REC-sparql11-protocol-20130321/). For instance, the query above can be sent using the following HTTP POST request:
+SPARQL queries are submitted to SPARQL endpoints via [*HTTP*](https://datatracker.ietf.org/doc/html/rfc2616) requests, following the [*SPARQL 1.1 Protocol*](https://www.w3.org/TR/2013/REC-sparql11-protocol-20130321/). For instance, the query above can be sent using the following HTTP POST request:
 
 ```HTTP
 POST /sparql/ HTTP/1.1
@@ -126,7 +126,7 @@ The SPARQL endpoint processes the query and returns the results in the requested
 
 **SPARQL Update Example**
 
-SPARQL can also modify RDF data using the [SPARQL 1.1 Update](https://www.w3.org/TR/2013/REC-sparql11-update-20130321/) language. For example, to insert a single triple indicating that a node is of type `osm:node`, the following command can be used:
+SPARQL can also modify RDF data using the [*SPARQL 1.1 Update*](https://www.w3.org/TR/2013/REC-sparql11-update-20130321/) language. For example, to insert a single triple indicating that a node is of type `osm:node`, the following command can be used:
 
 ```
 PREFIX osmnode: <https://www.openstreetmap.org/node/>
@@ -198,41 +198,41 @@ Geometric features are stored as string literals in the [Well-Known Text](http:/
 
 ## <a id="related_work"></a>1.4. Related Work
 
-There are tools available for SQL-like databases with similar functionality to `olu` like [*OSM2PGSQL*](https://osm2pgsql.org) which uses PostgreSQL/PostGIS databases. [*Sophox*](https://github.com/Sophox/sophox) provides a tool to generate RDF triples from OSM data and a corresponding SPARQL endpoint. It also has the ability to continuously update a SPARQL endpoint from *OsmChange* files. However, it simplifies the geometric information of ways and relations to single points rather than retaining their full geometric shapes. Therefore, the geometries of the referencing objects are not updated.
+There are tools available for SQL-like databases with similar functionality to `olu` like [*OSM2PGSQL*](https://osm2pgsql.org) which uses PostgreSQL/PostGIS databases. [*Sophox*](https://github.com/Sophox/sophox) provides a tool to generate RDF triples from OSM data and a corresponding SPARQL endpoint. It also has the ability to continuously update a SPARQL endpoint from OsmChange files. However, it simplifies the geometric information of ways and relations to single points rather than retaining their full geometric shapes. Therefore, the geometries of the referencing objects are not updated.
 
 # <a id="implementation"></a>2. Implementation
 
-In this section we will first define the problem we are trying to solve with our tool and then show how we have implemented the update process.
+In this section we will first define the problem we are trying to solve with our tool and then show how we have implemented the update process in our tool.
 
 ## <a id="problem_def"></a>2.1. Problem Definition
 
 In Chapter 1, we introduced the concepts of OpenStreetMap (OSM) and osm2rdf, highlighting their potential to enable (geospatial) queries on the complete OSM dataset. However, the dynamic nature of OSM, which data is constantly modified by millions of registered OpenStreetMap users, poses a significant challenge. Re-converting the entire OSM dataset into RDF triples and reinitializing the SPARQL endpoint with every change or at regular intervals is computationally expensive and impractical. A more efficient approach involves updating only the objects in the SPARQL endpoint that have actually changed.
 
-The *OsmChange* file format, as described in Section 1.2, provides a mechanism to describe incremental changes in OSM data. However, before these changes can be applied to the SPARQL endpoint, the objects in the change files must first be converted into RDF triples. Updating the geometries of OSM objects in the database adds complexity to this process. Since ways and relations do not have explicit location information, their geometries depend on referenced nodes or other objects. For instance, a change in a node’s position can indirectly impact the geometry of related objects that reference the modified node but are not explicitly mentioned in the change file. To address this, the update process must:
+The OsmChange file format, as described in Section 1.2, provides a mechanism to describe incremental changes in OSM data. However, before these changes can be applied to the SPARQL endpoint, the objects in the change files must first be converted into RDF triples. Updating the geometries of OSM objects in the database adds complexity to this process. Since ways and relations do not have explicit location information, their geometries depend on referenced nodes, ways or relations. For instance, a change in a node’s position can indirectly impact the geometry of objects that reference the modified node but are not explicitly mentioned in the change file. To address this, the update process must:
 
 - Read all objects deleted, created or modified in the OsmChange file.
 - Retrieve all objects in the database that reference the modified objects.
 - Retrieve all ways and nodes that are referenced by these objects.
 
-Once identified, the relevant data is converted into RDF triples and used to update the SPARQL endpoint. This incremental approach ensures efficient handling of changes while maintaining the integrity of the geometric properties of the data. The following chapters describe the implementation of this update process within `olu`,
+In order for osm2rdf to determine all geometries, we need a file containing all the OSM objects mentioned above. Once we have this data, we can generate the triples, and use them to update the SPARQL endpoint. The following chapters describe the implementation of this update process within `olu`,
 
 ## <a id="providing_osc"></a>2.2. Providing Change Files
 
-The update process is managed by the `OsmUpdater` class, which allows users to provide *OsmChange* files either locally or via a replication server, such as the before mentioned one from OSM. If a replication server is used and no sequence number is specified, the process determines the starting sequence number by querying the SPARQL endpoint for the node with the most recent timestamp. From this timestamp, the sequence number of the change file containing the creation or modification of this node can be determined as a starting point.
+The update process is managed by the `OsmUpdater` class, which allows users to provide OsmChange files either locally or via a replication server, such as the before mentioned one from OSM. If a replication server is used and no sequence number is specified, the process determines the starting sequence number by querying the SPARQL endpoint for the node with the most recent timestamp. From this timestamp, the sequence number of the change file containing the creation or modification of this node can be determined as a starting point.
 
 **Merging Change Files**
 
-Since *OsmChange* files are generated at regular intervals (e.g., minutely, hourly, or daily), multiple files may need to be processed to reflect all changes up to the latest sequence. To optimize this process, these files are merged to prevent redundant updates, like objects that are modified multiple times within the timeframe. 
+Since OsmChange files are commonly generated at regular intervals (e.g., minutely, hourly, or daily), multiple files may need to be processed to reflect all changes up to the latest sequence. To optimize this process, these files are merged to prevent redundant updates, like objects that are modified multiple times within the timeframe. 
 
 The C++ library [`libosmium`](https://osmcode.org/libosmium/) is used to merge the change files. This library offers tools to read OSM objects into a buffer and sort them by type (node, way, or relation), ID, version, and timestamp. As deleting objects does not increase the version number, we also need to consider whether the object appeared in a delete-tag in the change files and sort them so that the deleted object appears last. By retaining only the latest version of each object, the merged output file reflects the cumulative changes, resulting in a single change file to process in the subsequent steps.
 
 ## <a id="process_osc"></a>2.3. Processing Change File
 
-The resulting *OsmChange* file is processed by the `OsmChangeHandler` class, which executes a two-phase operation to identify and prepare OSM elements for updating.
+The resulting OsmChange file is processed by the `OsmChangeHandler` class, which executes a two-phase operation to identify and prepare OSM elements for updating.
 
-In the first iteration, the handler reads through the change file and organizes the IDs of all OSM elements into nine sets based on their type (node, way, or relation) and the type of change (`create`, `modify`, or `delete`). These sets act as a preliminary catalog of all changes in the file.
+In the first iteration, the handler reads through the change file and organizes the IDs of all OSM elements into nine sets based on their type (node, way, or relation) and the type of change (`create`, `modify`, or `delete`). These sets act as a catalog of all changes that are explicitly mentioned in the file.
 
-During the second iteration, the handler focuses on elements within `create` and `modify` tags. Each XML object is temporarily stored in a file for further processing. Additionally, the handler inspects the members of ways and relations, identifying any references to nodes, ways, or relations not already present in the OsmChange file. The IDs of these referenced elements are stored in one of three sets: `referencedNodes`, `referencedWays`, or `referencedRelations`.
+During the second iteration, the handler focuses on elements within `create` and `modify` tags. Each XML representation of the objects are temporarily stored in a file. Additionally, the handler inspects the members of ways and relations and stores the IDs of these referenced elements in one of three sets: `referencedNodes`, `referencedWays`, or `referencedRelations`.
 
 Updating the geometries of ways or relations in the database requires additional processing. For instance, when a node or way is modified, all ways or relations that reference it must also be updated. To fetch objects that reference a modified node or way in the change file, the handler sends SPARQL queries to the endpoint. For example, the following query retrieves ways referencing modified nodes:
 
@@ -247,7 +247,7 @@ GROUP BY ?way
 
 Similar queries are used to identify relations referencing modified nodes or ways. The IDs of these objects are added to two additional sets, `waysToUpdateGeometry` and `relationsToUpdateGeometry`.
 
-At the end of this process, the handler has identified all OSM elements that need to be updated. However, the `referencedNodes`, `referencedWays`, and `referencedRelations` sets remain incomplete, as they only include elements that are explicitly referenced by ways and relations already present in the *OsmChange* file. These gaps are addressed in subsequent steps.
+At the end of this process, the handler has identified the IDs of all OSM elements that need to be updated. However, the `referencedNodes`, `referencedWays`, and `referencedRelations` sets remain incomplete, as they only include elements that are explicitly referenced by ways and relations already present in the OsmChange file. These gaps are addressed in subsequent steps.
 
 ## <a id="fetching_refs"></a>2.4. Fetching References and Creating Dummy Objects
 
@@ -262,11 +262,11 @@ SELECT ?uri WHERE {
 GROUP BY ?uri
 ```
 
-This query fetches the referenced nodes and ways, which are then added to the `referencedWays` and `referencedNodes` sets. The same approach is applied to fetch members for each way in the `referencedWays` and `waysToUpdateGeometry` sets.
+This query fetches the referenced nodes, ways, and relations which are then added to the `referencedRelations`, `referencedWays`, and `referencedNodes` sets. The same approach is applied to fetch members for each way in the `referencedWays` and `waysToUpdateGeometry` sets.
 
 **Creating Dummy Objects**
 
-Once all referenced object IDs are collected, dummy objects are created for each referenced node and way. These dummy objects are placeholders that provide only the essential geometric and relational information required by the referencing objects. This means we have to retrieve the location for each referenced node, and the members of each referenced way and relation.
+Once all referenced object IDs are collected, dummy objects are created for each referenced object. These dummy objects are placeholders that provide only the essential geometric and relational information required by the referencing objects. This means we have to retrieve the location for each referenced node, and the members of each referenced way and relation in correct order.
 
 As the location is stored in a triple with the subject `osm2rdfgeom:osm_node_`, we can fetch them with the following query:
 
@@ -283,7 +283,7 @@ The query returns the node’s location in Well-Known Text (WKT) format, which i
 <node id="NODE_ID" lat="LATITUDE" lon="LONGITUDE"/>
 ```
 
-For referenced ways and relations we need to fetch information about all members, whereby we maintain the correct order of the members. This information is stored in a triple with the predicate `osm2rdfmember:pos`. For ways, this information is fetched using the following query:
+For referenced ways and relations we need to fetch information about all members, whereby we maintain the correct order of the members. This information is stored in a triple with the predicate `osm2rdfmember:pos`, that is generated by osm2rdf when using the `--add-way-node-order` option. For ways, this information is fetched using the following query:
 
 ```sql
 SELECT ?way 
@@ -321,19 +321,11 @@ osm2rdfmember:osmrel_1189_osmway_1096 osm2rdfmember:id osmway:1069 .
 
 This adjustment eliminates arbitrary blank node identifiers, making it easier to verify the correctness of results during testing and debugging.
 
-**Preparing OSM Data for Conversion**
-
-Before converting OSM data to RDF, the elements (nodes, ways, and relations) must be ordered by their IDs. This ensures consistency and compatibility with the osm2rdf tool. The [Osmium Tool](https://osmcode.org/osmium-tool/) is used for this purpose with the following command:
-
-```bash
-osmium sort PATH_TO_NODE_FILE PATH_TO_WAY_FILE PATH_TO_RELATION_FILE -o PATH_TO_INPUT_FILE --overwrite
-```
-
-After sorting, the ordered `.osm` file is processed using the `osm2rdf` tool, which generates an RDF file containing all the triples required to update the database. This final file provides a complete and accurate representation of the OSM data in RDF format, ready for integration into the SPARQL endpoint.
+Before converting OSM data to RDF, the elements (nodes, ways, and relations) are gathered in an ordered `.osm` file, which is then processed using the `osm2rdf` tool.
 
 ## <a id="updating"></a>2.7. Updating the Database
 
-The database update process starts by removing all triples from the database that belong to objects that were in a `delete`, `create` or `modify` tag in the *OsmChange* file, or that belong to objects, which geometries need to be updated, e.g. the elements in the `waysToUpdateGeometry` and `relationsToUpdateGeometry` sets. This is achieved using the following SPARQL query:
+The database update process starts by removing all triples from the database that belong to objects that were in a `delete`, `create` or `modify` tag in the OsmChange file, or that belong to objects, which geometries need to be updated, e.g. the elements in the `waysToUpdateGeometry` and `relationsToUpdateGeometry` sets. This is achieved using the following SPARQL query:
 
 ```sql
 DELETE {
@@ -351,18 +343,18 @@ WHERE {
 
 This query ensures that:
 
-- All triples directly linked to the specified subjects `osmnode:`, `osmnway:`, and `osmnrel:` combined with their ID, are deleted.
-- Any nested relationships `?o1`, such as geometries and member nodes, are also removed.
+- All triples with the specified subjects `osmnode:`, `osmnway:`, and `osmnrel:` combined with their ID, are deleted.
+- Any nested relationships `?o1`, such as geometries and member-relationships, are also removed.
 
 **Filtering the Triples**
 
-Before inserting new triples generated by `osm2rdf`, the data is filtered to exclude triples originating from referenced nodes, ways, or relations. This step ensures only the relevant triples are inserted into the database.
+Before inserting new triples generated by `osm2rdf`, the data is filtered to exclude triples originating from referenced nodes, ways, or relations, ensuring that only relevant triples are inserted into the database.
 
 The filtering process involves iterating through each generated triple, extracting the corresponding OSM object ID, and verifying whether the ID belongs to a relevant object. Relevant objects are those directly impacted by the changes, excluding those included solely as references.
 
 **Inserting the Updated Triples**
 
-Once filtered, the triples are added to the database using the following SPARQL update query:
+The filtered triples are added to the database using the following SPARQL update query:
 
 ```sql
 INSERT DATA { TRIPLES ... }
@@ -374,9 +366,9 @@ In this section, we evaluate the results of our implementation, testing the tool
  
 ## <a href="#correctness"></a>3.1. Correctness
 
-We tested the implementation using OSM data provided by [*Geofabrik*](https://download.geofabrik.de), focusing on the subset for the federal state of [Bremen](https://download.geofabrik.de/europe/germany/bremen.html). *Geofabrik* offers full datasets and daily change files for specified regions. For testing, we downloaded a three-month-old dataset and the latest dataset, converted them to RDF using `osm2rdf` with the options `--add-way-node-order --write-ogc-geo-triples none`, and imported the triples into two empty graphs: `http://example.com/updated` and `http://example.com/latest`.
+We tested the implementation using OSM data provided by [*Geofabrik*](https://download.geofabrik.de), focusing on the subset for the federal state of [Bremen](https://download.geofabrik.de/europe/germany/bremen.html). Geofabrik offers full datasets and daily change files for specified regions. For testing, we downloaded a three-month-old dataset and the latest dataset, converted them to RDF using `osm2rdf` with the options `--add-way-node-order --write-ogc-geo-triples none`, and imported the triples into two empty graphs: `http://example.com/updated` and `http://example.com/latest`.
 
-The update process was performed on the http://example.com/updated graph, which can be specified with `-g`, using the following command:
+The update process was performed on the `http://example.com/updated` graph, which can be specified with `-g`, using the following command:
 
 ```bash
 olu SPARQL_ENPOINT_URI -d http://download.geofabrik.de/europe/germany/bremen-updates/ -g http://example.com/updated
@@ -413,17 +405,17 @@ WHERE {
 
 If the query result is empty, it confirms that the updated graph contains the same triples as the latest graph, proving the tool correctly processes changes from the OsmChange files.
 
-*Results*
+**Results**
 
-The tests confirmed that, apart from minor encoding differences, the tool correctly applied all changes from the *OsmChange* files to the http://example.com/updated graph. This demonstrates the correctness of the update process.
+The query showed that before we started the update process, there where ca. 1.5 Million triples in the database different. After updateding this number reduced to two triples, for which only the encoding of spwecial characters differed. This shows that the tool correctly applied all changes from the OsmChange files to the `http://example.com/updated` graph. 
 
 The encoding differences arise because OSM tag values are free text with undefined encoding, which can lead to variations in how special characters (e.g., newlines) are represented. During processing, our tool decodes these strings and re-encodes them before inserting them into the database. While these encoding variations may appear in the SPARQL query results, they do not affect the actual information content of the tags and are therefore ignored during correctness verification.
 
 ## <a id="#performance"></a>3.2. Performance
 
-Evaluating the performance of our tool is challenging, as it heavily depends on the efficiency of the SPARQL endpoint used and the size of the OSM dataset being updated. A practical benchmark for usability is the [minutely diffs](https://planet.openstreetmap.org/replication/minute/) for the complete OSM planet data, which reflect all changes made to the global OSM database within minute-long intervals. To maintain synchronization with the OSM planet data, these files must be processed on average in less than a minute.
+A practical benchmark for usability is are the [hourly diffs](https://planet.openstreetmap.org/replication/hour/) for the complete OSM planet data, which reflect all changes made to the global OSM database within hour-long intervals. To maintain synchronization with the OSM planet data, these files must be processed on average in less than an hour.
 
-To test our tool, we used a publicly available [QLever instance](https://qlever.cs.uni-freiburg.de/osm-planet) of the complete OSM planet data. To isolate the processing time, we skipped deletion and insertion operations on the SPARQL endpoint and instead wrote the update queries to an output file using the `-o` option. We also specified the start sequence number using `-s`, ensuring that 100 change files were processed. The following command was used:
+To test our tool, we used a publicly available [QLever instance](https://qlever.cs.uni-freiburg.de/osm-planet) of the complete OSM planet data. To isolate the processing time, we skipped deletion and insertion operations on the SPARQL endpoint and instead wrote the update queries to an output file using the `-o` option. We also specified the start sequence number using `-s`, ensuring that only one change file is processed. The following command was used:
 
 ```bash
 olu https://qlever.cs.uni-freiburg.de/api/osm-planet -d https://planet.openstreetmap.org/replication/minute/ -s -o sparqlUpdateOutput.txt
@@ -431,20 +423,29 @@ olu https://qlever.cs.uni-freiburg.de/api/osm-planet -d https://planet.openstree
 
 **Results**
 
-Our tool completed the processing of 100 minutely change files in 41 minutes and 55 seconds, demonstrating that it can handle the changes efficiently enough to keep a SPARQL instance synchronized with the OSM planet data.
-
-The number of changes to OSM data can vary significantly from minute to minute, which means some change files may take longer than a minute to process. However, over extended periods, the differences tend to average out, ensuring that the updates can be executed within the required timeframe on average.
+We processed the change file, achieving a processing time of 44 minutes. This result demonstrates that the tool can handle updates efficiently enough to keep a SPARQL instance synchronized with the OSM planet data. While the number of changes in each diff can vary, leading to occasional delays, these variations tend to average out over longer periods, ensuring that updates remain within the required timeframe.
 
 ## <a id="#improvements"></a>3.3. Improvements
 
-Our `olu` impelemntation does currently not support multithreading, however there are some tasks like the filtering of triples
+**Performance**
 
-The most time-consuming part of the update process is the deletion of objects from the database and the insertion of new triples.
+While our tests demonstrate that `olu` is performant enough to handle updates for the complete OSM dataset, there remains room for optimization. The tool’s performance is influenced by several factors, including the efficiency of the SPARQL endpoint and the size of the OSM dataset being processed. A straightforward approach to improve performance would be to use a faster SPARQL endpoint or work with a smaller subset of the OSM data. However, there are also opportunities to enhance the implementation itself:
 
+- **Multithreading Support**: Currently, `olu` does not support multithreading. Tasks such as filtering triples and creating dummy objects could be parallelized, reducing processing times and improving overall efficiency.
+
+- **Optimizing Deletion Queries**: The deletion query presented in Section 2.7 is designed to be generalized, accommodating all OSM objects without requiring knowledge of the exact triples generated by osm2rdf. While this approach ensures flexibility and future-proofing, it is not optimized for performance. By narrowing the query to specific namespaces that correspond to triples actually present in the database, the deletion process could be made significantly faster.
+
+- **Efficient Insertion of Triples**: For an hourly diff of the complete OSM dataset, approximately 16 million triples must be inserted into the database. Optimizing this process is essential for scalability. One potential improvement could be leveraging the [*SPARQL LOAD*](https://www.w3.org/TR/sparql11-update/#load) operation, which allows the SPARQL endpoint to directly read an RDF document and insert triples. This method could reduce the number of HTTP requests and improve performance. However, this feature is not supported by all SPARQL endpoints, which may limit its applicability.
+
+**Support for Bounding Boxes**
+
+[*Geofabrik*](https://download.geofabrik.de) offers a comprehensive catalogue of OSM subsets for most countries and smaller regions, such as the federal state of Bremen, which was used for testing in Chapter 3.1. While these subsets are useful, they have limitations: the selection of regions is fixed, and change files are only provided on a daily basis.
+
+A valuable enhancement to `olu` would be the ability to specify a bounding box as an option. This feature would enable the tool to efficiently update smaller subsets of the OSM dataset by using planet-wide diffs from OpenStreetMap. Instead of relying on predefined subsets, users could define custom regions of interest, allowing for greater flexibility when working with localized datasets and more frequent updates.
 
 # <a id="#conclusion"></a>4. Conclusion and Future Work
 
-In this work, we presented the implementation of our tool, `olu`, designed to update SPARQL endpoints containing OpenStreetMap (OSM) data. We demonstrated that `olu` produces correct results and offers sufficient performance for practical use. However, the tool currently does not support the update of [GeoSPARQL](https://en.wikipedia.org/wiki/GeoSPARQL) triples, such as `ogc:contains` or `ogc:intersects`. Generating these triples requires more than just resolving direct references between OSM objects, as is done in `olu`. It also necessitates identifying all OSM elements that are geometrically linked to updated objects, for instance, all areas containing a modified node or all ways intersecting a modified way. Addressing this limitation is both a challenging and significant task, making it a promising direction for future work and a valuable enhancement to the functionality of `olu`.
+In this work, we presented the implementation of our tool, `olu`, designed to update SPARQL endpoints containing OpenStreetMap (OSM) data. We demonstrated that `olu` produces correct results and offers sufficient performance for practical use. However, the tool currently does not support the update of [*GeoSPARQL*](https://en.wikipedia.org/wiki/GeoSPARQL) triples, such as `ogc:contains` or `ogc:intersects`. Generating these triples requires more than just resolving direct references between OSM objects, as is done in `olu`. It also necessitates identifying all OSM elements that are geometrically linked to updated objects, for instance, all areas containing a modified node or all ways intersecting a modified way. Addressing this limitation is both a challenging and significant task, making it a promising direction for future work and a valuable enhancement to the functionality of `olu`.
 
 <footer>
     <h2 id="footnote-label"> References </h2>
