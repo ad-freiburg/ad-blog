@@ -14,7 +14,7 @@ draft: true
 
 1. [Introduction](#introduction)
 
-2. [Qlever-control script](qlever-control-script)
+2. [Qlever-control script](#qlever-control-script)
 
 3. [Goals](#goals)
 
