@@ -51,9 +51,9 @@ that make use of many auxiliary functions.
 
 
 ## 4. Approach {#approach}
-Before starting to write tests, we had to familiarise ourselves with the topic of mocking, the operation of github and the structure of Python files. As the Python programming language was already familiar from my studies, I only needed to learn how to test functions efficiently with the help of mocking. 
+Before starting to write tests, I had to familiarise myself with the topic of mocking, the operation of github and the structure of Python files. As the Python programming language was already familiar from my studies, I only needed to learn how to test functions efficiently with the help of mocking. 
 
-The files were analysed, tests were written for the execute function in a Python commands file of the same name and tests were written for the other functions in a separate Python file. Every effort was made to test every line of code (line coverage). If errors occurred in the code, a pull request was made to improve the code. If the code lost readability due to long, swappable code blocks, suggestions for improvement were submitted. This was usually achieved with the help of outsourced functions that shortened the execute function of the command files and were then also tested. 
+The files were analysed, were written for the execute function in a Python commands file of the same name and tests were written for the other functions in a separate Python file. In total over 70 tests were written. Every effort was made to test every line of code (line coverage). If errors occurred in the code, a pull request was made to improve the code. If the code lost readability due to long code blocks, which weren't essential for understanding the function, suggestions for improvement were submitted. This was usually achieved with the help of outsourced functions that shortened the execute function of the command files and were then also tested. 
 
 ### Example for testing an execute function using the log.py file {#test-example}
 Figure 1: Basic Test for log
