@@ -32,30 +32,30 @@ draft: true
 ----
 
 
-## 1. Introduction {#introduction}
+## 1. Introduction
 The [QLever](https://qlever.cs.uni-freiburg.de/) SPARQL engine was developed at the Chair of Algorithms and Data
 Structures at the University of Freiburg. It can efficiently search through terabytes of data with the help of queries and Output information very quickly. QLever can be operated with the help of a "qlever-control" script written in Python. When programming QLever, great importance is attached to efficient, comprehensively tested and well documented code. So far, the qlever-control script has only been tested end-to-end and no unit tests.
 
-## 2. Qlever-control script {#qlever-control-script}
+## 2. Qlever-control script
 The qlever-control script contains commands written in Python that can be used to operate the SPARQL engine. Some of these commands are described below.
 
 The start and stop commands can be used to stop running QLever server processes and then start the engine on a free port (start.py; stop.py). Running QLever processes can be displayed with the status command (status.py). Logging and debugging during runtime is realised with the help of the logging system (log.py). The index of a given RDF dataset is constructed in index.py. The cache.py file can be used to output statistics and details of the cache memory.
 
-## 3. Goals {#goals}
+## 3. Goals
 The aim of this project was to write unit tests for the commands Python files. Due to time constraints, this was limited to the QLever commands start, status, stop, index, cache and log described above. In addition, the readability of the code of the commands Python files was to be improved. Testing was implemented particularly efficiently using the mocking method. This project should help to ensure a high quality of the qlever-control script code. 
 
-## 4. Mocking {#mocking}
+## 4. Mocking
 In mocking, an object is imitated with the help of a mock object. This is most commonly used in unittesting. Mocking allows functions with complex dependencies to be tested in Isolation by imitating the dependencies in the test using mock objects. For example, if a command line for the index is created and executed in index.py, the execution can be mocked. This allows to check whether the execution command was called with the correct parameters. The start-stop command for the engine can also be checked for correctness without actually starting the server for each test. Error messages can also be intercepted and tested with mocking. 
 In the mock object library [unittest.mock](https://docs.python.org/3/library/unittest.mock.html) in Python, the object is first converted into a mock object with "patch". The return value of the mock object can then be set as required using "return_value". Mocking can be particularly helpful when testing functions
 that make use of many auxiliary functions.
 
 
-## 4. Approach {#approach}
+## 4. Approach
 Before starting to write tests, I had to familiarise myself with the topic of mocking, the operation of github and the structure of Python files. As the Python programming language was already familiar from my studies, I only needed to learn how to test functions efficiently with the help of mocking. 
 
 The files were analysed, were written for the execute function in a Python commands file of the same name and tests were written for the other functions in a separate Python file. In total over 70 tests were written. Every effort was made to test every line of code (line coverage). If errors occurred in the code, a pull request was made to improve the code. If the code lost readability due to long code blocks, which weren't essential for understanding the function, suggestions for improvement were submitted. This was usually achieved with the help of outsourced functions that shortened the execute function of the command files and were then also tested. 
 
-### Example for testing an execute function using the log.py file {#test-example}
+### Example for testing an execute function using the log.py file
 Figure 1: Basic Test for log
 
 ```
@@ -116,13 +116,13 @@ Figure 2: Test for failed attempt when executing the subprocess.run command
 When writing the tests, care was taken to observe the required form templates such as line length and blank lines. In addition, each line within the code of the execute function was covered with a test, thus ensuring line coverage. The tests were commented with the required information. This resulted in comprehensible, easy-to-read code. A similar procedure was used for the tests for the auxiliary functions outside the execute function.
 
 
-### Code optimisation {#code-optimisation}
+### Code optimisation
 
 In some places, suggestions for improving the code were formulated. For example, the execute function of the stop.py file consisted of 58 lines of code in which some processes were executed that were necessary for the preparation of the stop, but did not belong directly to the stop process. By outsourcing code to a stop_process and a stop_container auxiliary function, the execute function could be reduced to 44 lines. This increased the clarity of the execute function. It was also easier to test, as the new auxiliary functions were tested separately and could be mocked within the execute function for testing.
 Individual errors in the code were also found and corrected. 
 
 
-## 5. Conclusion and future work {#conclusion-and-future-work}
+## 5. Conclusion and future work
 
 In summary, it can be said that the work of the IT project has comprehensively tested and optimised the code of the commands files examined. Attention was paid to welldocumented and clear code. Suggestions for improving existing code were also made and errors in the code were pointed out. This enabled the project's objectives to be met.
 
