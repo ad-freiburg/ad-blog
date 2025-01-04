@@ -119,12 +119,12 @@ When writing the tests, care was taken to observe the required form templates su
 ### Code optimisation
 
 In some places, suggestions for improving the code were formulated. For example, the execute function of the stop.py file consisted of 58 lines of code in which some processes were executed that were necessary for the preparation of the stop, but did not belong directly to the stop process. By outsourcing code to a stop_process and a stop_container auxiliary function, the execute function could be reduced to 44 lines. This increased the clarity of the execute function. It was also easier to test, as the new auxiliary functions were tested separately and could be mocked within the execute function for testing.
-Individual errors in the code were also found and corrected. 
+Some errors in the code were also found and corrected. 
 
 
 ## 5. Conclusion and future work
 
-In summary, it can be said that the work of the IT project has comprehensively tested and optimised the code of the commands files examined. Attention was paid to welldocumented and clear code. Suggestions for improving existing code were also made and errors in the code were pointed out. This enabled the project's objectives to be met.
+In summary, it can be said that the work of the IT project has comprehensively tested and optimised the code of the command files. Attention was paid to welldocumented and clear code. Suggestions for improving existing code were also made and errors in the code were pointed out. This enabled the project's objectives to be met.
 
 The remaining command files still need to be tested in future work. The tests of the commands files can serve as a guide for testing with mocking. This can save a lot of time when writing unit tests.
 
