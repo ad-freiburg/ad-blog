@@ -34,7 +34,7 @@ draft: true
 
 ## 1. Introduction
 The [QLever](https://qlever.cs.uni-freiburg.de/) SPARQL engine was developed at the Chair of Algorithms and Data
-Structures at the University of Freiburg. It can efficiently search through terabytes of data with the help of queries and Output information very quickly. QLever can be operated with the help of a "qlever-control" script written in Python. When programming QLever, great importance is attached to efficient, comprehensively tested and well documented code. So far, the qlever-control script has only been tested end-to-end and no unit tests.
+Structures at the University of Freiburg. It can efficiently search through terabytes of data with the help of queries and output information very quickly. QLever can be operated with the help of a "qlever-control" script written in Python. When programming QLever, great importance is attached to efficient, comprehensively tested and well documented code. So far, the qlever-control script has only been tested end-to-end and no unit tests.
 
 ## 2. Qlever-control script
 The qlever-control script contains commands written in Python that can be used to operate the SPARQL engine. Some of these commands are described below.
