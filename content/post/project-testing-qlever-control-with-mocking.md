@@ -4,6 +4,7 @@ date: 2024-12-22T16:24:05+01:00
 author: "Simon Lempp"
 tags: ["mocking", "unittests", "testing", "QLever", "qlever-control"]
 categories: ["project"]
+image:
 draft: true
 ---
 
