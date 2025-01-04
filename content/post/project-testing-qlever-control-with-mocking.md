@@ -72,44 +72,44 @@ Figure 1: Basic Test for log
 11
 12       # Instantiate LogCommand and execute the function
 13       result = LogCommand().execute(args)
-
-14       # Assertions
-15       log_file = f"{args.name}.server-log.txt"
-16       expected_log_cmd = f"tail -n +1 -f {log_file}"
-17       expected_log_msg = (f"Follow log file {log_file}, press Ctrl-C "
-18                           f"to stop following (will not stop the server)")
-19       # Check that the info log contains the exception message
-20       mock_log.info.assert_has_calls([call(expected_log_msg), call("")],
-21                                      any_order=False)
-22
-23       # Checking if run_command was only called once
-24       mock_run.assert_called_once_with(expected_log_cmd, shell=True)
-25
-26       assert result
+14
+15       # Assertions
+16       log_file = f"{args.name}.server-log.txt"
+17       expected_log_cmd = f"tail -n +1 -f {log_file}"
+18       expected_log_msg = (f"Follow log file {log_file}, press Ctrl-C "
+19                           f"to stop following (will not stop the server)")
+20       # Check that the info log contains the exception message
+21       mock_log.info.assert_has_calls([call(expected_log_msg), call("")],
+22                                      any_order=False)
+23
+24       # Checking if run_command was only called once
+25       mock_run.assert_called_once_with(expected_log_cmd, shell=True)
+26
+27       assert result
 ```
-Most of the tests were similar in design and structure. All tests of a file were written in a class Test*Command, where * stood for the file name. A basic test was then written, which simulated the typical sequence of the execute function without special cases and with successful execution (see Figure 1). As each Python file was to be tested separately, the functions were tested in isolation instead of with all sub-functions. For this purpose, the relevant sub-functions were mocked for each test (Figure 1, line 1-2). This offered the advantage that sub-functions that required long execution times, large amounts of data or complicated data formats could be simulated. It was possible to check whether the function was called with the correct parameters in the correct sequence (Figure 1, lines 23-32). It was also checked for the sub-functions whether only the intended calls and no other calls were made. To ensure that the function could be run through without error, the outcome of the auxiliary functions also had to be simulated in some tests. When mocking the auxiliary functions, care was taken to ensure that the data type of the parameters and the outcome was not changed. The execute functions were given an "args" class object as an argument. This was also simulated using the "MagikMock()" mock object (Figure 1, line 13). The individual properties of "args" could then be set in such a way that the desired path was traversed in the execute (Figure 1, lines 12-17). At the end of a test, it was checked whether the mocked functions were called with the correct parameters in the correct order. The return value of the execute function was also checked.
+Most of the tests were similar in design and structure. All tests of a file were written in a class Test*Command, where * stood for the file name. A basic test was then written, which simulated the typical sequence of the execute function without special cases and with successful execution (see Figure 1). As each Python file was to be tested separately, the functions were tested in isolation instead of with all sub-functions. For this purpose, the relevant sub-functions were mocked for each test (Figure 1, line 1-2). This offered the advantage that sub-functions that required long execution times, large amounts of data or complicated data formats could be simulated. It was possible to check whether the function was called with the correct parameters in the correct sequence (Figure 1, lines 16-25). It was also checked for the sub-functions whether only the intended calls and no other calls were made. To ensure that the function could be run through without error, the outcome of the auxiliary functions also had to be simulated in some tests. When mocking the auxiliary functions, care was taken to ensure that the data type of the parameters and the outcome was not changed. The execute functions were given an "args" class object as an argument. This was also simulated using the "MagikMock()" mock object (Figure 1, line 6). The individual properties of "args" could then be set in such a way that the desired path was traversed in the execute (Figure 1, lines 5-10). At the end of a test, it was checked whether the mocked functions were called with the correct parameters in the correct order (Figure 1, line 25). The return value of the execute function was also checked (Figure 1, line 27).
 
-Outside the basic test, tests were carried out for special cases, various branches of the branches and for failed runs. Figure 2 shows a section of such a test. The error message for the failure of a sub-function was intercepted and replaced by another one (Figure 2, lines 102- 105). It was then possible to check whether the modified error message occurred when executing the function with the mocked "args". 
+Outside the basic test, tests were carried out for special cases, various branches of the branches and for failed runs. Figure 2 shows a section of such a test. The error message for the failure of a sub-function was intercepted and replaced by another one (Figure 2, lines 14- 17). It was then possible to check whether the modified error message occurred when executing the function with the mocked "args". 
 
 Figure 2: Test for failed attempt when executing the subprocess.run command
 ```
-    @patch('subprocess.run')
-    @patch('qlever.commands.log.log')
-    # test for failed subprocess.run
-    def test_execute_failed_to_run_subprocess(self, mock_log,
-                                                      mock_run):
-        # Setup args
-        args = MagicMock()
-        args.name = "TestName"
-        args.from_beginning = False
-        args.no_follow = True
-        args.show = False
-        args.tail_num_lines = 50
-
-        # Assertions
-        # Simulate a command execution failure
-        error_msg = Exception("Failed to run subprocess.run")
-        mock_run.side_effect = error_msg
+1    @patch('subprocess.run')
+2    @patch('qlever.commands.log.log')
+3    # test for failed subprocess.run
+4    def test_execute_failed_to_run_subprocess(self, mock_log,
+5                                                      mock_run):
+6        # Setup args
+7        args = MagicMock()
+8        args.name = "TestName"
+9        args.from_beginning = False
+10       args.no_follow = True
+11       args.show = False
+12       args.tail_num_lines = 50
+13
+14       # Assertions
+15       # Simulate a command execution failure
+16       error_msg = Exception("Failed to run subprocess.run")
+17       mock_run.side_effect = error_msg
 
 ```
 
