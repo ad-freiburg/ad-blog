@@ -59,35 +59,35 @@ The files were analysed, were written for the execute function in a Python comma
 Figure 1: Basic Test for log
 
 ```
-   @patch('subprocess.run')
-   @patch('qlever.commands.log.log')
-   # Test execute of index command for basic case with successful execution
-   def test_execute_beginning_without_no_follow(self, mock_log, mock_run):
-        # Setup args
-        args = MagicMock()
-        args.name = "TestName"
-        args.from_beginning = True
-        args.no_follow = False
-        args.show = False
+1   @patch('subprocess.run')
+2   @patch('qlever.commands.log.log')
+3   # Test execute of index command for basic case with successful execution
+4   def test_execute_beginning_without_no_follow(self, mock_log, mock_run):
+5        # Setup args
+6        args = MagicMock()
+7        args.name = "TestName"
+8        args.from_beginning = True
+9        args.no_follow = False
+10       args.show = False
+11
+12       # Instantiate LogCommand and execute the function
+13       result = LogCommand().execute(args)
 
-        # Instantiate LogCommand and execute the function
-        result = LogCommand().execute(args)
-
-        # Assertions
-        log_file = f"{args.name}.server-log.txt"
-        expected_log_cmd = f"tail -n +1 -f {log_file}"
-        expected_log_msg = (f"Follow log file {log_file}, press Ctrl-C "
-                            f"to stop following (will not stop the server)")
-        # Check that the info log contains the exception message
-        mock_log.info.assert_has_calls([call(expected_log_msg), call("")],
-                                       any_order=False)
-
-        # Checking if run_command was only called once
-        mock_run.assert_called_once_with(expected_log_cmd, shell=True)
-
-        assert result
+14       # Assertions
+15       log_file = f"{args.name}.server-log.txt"
+16       expected_log_cmd = f"tail -n +1 -f {log_file}"
+17       expected_log_msg = (f"Follow log file {log_file}, press Ctrl-C "
+18                           f"to stop following (will not stop the server)")
+19       # Check that the info log contains the exception message
+20       mock_log.info.assert_has_calls([call(expected_log_msg), call("")],
+21                                      any_order=False)
+22
+23       # Checking if run_command was only called once
+24       mock_run.assert_called_once_with(expected_log_cmd, shell=True)
+25
+26       assert result
 ```
-Most of the tests were similar in design and structure. All tests of a file were written in a class Test*Command, where * stood for the file name. A basic test was then written, which simulated the typical sequence of the execute function without special cases and with successful execution (see Figure 1). As each Python file was to be tested separately, the functions were tested in isolation instead of with all sub-functions. For this purpose, the relevant sub-functions were mocked for each test (Figure 1, line 8f.). This offered the advantage that sub-functions that required long execution times, large amounts of data or complicated data formats could be simulated. It was possible to check whether the function was called with the correct parameters in the correct sequence (Figure 1, lines 23-32). It was also checked for the sub-functions whether only the intended calls and no other calls were made. To ensure that the function could be run through without error, the outcome of the auxiliary functions also had to be simulated in some tests. When mocking the auxiliary functions, care was taken to ensure that the data type of the parameters and the outcome was not changed. The execute functions were given an "args" class object as an argument. This was also simulated using the "MagikMock()" mock object (Figure 1, line 13). The individual properties of "args" could then be set in such a way that the desired path was traversed in the execute (Figure 1, lines 12-17). At the end of a test, it was checked whether the mocked functions were called with the correct parameters in the correct order. The return value of the execute function was also checked.
+Most of the tests were similar in design and structure. All tests of a file were written in a class Test*Command, where * stood for the file name. A basic test was then written, which simulated the typical sequence of the execute function without special cases and with successful execution (see Figure 1). As each Python file was to be tested separately, the functions were tested in isolation instead of with all sub-functions. For this purpose, the relevant sub-functions were mocked for each test (Figure 1, line 1-2). This offered the advantage that sub-functions that required long execution times, large amounts of data or complicated data formats could be simulated. It was possible to check whether the function was called with the correct parameters in the correct sequence (Figure 1, lines 23-32). It was also checked for the sub-functions whether only the intended calls and no other calls were made. To ensure that the function could be run through without error, the outcome of the auxiliary functions also had to be simulated in some tests. When mocking the auxiliary functions, care was taken to ensure that the data type of the parameters and the outcome was not changed. The execute functions were given an "args" class object as an argument. This was also simulated using the "MagikMock()" mock object (Figure 1, line 13). The individual properties of "args" could then be set in such a way that the desired path was traversed in the execute (Figure 1, lines 12-17). At the end of a test, it was checked whether the mocked functions were called with the correct parameters in the correct order. The return value of the execute function was also checked.
 
 Outside the basic test, tests were carried out for special cases, various branches of the branches and for failed runs. Figure 2 shows a section of such a test. The error message for the failure of a sub-function was intercepted and replaced by another one (Figure 2, lines 102- 105). It was then possible to check whether the modified error message occurred when executing the function with the mocked "args". 
 
