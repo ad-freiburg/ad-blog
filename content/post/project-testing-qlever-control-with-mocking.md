@@ -1,6 +1,6 @@
 ---
 title: "Project Testing Qlever Control With Mocking"
-date: 2024-12-22T16:24:05+01:00
+date: 2025-01-04T16:24:05+01:00
 author: "Simon Lempp"
 tags: ["mocking", "unittests", "testing", "QLever", "qlever-control"]
 categories: ["project"]
