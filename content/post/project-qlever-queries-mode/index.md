@@ -11,7 +11,7 @@ draft: false
 
 <style>body {text-align: justify}</style>
 
-[QLever](https://qlever.cs.uni-freiburg.de/) is a SPARQL engine that can efficiently index and query very large knowledge graphs with over 100 billion triples on a single standard PC or server. In particular, QLever is supposed to be fast for queries that involve large intermediate or final results, which are notoriously hard for other engines on the market.
+[QLever](https://qlever.cs.uni-freiburg.de/) is a SPARQL engine that can efficiently index and query very large knowledge graphs with over 100 billion triples on a single commodity PC or server. In particular, QLever is supposed to be fast for queries that involve large intermediate or final results, which are notoriously hard for other engines on the market.
 To quantify Qlever’s performance advantage, in this project we design and implement a comparison tool to compare Qlever with other prominent SPARQL engines by executing a set of pre-defined SPARQL queries on multiple datasets and benchmarks and visualising the performance metrics with the help of a web application.
 
 ## Content
