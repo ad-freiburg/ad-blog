@@ -207,7 +207,7 @@ The web application was built using HTML, CSS, JavaScript and Bootstrap for addi
 
 On the main page of the web app, the results are grouped by the dataset and some common performance metrics are compared for the different SPARQL engines. The web app automatically reads the files present in the output directory and groups them and displays the results from results.tsv file.
 
-<!-- ![Main page with the results](/img/project-qlever-queries-mode-webapp/main_page.jpg) -->
+<!-- ![Main page with the results](img/main_page.jpg) -->
 ### SPARQL Engine Comparison
 
 ### DBLP
@@ -224,7 +224,7 @@ On the main page of the web app, the results are grouped by the dataset and some
 
 Clicking on the column sorts that particular column in ascending and descending order and by holding shift and clicking on a column preserves the previous sort selected. Clicking on the rows showing the performance of each SPARQL engine takes the user to a page that displays all the queries that were executed and individual runtimes for that particular SPARQL engine and dataset.
 
-<!-- ![Query Details tab 1](/img/project-qlever-queries-mode-webapp/query_details_tab1.jpg) -->
+<!-- ![Query Details tab 1](img/query_details_tab1.jpg) -->
 ### SPARQL Engine - qlever
 ### Knowledge graph - DBLP
 
@@ -243,7 +243,7 @@ Clicking on the column sorts that particular column in ascending and descending 
 
 Clicking on one of the query rows selects it and displays the second tab with the full SPARQL query. The third tab displays the execution tree for the selected query (only for Qlever). The execution tree tab supports zoom in, zoom out and drag to move functionality. The final tab displays the results returned by executing the query. As the number of results can be quite large, the tab only displays the first 1000 results if it exceeds that. The user can click on the show more button to display the next 1000 results.
 
-<!-- ![Query Details tab 2](/img/project-qlever-queries-mode-webapp/query_details_tab2.jpg) -->
+<!-- ![Query Details tab 2](img/query_details_tab2.jpg) -->
 **SPARQL Engine - qlever**
 
 **Query runtimes | <u>Full query</u> | Execution tree | Query result**
@@ -255,11 +255,11 @@ SELECT ?paper ?title WHERE {<br>
 
 <center style="margin-top:-35px;margin-bottom:35px;">Figure 3: Tab displaying the full SPARQL query for the selected query</center>
 
-![Query Details tab 3](/img/project-qlever-queries-mode-webapp/query-details-3.png)
+![Query Details tab 3](img/query-details-3.png)
 
 <center style="margin-top:-35px;margin-bottom:35px;">Figure 4: Tab displaying the runtime execution tree for the selected query</center>
 
-<!-- ![Query Details tab 4](/img/project-qlever-queries-mode-webapp/query_details_tab4.jpg) -->
+<!-- ![Query Details tab 4](img/query_details_tab4.jpg) -->
 ### SPARQL Engine - qlever
 
 **Query runtimes | Full query | Execution tree | <u>Query result</u>**
@@ -276,7 +276,7 @@ SELECT ?paper ?title WHERE {<br>
 
 Going back to the main page, we see that there is a compare button for each dataset. Clicking on it takes the user to a screen where each SPARQL engine is compared on performance on an individual query basis. The failed queries are maked in red. The columns are sortable in the same way as on the main screen. Hovering over the query ID displays the full SPARQL query.
 
-<!-- ![Comparison Modal](/img/project-qlever-queries-mode-webapp/comparison_modal.jpg) -->
+<!-- ![Comparison Modal](img/comparison_modal.jpg) -->
 
 ### Performance Comparison <br><br>
 
@@ -294,7 +294,7 @@ Going back to the main page, we see that there is a compare button for each data
 
 There is also the section for Comparing Execution trees here (Only for Qlever). The dropdown boxes are automatically populated with all the different versions of Qlever found in the output directory. The user can select a query and the Qlever versions to compare from the dropdown and click on Compare. This takes the user to the Compare Execution trees screen, which looks similar to the Execution tree screen above, but with two of them side by side for easy comparison.
 
-<!-- ![Compare exec trees](/img/project-qlever-queries-mode-webapp/compare_exec_trees.jpg)
+<!-- ![Compare exec trees](img/compare_exec_trees.jpg)
 
 <center style="margin-top:-35px;margin-bottom:35px;">Figure 7: Page showing runtime execution tree comparison for 2 versions of Qlever given a query and a dataset</center> -->
 
