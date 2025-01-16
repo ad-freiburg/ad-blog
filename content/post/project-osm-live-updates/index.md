@@ -6,7 +6,6 @@ authorAvatar: ""
 tags: [osm, osc, sparql, updates]
 categories: []
 image: "img/project_osm_live_updates.png"
-draft: true
 ---
 
 The [osm-live-updates](https://github.com/nicolano/osm-live-updates) (`olu`) tool is designed to keep SPARQL endpoints containing [*OpenStreetMap*](https://www.openstreetmap.org) (OSM) data up to date. It processes [*OsmChange*](https://wiki.openstreetmap.org/wiki/OsmChange) files and works with OSM data that has been converted into RDF triples using `osm2rdf`. `olu` aims to preserve the correctness of the complete object geometry of the OSM data. The tool is open-source and available on Github.
@@ -376,13 +375,13 @@ olu SPARQL_ENPOINT_URI -d http://download.geofabrik.de/europe/germany/bremen-upd
 
 Once the update process was complete, the following query was used to compare the two graphs and identify any differing triples:
 
-```
+```sparql
 SELECT ?s ?p ?o
 WHERE {
-  { 
+  {
     {
       GRAPH <http://example.com/updated> {
-        ?s ?p ?o.  
+        ?s ?p ?o.
       }
     } MINUS {
       GRAPH <http://example.com/latest> {
@@ -396,7 +395,7 @@ WHERE {
       }
     } MINUS {
       GRAPH <http://example.com/updated> {
-        ?s ?p ?o.  
+        ?s ?p ?o.
       }
     }
   }
