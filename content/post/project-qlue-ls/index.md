@@ -225,7 +225,7 @@ That being said, the very strict compiler makes it hard to get stuff done quickl
 
 Here is the module structure of my crate[^5]:
 
-![](img/examples/code structure.canvas|code structu)
+![](img/code_structure.svg)
 
 ## speaking JSON-RPC
 
