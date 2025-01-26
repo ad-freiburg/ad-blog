@@ -17,7 +17,7 @@ a query language for knowledge graphs.
 <!--more-->
 
 You can find the source code in my [GitHub repository](https://github.com/IoannisNezis/sparql-language-server).  
-And a life demo on [qlue-ls.com](https://qlue-ls.com/).
+And a live demo on [qlue-ls.com](https://qlue-ls.com/).
 
 
 # TL;DR
