@@ -10,7 +10,7 @@ image: "img/cover.png"
 
 Modern developer environments are way more capable than simple text editors.
 They provide domain-specific tools to improve the user experience.
-They give hints, suggest changes or completions and more.  
+They give hints, suggest changes and completions and more.  
 In this article we will take a look behind the curtains and build language support for *SPARQL*,
 a query language for knowledge graphs.
 
