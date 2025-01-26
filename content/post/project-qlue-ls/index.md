@@ -22,7 +22,7 @@ And a live demo on [qlue-ls.com](https://qlue-ls.com/).
 
 # TL;DR
 
-I build a [sparql-language-server](https://github.com/IoannisNezis/Qlue-ls) from scratch in [Rust](https://www.rust-lang.org/), powered by [tree-sitter](https://tree-sitter.github.io/tree-sitter/).
+I built a [sparql-language-server](https://github.com/IoannisNezis/Qlue-ls) from scratch in [Rust](https://www.rust-lang.org/), powered by [tree-sitter](https://tree-sitter.github.io/tree-sitter/).
 To showcase the language server I build a [web editor](https://sparql.nezis.de/) using [Monaco](https://microsoft.github.io/monaco-editor/).
 To run the language server within the browser, I used [WebAssembly](https://webassembly.org/)
 
