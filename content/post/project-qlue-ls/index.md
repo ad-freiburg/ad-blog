@@ -36,7 +36,7 @@ To run the language server within the browser, I used [WebAssembly](https://weba
     - [Capabilities](#capabilities)
 - [Implementation](#implementation)
     - [speakingJSON-RPC](#speaking-json-rpc)
-    - [Parser: the Engine under the hood](#parser:-the-engine-under-the-hood)
+    - [Parser: the Engine under the Hood](#parser:-the-engine-under-the-hood)
         - [Tree-sitter](#tree-sitter)
     - [Implemented Capabilities](#implemented-capabilities)
         - [Formatting](#formatting)
