@@ -32,7 +32,7 @@ To run the language server within the browser, I used [WebAssembly](https://weba
 - [Goal](#goal)
 - [The Language Server Protocol ](#the-language-server-protocol)
     - [JSON-RPC](#json-rpc)
-    - [Document synchronization](#document-synchronization)
+    - [Document Synchronization](#document-synchronization)
     - [Capabilities](#capabilities)
 - [Implementation](#implementation)
     - [speakingJSON-RPC](#speaking-json-rpc)
