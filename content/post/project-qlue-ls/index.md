@@ -220,7 +220,7 @@ I chose to use [Rust](https://www.rust-lang.org/) for this project since it's fa
 Rust is the most admired programming language in the [Stack overflow developer survey 2024](https://survey.stackoverflow.co/2024/technology#2-programming-scripting-and-markup-languages),
 and i was curious to find out why. After this project, I can confirm that Rust is a brilliant language, but the leading curve is quiet steep.
 
-The error handling, increddibly smart compiler, functional approach and rich ecosystem enable a smooth developing expirience.
+The error handling, incredibly smart compiler, functional approach and rich ecosystem enable a smooth developing experience.
 That being said, the very strict compiler makes it hard to get stuff done quickly, however the resulting code is a lot more robust.
 
 Here is the module structure of my crate[^5]:
@@ -231,12 +231,12 @@ Here is the module structure of my crate[^5]:
 
 Okay first things first, we need to speak **JSON-RPC**.  
 After that we can implement some tool to analyze SPARQL queries.  
-When we got the analysis tool running we can use it to provide some language features.
+When we got the analysis tool running, we can use it to provide some language features.
 
-Assume we set up the Editor (client) to connect to our language server.  
+Assume we set up the editor (client) to connect to our language server.  
 It will send an utf-8 byte-stream. We need to interpret the bytes and respond.
 
-The first message will look something like this:
+The first message will look like something like this:
 
 ```json
 {
@@ -255,7 +255,7 @@ The first message will look something like this:
 }
 ```
 
-For each type of message I build a set of corresponding structs:
+For each type of message, I built a set of corresponding structs:
 
 ```rust
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -308,10 +308,10 @@ pub struct ClientInfo {
 ```
 
 For **se**rializing and **de**serializing I used [serde](https://serde.rs/).  
-Note that in Rust the notion of "Inheritance" does not exist. It uses "traits" to define shared behavior.  
+Note that in Rust the notion of "inheritance" does not exist. It uses "traits" to define shared behavior.  
 I solved this issue with `#[serde(flatten)]`, which inlines the data from a struct into a parent struct.  
 Another issue was the naming convention.  
-I JSON-RPC the fields are written in *camelCase*, but Rust uses *snake_case*.  
+In JSON-RPC the fields are written in *camelCase*, but Rust uses *snake_case*.  
 Serde also offers a solution for that: the `#[serde(rename_all = "camelCase")]` annotation.
 
 This is basically how I read and write messages.
@@ -332,20 +332,20 @@ Then I defined the basic structs for  [document synchronization](https://microso
 | [textDocument/didChange](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didChange) | client | notification | signals changes to a text document   |
 | [textDocument/didClose](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didClose)   | client | notification | signals closed text document |
 
-With these messages defined, we can open and close a connection to a client and keep a synchronized state of the clients documents.
+With these messages defined, we can open and close a connection to a client and keep a synchronized state of the client's documents.
 
-To run this native i also needed to listen to stdin and parse the [Header](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#headerPart) from raw bytes, but i spare you that experience.
+To run this native I also needed to listen to stdin and parse the [Header](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#headerPart) from raw bytes, but i spare you that experience.
 
 ## Parser: the Engine under the hood
 
-Okay now we want to build some tools to analyze the given text,
+Okay, now we want to build some tools to analyze the given text,
 and provide some smarts.
 
 First we need to "understand" the given text.
 Understanding arbitrary text is quiet the challenge, and we only recently made some advancements in that area.
-Luckily all SPARQL queries follow a strict structure, called a grammar, which is defined in its [specification](https://www.w3.org/TR/sparql11-query/#rQuery).
+Luckily, all SPARQL queries follow a strict structure, called a grammar, which is defined in its [specification](https://www.w3.org/TR/sparql11-query/#rQuery).
 A grammar is basically a set of production rules that map nonterminal-symbols to other nonterminal-symbols or terminal-symbols. Every valid SPARQL query can be produced by applying those rules until only terminal symbols are left.
-For some grammars we can build a program that reconstructs which production rules got used to produce a given string. Such a program is called **parser**. The result of a parser, the rules that got used, is called **syntax tree**.
+For some grammars, we can build a program that reconstructs which production rules got used to produce a given string. Such a program is called **parser**. The result of a parser, the rules that got used, is called **syntax tree**.
 
 Here is an example:
 
@@ -381,18 +381,18 @@ SELECT * WHERE {
 ### Tree-sitter
 
 Usually parses get to parse complete strings that are valid.
-When you give them invalid input they react not so happy (symbolic image below)
+When you give them invalid input they react less happy (symbolic image below).
 
 ![](img/resiliant-parsers.png)
 [^3]
 
-In our use-case the text we handle is incomplete most of the time.
+In our use-case, the text we handle is incomplete most of the time.
 So we need a parser that is resilient to errors.
 
 The big-boy-language-servers like [rust-analyser](https://github.com/rust-lang/rust-analyzer) use customized [resilient LL Parsers](https://matklad.github.io/2023/05/21/resilient-ll-parsing-tutorial.html).
-But since I wanted to get on the road quick, I choose [tree-sitter](https://tree-sitter.github.io/tree-sitter/) (for now... ;)).
+But since I wanted to get on the road quickly, I chose [tree-sitter](https://tree-sitter.github.io/tree-sitter/) (for now... ;)).
 Tree-sitter, at its core, is a parser generator. It generates error resilient parsers.
-Its most commonly used in editors like [neovim](https://neovim.io/) or emacs[^6] to highlight text.
+It's most commonly used in editors like [neovim](https://neovim.io/) or emacs[^6] to highlight text.
 
 Parser generators take a grammar and generate a fully functioning parser.
 I found a [sparql-tree-sitter](https://github.com/GordianDziwis/tree-sitter-sparql) grammar by [GordianDziwis](https://github.com/GordianDziwis).
@@ -419,7 +419,7 @@ For some C-reasons I won't get into right now, tree-sitter can generate rust-bin
 It provides some functions to parse and navigate the resulting concrete-syntax-tree.
 
 {{< notice example >}}
-Here is an example from the format function:
+Here is an example of the format function:
 ```rust
    let mut parser = Parser::new();
    match parser.set_language(&tree_sitter_sparql::LANGUAGE.into()) {
@@ -437,7 +437,7 @@ Here is an example from the format function:
 {{< /notice >}}
 
 A cool feature of tree-sitter is [queries](https://tree-sitter.github.io/tree-sitter/using-parsers#pattern-matching-with-queries).
-A query is build out of one or more patterns. Each pattern is an [S-expression](https://en.wikipedia.org/wiki/S-expression).
+A query is built out of one or more patterns. Each pattern is an [S-expression](https://en.wikipedia.org/wiki/S-expression).
 Tree-sitter can match these patterns against the syntax tree and return all matches.
 
 {{< notice example >}}
@@ -504,48 +504,48 @@ And here is the query:
 
 #### How resilient is tree-sitter?
 
-Very, resilient.
+Very resilient.
 Tree-sitter recovers from basically anything and conserves information from very incomplete input.
 So the question is not how resilient it is, the problem is how good the quality of the information it conserves is.
 
 Tree-sitter produces GLR parsers.
 It explores, nondeterministically, many different possible LR (bottom-up) parses.
 Then it chooses the "the best one".
-In the words of [Alex Kladov](https://github.com/matklad) the creator of [rust-anayzer](https://github.com/rust-lang/rust-analyzer) this leads to the following behavior:
+In the words of [Alex Kladov](https://github.com/matklad), the creator of [rust-anayzer](https://github.com/rust-lang/rust-analyzer), this leads to the following behavior:
 >(...) Tree-sitter \[can\] recognize many complete valid small fragments of a tree, but it might have trouble
 > assembling them into incomplete larger fragments.
 
-This is very useful for the use-case of syntax highlighting. You want to highlight as many tokens as possible, the larger context of in which they appear is often not so important.
+This is very useful for the use-case of syntax highlighting. You want to highlight as many tokens as possible, the larger context in which they appear is often not so important.
 
-In our use-case however, it's the other way around.
+In our use-case, however, it's the other way around.
 
 Let's look at a few examples.
 
 ## Implemented Capabilities
 
-Okay, now that you may have an idea of the fundamental mechanisms.
-Let's talk about the features, besides the lifecycle and synchronization, that I implemented.
+Okay, now that you may have an idea of the fundamental mechanisms,
+let's talk about the features, besides the lifecycle and synchronization that I implemented.
 
 {{< notice warning >}}
 The implemented features are just a **proof of concept**!
 There are many features that could and should be added.
 But that takes a lot of time to get right.
-And frankly also requires a stronger parser.
+And, frankly, also requires a stronger parser.
 This should just give you an idea of what's possible.
 {{< /notice >}}
 
 ### Formatting
 
 When the client sends a `textDocument/formatting` request, the server returns a list of [`TextEdit`](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textEdit)'s.
-A `TextEdit` is a incremental change, composed of a Range and a String.
-The Client then applies the changes and thus formats the document.
+A `TextEdit` is a incremental change, composed of a range and a string.
+The client then applies the changes and thus formats the document.
 
 I implemented this with a post-order-[traversal](https://en.wikipedia.org/wiki/Tree_traversal) of the parse-tree provided by tree-sitter.
 
 ![](img/postorder-traversal.png)
 [^7]
 
-Each step the "Type" of the node is matched and handled with a strategy.
+Each step, the "type" of the node is matched and handled with a strategy.
 For example "separate each child by a new line" or "capitalize the text".
 That is done recursively.
 
