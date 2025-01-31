@@ -66,7 +66,7 @@ To run the language server within the browser, I used [WebAssembly](https://weba
 # Motivation
 
 The problem of providing language support to developers is very old.
-In the past domain-specific development environments where very common.
+In the past, domain-specific development environments were very common.
 
 | Domain    | development environment |
 | --------- | ----------------------- |
@@ -77,29 +77,29 @@ In the past domain-specific development environments where very common.
 | R         | RStudio                 |
 | LaTeX     | TeXworks or Overleave   |
 
-These Programs contain source-code editors, but also provide a suit of integrated tool's that support the development process of their respective domains.
+These programs contain source-code editors, but also provide a suit of integrated tools that support the development process of their respective domains.
 That's why they are also referred to as IDE's (**I**ntegrated **D**evelopment **E**nvironment).
-While these development environments still dominate, modern development environments seem to go a different direction.
+While these development environments still dominate, modern development environments seem to go into a different direction.
 
 Some of the new kids on the block are: [neovim](https://neovim.io/), [vscode](https://code.visualstudio.com/) or [sublime text](https://www.sublimetext.com/).
-They all are **general purpose** code editors that have a open-source plugin ecosystem and allow for a personalized customization. A core maintainer of Neovim,
+They all are **general purpose** code editors that have a open-source plugin ecosystem and allow a personalized customization. A core maintainer of Neovim,
 [TJ DeVries](https://github.com/tjdevries), calls them PDE's (**P**ersonalized **D**evelopment **E**nvironment), although i don't think it caught on yet.
 
-Long story short: Language support in these PDE's is not build in, but provided via an extension.
-This is made possible by a Protocol published by Microsoft in 2016: The **L**anguage **S**erver **P**rotocol (LSP).
-It enables the Editor (LSP-Client) and the Language support program (LSP-Server or Language Server) to be separated into two independent components.
+Long story short: Language support in these PDE's is not built-in, but provided via an extension.
+This is made possible by a protocol published by Microsoft in 2016: The **L**anguage **S**erver **P**rotocol (LSP).
+It enables the editor (LSP-Client) and the Language support program (LSP-Server or Language Server) to be separated into two independent components.
 
 ![](img/language-server-sequence.png)
 [^2]
 
-A key advantage of this architecture, is the reusablitity.  
-The language support has to be written only once, and not over and over again for every development tool.
+A key advantage of this architecture is the reusablitity.  
+The language support has to be written only once and not over and over again for every development tool.
 
 ![](img/lsp-languages-editors.png)[^8]
 
 # Goal
 
-My goal is to create a Language Server for [SPARQL](https://www.w3.org/TR/sparql11-query/#rQueryUnit).
+My goal is to create a language server for [SPARQL](https://www.w3.org/TR/sparql11-query/#rQueryUnit).
 The language server should be able to **format** queries, give **diagnostic** reports and suggest **completions**.
 To work in the [Qlever-UI](https://qlever.cs.uni-freiburg.de/) the Language Server should be accessible from an editor which runs in the browser.
 
