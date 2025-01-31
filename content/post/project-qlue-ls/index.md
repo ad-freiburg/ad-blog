@@ -685,7 +685,6 @@ This is useful to give inexperienced users documentation about how some construc
 
 #### Ideas for the future
 
-Here are a few ideas I have to extend this feature.
 **These are not implemented yet**
 
 Display the structure of the query;
