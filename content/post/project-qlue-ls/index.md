@@ -725,7 +725,7 @@ The diagnostics I implemented are:
 Highlight syntax errors:
 
 ![](img/examples/diagnostics-syntax.png)
-This would require a more powerful parser, that gives information about how the parse failed.
+This would require a more powerful parser that gives information about how the parse failed.
 
 Highlight semantic errors, like selecting all variables in a `GROUP BY`:
 
@@ -744,7 +744,7 @@ The change of the text-document is always done by the client (editor).
 The server provides the text-edits but its up to the client to apply them since it "owns" the text-document.
 {{< /notice >}}
 
-Often code-actions correspond to a diagnostic they resolve. Such code-actions are called "quickfix".
+Often, code-actions correspond to a diagnostic they resolve. Such code-actions are called "quickfix".
 The exemplary code action I implemented is "Shorten URI".
 The idea is to shorten a URI into its compact ["Curie"](https://www.w3.org/TR/2010/NOTE-curie-20101216/) form.
 
@@ -757,7 +757,7 @@ This code-action is powered by [curies.rs](https://github.com/biopragmatics/curi
 ### Completion Suggestions
 The key feature for a SPARQL language server is, in my opinion, code-completion.
 Here the editor provides suggestions to the user.
-In SPARQL this is not just a convenience. Without smart completion suggestsions a user has to know the ontology by heart. Its also a massive efficiency boost for experianced users.
+In SPARQL this is not just a convenience. Without smart completion suggestions a user has to know the ontology by heart. Its also a massive efficiency boost for experianced users.
 
 Here is a possible structure for completions:
 
@@ -766,7 +766,7 @@ Here is a possible structure for completions:
 The simplest kind of completions is just to provide static snippets of keywords or structures to the user.
 For this just the "Location" of the cursor is relevant, the context of the content of the knowledge-graph does not influence the suggestions.
 
-Here are a few Examples i implemented:
+Here are a few examples i implemented:
 
 |                                                |                                                |                                     |
 | ---------------------------------------------- | ---------------------------------------------- | ----------------------------------- |
@@ -817,7 +817,7 @@ SELECT ?bicycle_parking ?geometry WHERE {
 ```
 
 Now I want to know the same thing just for Berlin.  
-Unfortunately i forgot that the relation ID of Berlin is `62422`...  
+Unfortunately, i forgot that the relation ID of Berlin is `62422`...  
 A good online-contextual-completion should help me:
 
 |                            |                           |
@@ -833,14 +833,14 @@ I looked at three editors: neovim, vs-code, and a custom web-based-editor.
 
 ## Neovim
 
-To get a language server running with neovim is very easy because it has a build in language client and
+To get a language server running with neovim is very easy because it has a built-in language client and
 neovim is build to be hacked.
 
 ### Installing the Program
 
 First `Qlue-ls` needs to be available as executable binary on the system, neovim runs on.
 You could just build the binary from source.
-But to make it more convenient I added the binary into two "repositories":
+But to make it more convenient, I added the binary into two "repositories":
 
 The Rust repository [crate.io](https://crates.io/crates/qlue-ls). To install from there, run:
 ```shell
@@ -850,7 +850,7 @@ And the python repository [Pypi](https://pypi.org/project/qlue-ls/). To install 
 ```shell
 pipx install qlue-ls
 ```
-The python package is build with the help of [maturin](https://github.com/PyO3/maturin).
+The python package is built with the help of [maturin](https://github.com/PyO3/maturin).
 
 ### Attaching
 
@@ -872,14 +872,14 @@ vim.api.nvim_create_autocmd({ 'FileType' }, {
   end,
 })
 ```
-When you open a `sparql` file (a file with suffix `.rq`).
-This runs the command `qlue-ls server` and connects the language client to this process.
+When you open a `sparql` file (a file with suffix `.rq`),
+this runs the command `qlue-ls server` and connects the language client to this process.
 
 ## VS-code
 
-In vs-code there is no build in language-client.
+In vs-code, there is no built-in language-client.
 Instead, you have to create a vs-code-extention that acts as a language-client.
-I will do that in the Future™.
+I will do that in the future™.
 
 ## The Browser
 
@@ -894,11 +894,11 @@ And you would be right, until 2017.
 It defines a Bytecode to run programs withing the browser.
 All big browsers support it.
 
-If your Program can be converted (compiled) to this WebAssembly(WASM) Bytecode it can execute in the Browser.
+If your program can be converted (compiled) to this WebAssembly(WASM) Bytecode, it can execute in the Browser.
 ![](img/WebAssembly-data-flow-architecture.png)[^9]
 So now we need to build a compiler to convert Rust to WASM Bytecode...
-Unfortunately [some strangers on the Internet](https://github.com/rustwasm/team) already did that.
-The Project is called [wasm-pack](https://rustwasm.github.io/wasm-pack/).
+Unfortunately, [some strangers on the Internet](https://github.com/rustwasm/team) already did that.
+The project is called [wasm-pack](https://rustwasm.github.io/wasm-pack/).
 
 It's very organic and simple, you just annotate the method or struct you want to "export" to WASM.
 
@@ -922,7 +922,7 @@ export function init_language_server(writer) {
 ...
 ```
 
-To actually run this in the browser I needed to jump through a couple more hoops but I spare you the details.
+To actually run this in the browser, I needed to jump through a couple more hoops but I spare you the details.
 I packaged the result and uploaded it to [npm](https://www.npmjs.com/package/qlue-ls): a JavaScript repository.
 Now we can install the package using npm and access it from a JavaScript file:
 
@@ -938,7 +938,7 @@ server.listen(...);
 
 #### Tree-Sitter in WebAssembly
 
-As stated earlier tree-sitter creates a parser in c and I wrote my program in Rust.
+As stated earlier, tree-sitter creates a parser in c and I wrote my program in Rust.
 Turns our compiling a Rust program that calls external C functions to WebAssembly creates something
 called "**ABI-Incompatibilities**".
 I wish I could tell you how I solved that, but to be honest, I don't want to talk about this experience, since it was extremely painful.
@@ -948,20 +948,20 @@ This is the second reason for me to move away from tree-sitter.
 
 ### The Editor
 
-Next we need a web-based editor.
-There are a couple options, here are a few:
+Next, we need a web-based editor.
+There are a couple options. Here are a few:
 
 - [Monaco-Editor](https://microsoft.github.io/monaco-editor/)
 - [CodeMirror](https://codemirror.net/)
 - [ACE Editor](https://ace.c9.io/)
 
-None of them have built in language clients, but all of them have extensions that provides one.
+None of them have built-in language clients, but all of them have extensions that provides one.
 
 - Monaco-Editor: [monaco-languageclient](https://github.com/TypeFox/monaco-languageclient)
 - CodeMirror: [@shopify/codemirror-language-client](https://github.com/shopify/theme-tools), [codemirror-languageserver](https://github.com/FurqanSoftware/codemirror-languageserver), [codemirror-languageservice](https://github.com/remcohaszing/codemirror-languageservice)
 - ACE Editor: [ace-linters](https://github.com/mkslanc/ace-linters)
 
-But to be fair the ones for CodeMirror don't really look stable.
+But to be fair, the ones for CodeMirror don't really look stable.
 
 I decided to go with Monaco for a couple reasons:
 
