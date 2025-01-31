@@ -101,17 +101,17 @@ The language support has to be written only once and not over and over again for
 
 My goal is to create a language server for [SPARQL](https://www.w3.org/TR/sparql11-query/#rQueryUnit).
 The language server should be able to **format** queries, give **diagnostic** reports and suggest **completions**.
-To work in the [Qlever-UI](https://qlever.cs.uni-freiburg.de/) the Language Server should be accessible from an editor which runs in the browser.
+To work in the [Qlever-UI](https://qlever.cs.uni-freiburg.de/), the Language Server should be accessible from an editor which runs in the browser.
 
 # The Language Server Protocol
 
-Let's talk briefly about the Protocol.
-It's build on top of [JSON-RPC](https://www.jsonrpc.org/specification), a [*JSON*](https://de.wikipedia.org/wiki/JSON) based protocol that enables, as the name suggests, inter-process communication.  
-This means the development tool (in our case the editor) and the language server run in two separate processes and communicate asynchronously via **JSON-RPC**.
+Let's talk briefly about the protocol.
+It's built on top of [JSON-RPC](https://www.jsonrpc.org/specification), a [*JSON*](https://de.wikipedia.org/wiki/JSON) based protocol that enables, as the name suggests, inter-process communication.  
+This means that the development tool (in our case the editor) and the language server run in two separate processes and communicate asynchronously via **JSON-RPC**.
 
 ## JSON-RPC
 
-I will give you just a brief introduction, if you want to know more you can read the [specification](https://www.jsonrpc.org/specification#id1).
+I will just give you a brief introduction, if you want to know more, you can read the [specification](https://www.jsonrpc.org/specification#id1).
 
 A normal JSON-RPC request has a `id`, `method` and `params` field.  
 The `method` is the name of the invoked operation, the `params` field contains the optional parameters for this invoked operation.
@@ -129,33 +129,33 @@ There are also notifications[^4] and error responses, but we will omit them for 
 
 ## Document synchronization
 
-For the Language server to do anything, it's required to "see" the workspace.
+For the language server to do anything, it's required to "see" the workspace.
 
 The LSP-specification defines 3 [Document Synchronization](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_synchronization) methods for this purpose:
  - [`textDocument/didOpen`](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didOpen)
  - [`textDocument/didChange`](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didChange)
  - [`textDocument/didClose`](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didClose)
 
-which are mandatory to implement (for clients).  
-Whenever a document is being opened, changed or closed the client is sending the information to the server, via these methods.
+These are mandatory to implement (for clients).  
+Whenever a document is being opened, changed or closed, the client is sending the information to the server via these methods.
 
 The [textDocument/didChange](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didChange) notification[^4] supports full and incremental synchronization.
 The server and client negotiate this during [initialization](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize).
 
 Incremental changes were more diffucult than expected.
 This is mainly because of the translation between different encodings.
-Editors give the position in the text-document (row, column) based on an utf-16 string representation.
+Editors give the position in the text-document (row, column) based on the utf-16 string representation.
 While the chars them self are encoded in utf-8.
-Of course utf-8 is a variable length encoding, so different characters can have different byte-sizes.
+Of course, utf-8 is a variable length encoding, so different characters can have different byte-sizes.
 
 ![](img/encodings.png)
 
 This was a bit confusing to get right.
 
-Through these messages the language server has a "mirrored" version of the editor state.
+Through these messages, the language server has a "mirrored" version of the editor state.
 
 {{< notice example >}}
- Here is a example for a incremental **textDocument/didChange** notification.
+ Here is an example for a incremental **textDocument/didChange** notification.
 ```json
  {
 	"params": {
@@ -189,36 +189,36 @@ Through these messages the language server has a "mirrored" version of the edito
 ## Capabilities
 
 When initialization and synchronization work, the real fun begins.  
-Now we can implement complex language features and provide actual smarts to the editor.
+Now we can implement complex language features and provide actual smarts to the editor,
 As long as both the client and server support the capability.
 
-Here is an **incomplete** list of Language Feature capabilities that made it into the specification
+Here is an **incomplete** list of language feature capabilities that made it into the specification
 
-| capability                                                                                                                                         | effect                                                        | State of implementation |
+| Capability                                                                                                                                         | Effect                                                        | State of implementation |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------- |
-| [Go to Declaration](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_declaration)          | Jump to the declaration of a symbol                          | Not planned             |
-| [Go to Definition](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_definition)            | Jump to the definition of a symbol                           | Not planned             |
-| [Document Highlight](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_documentHighlight)   | Highlight  all references to a symbol                         | Planned                 |
-| [Document Link]()                                                                                                                                  | Handle Links in a Document                                    | Planned                 |
-| [Hover](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_hover)                            | Show Information about the hovered symbol                     | In progess              |
-| [Folding Range](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_hover)                    | Indentify  foladable ranges in the document.                  | Not planned             |
-| [Document Symbols](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_documentSymbol)        | Identify all symbols in a document                            | Not planned             |
-| [Inline Value](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_inlineValue)               | Show Values in the editor                                     | Not Planned             |
-| [Completion Proposals](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_completion)        | Give Completion Proposals to the user                         | In progress             |
-| [Publish Diagnostics](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_publishDiagnostics) | Send Information like Hints, Warnings or Errors to the editor | In progress             |
-| [Pull Diagnostics](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_pullDiagnostics)       | Request Information like Hints, Warningso Errors              | In progress             |
-| [Code Action](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_codeAction)                 | Suggest changes                                               | In progress             |
+| [Go to declaration](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_declaration)          | Jump to the declaration of a symbol                          | Not planned             |
+| [Go to definition](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_definition)            | Jump to the definition of a symbol                           | Not planned             |
+| [Document highlight](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_documentHighlight)   | Highlight  all references to a symbol                         | Planned                 |
+| [Document link]()                                                                                                                                  | Handle links in a document                                    | Planned                 |
+| [Hover](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_hover)                            | Show information about the symbol hovered above                     | In progess              |
+| [Folding range](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_hover)                    | Indentify  foladable ranges in the document.                  | Not planned             |
+| [Document symbols](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_documentSymbol)        | Identify all symbols in a document                            | Not planned             |
+| [Inline value](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_inlineValue)               | Show values in the editor                                     | Not Planned             |
+| [Completion proposals](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_completion)        | Give completion proposals to the user                         | In progress             |
+| [Publish diagnostics](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_publishDiagnostics) | Send information like hints, warnings or errors to the editor | In progress             |
+| [Pull diagnostics](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_pullDiagnostics)       | Request Information like hints, warnings or Errors              | In progress             |
+| [Code action](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_codeAction)                 | Suggest changes                                               | In progress             |
 | [Formatting](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_formatting)                  | Format the whole document                                     | Done                    |
-| [Range Formatting](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_rangeFormatting)       | Format the provided range in a document                       | Not Planned             |
+| [Range formatting](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_rangeFormatting)       | Format the provided range in a document                       | Not planned             |
 | [Rename](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_rangeFormatting)                 | Rename a symbol                                               | Planned                 |
 
 # Implementation
 
 Let's talk about what I actually did.
 
-I choose to use [Rust](https://www.rust-lang.org/) for this project since its fancy and I like shiny things.  
+I chose to use [Rust](https://www.rust-lang.org/) for this project since it's fancy and I like shiny things.  
 Rust is the most admired programming language in the [Stack overflow developer survey 2024](https://survey.stackoverflow.co/2024/technology#2-programming-scripting-and-markup-languages),
-and i was curious to find out why. After this project I can confirm that Rust is a brilliant language, but the leading curve is quiet steep.
+and i was curious to find out why. After this project, I can confirm that Rust is a brilliant language, but the leading curve is quiet steep.
 
 The error handling, increddibly smart compiler, functional approach and rich ecosystem enable a smooth developing expirience.
 That being said, the very strict compiler makes it hard to get stuff done quickly, however the resulting code is a lot more robust.
