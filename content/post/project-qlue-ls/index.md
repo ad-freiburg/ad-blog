@@ -971,12 +971,12 @@ I decided to go with Monaco for a couple reasons:
 
 I will eventually also try ACE.
 
-To get Monaco running with the language client I again had to jump to a few hoops (actually a lot),
+To get Monaco running with the language client, I had to jump through a few hoops again (actually a lot),
 but I again spare you with the details.
 
 ### TextMate
 
-A good editor needs Syntax highlighting. (The thing that makes the colors)
+A good editor needs syntax highlighting. (The thing that makes the colors.)
 
 | without syntax highlighting              | with syntax highlighting              |
 | ---------------------------------------- | ------------------------------------- |
