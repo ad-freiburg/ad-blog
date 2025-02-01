@@ -95,7 +95,7 @@ It enables the editor (LSP-Client) and the Language support program (LSP-Server 
 A key advantage of this architecture is the reusablitity.  
 The language support has to be written only once and not over and over again for every development tool.
 
-![](img/lsp-languages-editors.png)[^8]
+![](img/lsp-languages-editors.png)[^7]
 
 # Goal
 
@@ -536,21 +536,68 @@ This should just give you an idea of what's possible.
 
 ### Formatting
 
-When the client sends a `textDocument/formatting` request, the server returns a list of [`TextEdit`](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textEdit)'s.
+When the client sends a `textDocument/formatting` request, the server returns a
+list of [`TextEdit`](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textEdit)'s.
 A `TextEdit` is a incremental change, composed of a range and a string.
 The client then applies the changes and thus formats the document.
 
-I implemented this with a post-order-[traversal](https://en.wikipedia.org/wiki/Tree_traversal) of the parse-tree provided by tree-sitter.
+![](img/TextEdits.svg)
 
-![](img/postorder-traversal.png)
-[^7]
+#### Formatting Algorithm
 
-Each step, the "type" of the node is matched and handled with a strategy.
-For example "separate each child by a new line" or "capitalize the text".
-That is done recursively.
+After a few itterations I came up with the following algorithm.
 
-Here are a few examples of formatted queries.  
-If you want to get a more detailed picture, check out the [formatting tests](https://github.com/IoannisNezis/Qlue-ls/blob/main/src/server/message_handler/formatting/tests.rs).
+---
+
+**Input**: String (sequence of characters)  
+**Output**: Sequence of TextEdit's
+
+---
+
+**Step 1**: Parse  
+Use the [parser](#parser-the-engine-under-the-hood) to compute a sytax tree.  
+
+![](img/SyntaxTree.svg)
+
+**Step 2**: Separate  
+For each node-kind, define a separator string. Then compute edits to speparate it's child with this separator.
+
+![](img/FormattingSeparation.svg)
+
+**Step 3**: Augment  
+For each note compute augmentation edits. These insert before, after, or in a node.  
+
+![](img/FormattingAugmentation.svg)
+
+---
+
+{{< notice "note" >}}
+In my implementation **Step 2** and **Step 3** are executed in a recursive manner.  
+When traversing the tree, a indentation level is parsed down the tree and increased based on the node kind.  
+
+**Step 2** and **3** are in its essence, a [catamorphism](https://en.wikipedia.org/wiki/Catamorphism)
+from a syntax tree to a sequence of edits.  
+Here of course a syntax tree is a [endofunctor](https://en.wikipedia.org/wiki/Functor#endofunctor) in the category 
+of types and functions but im drifting of.
+{{< /notice >}}
+
+---
+
+**Step 4**: Consolidate  
+Sort Edits by starting point and merge consolidate consecutive edits.  
+Optionally also remove redunant edits.
+
+![](img/FormattingConsolidation.svg)
+
+---
+
+The SPARQL grammar is quite large (138 rules), so implementing this in datail was a bit tedious.  
+
+#### Results
+
+Here are a few examples to give you an idea.  
+If want to get a better understanding of the behaviour of this formatter,  
+try it out in the [demo](https://qlue-ls.com).
 
 ```sparql
 BASE <http://...>
@@ -595,8 +642,7 @@ SELECT * WHERE {
 
 ```sparql
 SELECT * WHERE {
-    ?a ?b ",,," .
-    FILTER (1 IN (1, 2, 3))
+    ?a ?b ",,," FILTER (1 IN (1, 2, 3))
 }
 ```
 
@@ -637,42 +683,122 @@ capitalize_keywords = true
 insert_spaces = true
 tab_size = 2
 where_new_line = false
+filter_same_line = true
 ```
+
+#### Formatting comments
+
+This algorithm fails when comments appear in the input string.  
+For example this query:
+
+```sparql
+SELECT ?a # comment
+WHERE {
+  ?a ?b ?c
+}
+```
+
+Is formatted to:
+```sparql
+SELECT ?a # comment WHERE {
+  ?a ?b ?c
+}
+```
+
+So let's fix this really quick, how hard can it be?  Right...?  
+
+---
+
+**Step 1**: Parse, does not change.  
+The only difference is that comments can appear anywhere in the syntax tree:
+
+![](img/FormattingComments.svg)
+
+**Step 1.5**: Extract comments  
+When collecting the the edits just ignore the comment-nodes.  
+
+![](img/FormattingExtractComments.svg)
+
+For each comment store:
+
+- content
+- indentation level
+- is it a trailing comment or not
+- the end position of the node it "attaches" to
+
+The "attach" node is the first previous non-comment sibling or the parent.  
+(every comment has a parent)
+
+![](img/FormattingCommentAttach.svg)
+
+Then do **Step 2**, **Step 3** and **Step 4** as before.  
+But dont remove redunant edits in **Step 4**.
+
+{{< notice note >}}
+
+Since I compute a spearation edit between each node, I can savely assume that each comment got "deleted".  
+(Exept if its the first or last child of the root but lets ignore this edge case)
+
+{{< /notice >}}
+
+**Step 5**: Merge Comments  
+Merge the extracted comments into the sequence of edits.
+
+{{< notice note >}}
+
+Since edits got consolidated in **Step 4**, I can assume that the edits left in the sequence are non-consecutive.
+{{< /notice >}}
+
+The location of the comments "anchor" is either at the start of a separation edit:
+
+![](img/FormattingInsertingCommentsCase1.svg)
+
+Or conained in a merged edit:
+
+![](img/FormattingInsertingCommentsCase2.svg)
+
+In the second case, simply split the edit.  
+This is safe, since it was merged in the first place.
+
+Then we edit the following text-edit and remove leading whitespace, exept linebreaks.  
+Then there are 3 cases:
+
+![](img/FormattingEditTheEdit.svg)
+
+If the edit is just whitespace, then replace it with a "linebreak"-edit.  
+If the first non-whitespace character is not a linebreak, insert a "linebreak"-edit.  
+If the first non-whitespace character is a linebreak, dont do anything.
+
+---
+
+Figuring this all out and implementing it properly took me about a week.
 
 #### Ideas for the future
 
-There are three things that the formatter does not handle well:
-
-- **Comments**: should be possible to place at the end of a line:
-    ```sparql
-    SELECT * WHERE {
-        ?s ?p ?o # EOL comment
-    }
-    ```
-
 - **Long lines**: should cause a line break
-    ```sparql
-    SELECT ?v1 ?v3 ?v4 ?v5 ?v6 ?v7 ?v8 ?v9 ?v10
-           ?v11 ?v12 ?v13 ?v14 ?v15 ?v16 ?v17
-           ?v18 ?v19 ?v20 ?v21 ?v22 ?v23 ?v24
-           ?v25 ?v26 ?v27 ?v28 ?v29 ?v30 ?v31
-    WHERE {}
-    ```
+
+```sparql
+SELECT ?v1 ?v3 ?v4 ?v5 ?v6 ?v7 ?v8 ?v9 ?v10
+       ?v11 ?v12 ?v13 ?v14 ?v15 ?v16 ?v17
+       ?v18 ?v19 ?v20 ?v21 ?v22 ?v23 ?v24
+       ?v25 ?v26 ?v27 ?v28 ?v29 ?v30 ?v31
+WHERE {}
+```
 - **small nested queries**: should be compressed
-    ```sparql
-    SELECT ?castle WHERE {
-        osmrel:51701 ogc:contains ?castle .
-        { { ?castle osmkey:historic "castle" }
-          UNION
-          { ?castle osmkey:historic "tower" . ?castle osmkey:castle_type "defensive" } }
-        UNION
-        { ?castle osmkey:historic "archaeological_site" . ?castle osmkey:site_type "fortification" }
-        ?castle osmkey:name ?name .
-        ?castle osmkey:ruins ?ruins .
-        OPTIONAL { ?castle osmkey:historic ?class }
-        OPTIONAL { ?castle osmkey:archaeological_site ?class }
-    }
-    ```
+```sparql
+SELECT ?castle WHERE {
+    osmrel:51701 ogc:contains ?castle .
+    { { ?castle osmkey:historic "castle" }
+      UNION
+      { ?castle osmkey:historic "tower" . ?castle osmkey:castle_type "defensive" } }
+    UNION
+    { ?castle osmkey:historic "archaeological_site" . ?castle osmkey:site_type "fortification" }
+    ?castle osmkey:name ?name .
+    ?castle osmkey:ruins ?ruins .
+    OPTIONAL { ?castle osmkey:historic ?class }
+    OPTIONAL { ?castle osmkey:archaeological_site ?class }
+}
+```
 
 
 ### Hover
@@ -894,7 +1020,7 @@ It defines a Bytecode to run programs withing the browser.
 All big browsers support it.
 
 If your program can be converted (compiled) to this WebAssembly(WASM) Bytecode, it can execute in the Browser.
-![](img/WebAssembly-data-flow-architecture.png)[^9]
+![](img/WebAssembly-data-flow-architecture.png)[^8]
 So now we need to build a compiler to convert Rust to WASM Bytecode...
 Unfortunately, [some strangers on the Internet](https://github.com/rustwasm/team) already did that.
 The project is called [wasm-pack](https://rustwasm.github.io/wasm-pack/).
@@ -1238,6 +1364,5 @@ Also, since all existing features depend on the parse-tree, I want to build a st
 [^4]: notifications are messages without a `id`, since they do not expect a response.
 [^5]: In rust packages are called crates (you know... because cargo ships crates...)
 [^6]: https://www.youtube.com/watch?v=wLg04uu2j2o
-[^7]:https://www.geeksforgeeks.org/postorder-traversal-of-binary-tree/
-[^8]: https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
-[^9]:https://www.researchgate.net/figure/WebAssembly-data-flow-architecture_fig1_373229823
+[^7]: https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
+[^8]:https://www.researchgate.net/figure/WebAssembly-data-flow-architecture_fig1_373229823
