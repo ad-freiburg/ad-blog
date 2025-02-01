@@ -1,12 +1,7 @@
 {{ partial "head" . }}
 
-{{if eq .Site.Params.singleViewStyle "casper"}}
-  <body class="error-template"><div class="site-wrapper">
-  {{ partial "header-sori-error" . }}
-{{else}}
-  <body class="home-template"><div class="site-wrapper"> 
-  {{ partial "header" . }}
-{{end}}
+<body class="error-template"><div class="site-wrapper">
+  {{ partial "header-single" . }}
 
 <main id="site-main" class="site-main outer" role="main">
   <div class="inner">
@@ -25,10 +20,9 @@
           </header>
       </a>
       <section class="post-card-excerpt" style="padding: 0 25px;">
-          
       </section>
     </div>
-</article>    
+</article>
 </div>
 {{else}}
   <section class="error-message">
@@ -36,7 +30,7 @@
     <p class="error-description">{{ .Site.Params.pageNotFoundTitle }}</p>
     <a class="error-link" href="{{"/"|absURL}}">Go to the front page →</a>
   </section>
-{{end}}    
+{{end}}
 
   </div>
 </main>
