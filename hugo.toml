@@ -1,5 +1,4 @@
 baseurl = "/"
-theme = "ad-blog-theme"
 languageCode = "en-US"
 canonifyurls = true
 
