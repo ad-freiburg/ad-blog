@@ -10,7 +10,7 @@ image: "img/cover.png"
 
 Modern developer environments are way more capable than simple text editors.
 They provide domain-specific tools to improve the user experience.
-They give hints, suggest changes and completions and more.  
+They give hints, suggest changes and completions and more.
 In this article, we will take a look behind the curtains and build language support for *SPARQL*,
 a query language for knowledge graphs.
 
@@ -83,7 +83,7 @@ While these development environments still dominate, modern development environm
 
 Some of the new kids on the block are: [neovim](https://neovim.io/), [vscode](https://code.visualstudio.com/) or [sublime text](https://www.sublimetext.com/).
 They all are **general purpose** code editors that have a open-source plugin ecosystem and allow a personalized customization. A core maintainer of Neovim,
-[TJ DeVries](https://github.com/tjdevries), calls them PDE's (**P**ersonalized **D**evelopment **E**nvironment), although i don't think it caught on yet.
+[TJ DeVries](https://github.com/tjdevries), calls them PDE's (**P**ersonalized **D**evelopment **E**nvironment), although I don't think it caught on yet.
 
 Long story short: Language support in these PDE's is not built-in, but provided via an extension.
 This is made possible by a protocol published by Microsoft in 2016: The **L**anguage **S**erver **P**rotocol (LSP).
@@ -101,7 +101,7 @@ The language support has to be written only once and not over and over again for
 
 My goal is to create a language server for [SPARQL](https://www.w3.org/TR/sparql11-query/#rQueryUnit).
 The language server should be able to **format** queries, give **diagnostic** reports and suggest **completions**.
-To work in the [Qlever-UI](https://qlever.cs.uni-freiburg.de/), the Language Server should be accessible from an editor which runs in the browser.
+To work in the [Qlever UI](https://qlever.cs.uni-freiburg.de/), the Language Server should be accessible from an editor which runs in the browser.
 
 # The Language Server Protocol
 
@@ -218,7 +218,7 @@ Let's talk about what I actually did.
 
 I chose to use [Rust](https://www.rust-lang.org/) for this project since it's fancy and I like shiny things.  
 Rust is the most admired programming language in the [Stack overflow developer survey 2024](https://survey.stackoverflow.co/2024/technology#2-programming-scripting-and-markup-languages),
-and i was curious to find out why. After this project, I can confirm that Rust is a brilliant language, but the leading curve is quiet steep.
+and i was curious to find out why. After this project, I can confirm that Rust is a brilliant language, but the learing curve is quiet steep.
 
 The error handling, incredibly smart compiler, functional approach and rich ecosystem enable a smooth developing experience.
 That being said, the very strict compiler makes it hard to get stuff done quickly, however the resulting code is a lot more robust.
@@ -380,19 +380,19 @@ SELECT * WHERE {
 
 ### Tree-sitter
 
-Usually parses get to parse complete strings that are valid.
+Usually parsers get to parse complete strings that are valid.
 When you give them invalid input they react less happy (symbolic image below).
 
 ![](img/resiliant-parsers.png)
 [^3]
 
-In our use-case, the text we handle is incomplete most of the time.
+In our use case, the text we handle is incomplete most of the time.
 So we need a parser that is resilient to errors.
 
-The big-boy-language-servers like [rust-analyser](https://github.com/rust-lang/rust-analyzer) use customized [resilient LL Parsers](https://matklad.github.io/2023/05/21/resilient-ll-parsing-tutorial.html).
+The big-boy language servers like [rust-analyser](https://github.com/rust-lang/rust-analyzer) use customized [resilient LL Parsers](https://matklad.github.io/2023/05/21/resilient-ll-parsing-tutorial.html).
 But since I wanted to get on the road quickly, I chose [tree-sitter](https://tree-sitter.github.io/tree-sitter/) (for now... ;)).
 Tree-sitter, at its core, is a parser generator. It generates error resilient parsers.
-It's most commonly used in editors like [neovim](https://neovim.io/) or emacs[^6] to highlight text.
+It is most commonly used in editors like [neovim](https://neovim.io/) or emacs[^6] to highlight text.
 
 Parser generators take a grammar and generate a fully functioning parser.
 I found a [sparql-tree-sitter](https://github.com/GordianDziwis/tree-sitter-sparql) grammar by [GordianDziwis](https://github.com/GordianDziwis).
@@ -415,7 +415,7 @@ tree-sitter playground
 ```
 
 The generated parser is written in C.
-For some C-reasons I won't get into right now, tree-sitter can generate rust-bindings that allow us to call the c-functions from our rust-program (something I will regret later).
+For some C-reasons I won't get into right now, tree-sitter can generate rust bindings that allow us to call the c-functions from our rust-program (something I will regret later).
 It provides some functions to parse and navigate the resulting concrete-syntax-tree.
 
 {{< notice example >}}
@@ -545,7 +545,7 @@ The client then applies the changes and thus formats the document.
 
 #### Formatting Algorithm
 
-After a few itterations I came up with the following algorithm.
+After a few iterations, I came up with the following algorithm.
 
 ---
 
@@ -560,7 +560,7 @@ Use the [parser](#parser-the-engine-under-the-hood) to compute a sytax tree.
 ![](img/SyntaxTree.svg)
 
 **Step 2**: Separate  
-For each node-kind, define a separator string. Then compute edits to speparate it's child with this separator.
+For each node kind, define a separator string. Then compute edits to speparate its child with this separator.
 
 ![](img/FormattingSeparation.svg)
 
@@ -575,17 +575,17 @@ For each note compute augmentation edits. These insert before, after, or in a no
 In my implementation **Step 2** and **Step 3** are executed in a recursive manner.  
 When traversing the tree, a indentation level is parsed down the tree and increased based on the node kind.  
 
-**Step 2** and **3** are in its essence, a [catamorphism](https://en.wikipedia.org/wiki/Catamorphism)
+**Step 2** and **3** are, in its essence, a [catamorphism](https://en.wikipedia.org/wiki/Catamorphism)
 from a syntax tree to a sequence of edits.  
 Here of course a syntax tree is a [endofunctor](https://en.wikipedia.org/wiki/Functor#endofunctor) in the category 
-of types and functions but im drifting of.
+of types and functions, but i digress.
 {{< /notice >}}
 
 ---
 
 **Step 4**: Consolidate  
-Sort Edits by starting point and merge consolidate consecutive edits.  
-Optionally also remove redunant edits.
+Sort edits by starting point and merge consolidate consecutive edits.  
+Optionally also remove redundant edits.
 
 ![](img/FormattingConsolidation.svg)
 
@@ -715,7 +715,7 @@ The only difference is that comments can appear anywhere in the syntax tree:
 ![](img/FormattingComments.svg)
 
 **Step 1.5**: Extract comments  
-When collecting the the edits just ignore the comment-nodes.  
+When collecting the edits just ignore the comment-nodes.  
 
 ![](img/FormattingExtractComments.svg)
 
@@ -732,12 +732,12 @@ The "attach" node is the first previous non-comment sibling or the parent.
 ![](img/FormattingCommentAttach.svg)
 
 Then do **Step 2**, **Step 3** and **Step 4** as before.  
-But dont remove redunant edits in **Step 4**.
+But dont remove redundant edits in **Step 4**.
 
 {{< notice note >}}
 
-Since I compute a spearation edit between each node, I can savely assume that each comment got "deleted".  
-(Exept if its the first or last child of the root but lets ignore this edge case)
+Since I compute a spearation edit between each node, I can savely assume that each comment got "deleted"  
+(exept if it is the first or last child of the root but lets ignore this edge case).
 
 {{< /notice >}}
 
@@ -753,14 +753,14 @@ The location of the comments "anchor" is either at the start of a separation edi
 
 ![](img/FormattingInsertingCommentsCase1.svg)
 
-Or conained in a merged edit:
+Or contained in a merged edit:
 
 ![](img/FormattingInsertingCommentsCase2.svg)
 
 In the second case, simply split the edit.  
 This is safe, since it was merged in the first place.
 
-Then we edit the following text-edit and remove leading whitespace, exept linebreaks.  
+Then we edit the following textedit and remove leading whitespace, exept linebreaks.  
 Then there are 3 cases:
 
 ![](img/FormattingEditTheEdit.svg)
