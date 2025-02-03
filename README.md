@@ -116,7 +116,7 @@ Static content can be added to the `static/` folder. It is automatically synced
 to the correct destination on building.
 
 ## Changing the Title, Description and Menu
-These can be changed in the `config.[toml|yaml]` file. However, in the future
+These can be changed in the `hugo.[toml|yaml]` file. However, in the future
 the syntax (TOML) may change to match the post metadata (YAML).
 
 ## Changing the About Page
