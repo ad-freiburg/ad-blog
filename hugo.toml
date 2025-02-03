@@ -1,5 +1,4 @@
 baseurl = "/"
-theme = "ad-blog-theme"
 languageCode = "en-US"
 canonifyurls = true
 
@@ -30,9 +29,6 @@ orgDescription = ""
 showSupport = false
 
 pageNotFoundTitle = "404 - Page not found"
-
-#casper or caspertwo
-singleViewStyle = "casper"
 
 [services]
 [services.disqus]
