@@ -539,7 +539,7 @@ This should just give you an idea of what's possible.
 When the client sends a `textDocument/formatting` request, the server returns a
 list of [`TextEdit`](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textEdit)'s.
 A `TextEdit` is a incremental change, composed of a range and a string.
-The client then applies the changes and thus formats the document.
+The client then applies the changes, thus formatting the document.
 
 ![](img/TextEdits.svg)
 
@@ -803,7 +803,7 @@ SELECT ?castle WHERE {
 
 ### Hover
 
-When the client sends a `textDocument/hover` to request, the server responds with information about a given position in a text-document.
+When the client sends a `textDocument/hover` request, the server responds with information about a given position in a text-document.
 
 This is useful to give inexperienced users documentation about how some constructs work:
 
@@ -817,8 +817,9 @@ Display the structure of the query;
 ![](img/examples/hover-graph.png)
 In a serious implementation, since these graph-patterns can get quiet complex, I would use [mermaid.js](https://mermaid.js.org/) to generate diagrams. This would require a custom plugin in the editor to render these diagrams.
 
-If the language server can query the knowledge graph autonomously (not implemented yet), it could display additional information retrieved from the knowledge graph.
-For example the label of a resource:
+If the language server can query the knowledge graph autonomously (not implemented yet),
+it could display additional information retrieved from the knowledge graph,
+for example the label of a resource:
 ![](img/examples/hover-curie.png)
 Or the incoming and outgoing edges:
 ![](img/examples/hover-detailed.png)
@@ -906,25 +907,25 @@ This again could be split into two categories:
 
 #### 2.1. Offline
 
-Here the Language server only uses "locally available" information:
-That is: Text in the editor and the data bundled with the language server (for example known prefixes).
+Here, the language server only uses "locally available" information:
+That is: text in the editor and the data bundled with the language server (for example known prefixes).
 
-A Simple example for this are suggestions of already defined variables:
-
+A simple example for this are suggestions of already defined variables:
+  
 ![](img/examples/cmp_variable.png)
 This uses the parse-tree to find all variables.
-Currently, this is done very stupid, as this also suggests variables when they are out of scope:
+Currently, this is done very stupidly, as this also suggests variables when they are out of scope:
 
 ![](img/examples/cmp_variable_dumb.png)
 
 #### 2.1. Online
 
-Here the Language Server uses data from a SPARQL-endpoint to provide completion suggestions.
+Here, the language Server uses data from a SPARQL-endpoint to provide completion suggestions.
 {{< notice warning >}}
 This is not implemented yet!
 {{< /notice >}}
 
-Here is a example from the Qlever-OSM-endpoint: <htps://qlever.cs.uni-freiburg.de/api/osm-planet/>.
+Here is an example from the Qlever-OSM-endpoint: <htps://qlever.cs.uni-freiburg.de/api/osm-planet/>.
 [**O**pen**S**treet**M**ap](https://www.openstreetmap.org/) (OSM) is a Project that collects Geodata that is publicly accessible. Basically Google-maps, just without Google.
 This data can be represented in an RDF knowledge graph and queried using SPARQL.
 For example this query returns every bicycle parking spot in [Freiburg](https://www.openstreetmap.org/relation/62768):
@@ -941,15 +942,15 @@ SELECT ?bicycle_parking ?geometry WHERE {
 }
 ```
 
-Now I want to know the same thing just for Berlin.  
-Unfortunately, i forgot that the relation ID of Berlin is `62422`...  
-A good online-contextual-completion should help me:
+Now, I want to know the same thing just for Berlin.  
+Unfortunately, I forgot that the relation ID of Berlin is `62422`...  
+A good online-contextual-completion can help me:
 
 |                            |                           |
 | -------------------------- | ------------------------- |
 | ![](img/examples/online-cmp-before.png) | ![](img/examples/online-cmp-after.png) |
 
-# Using the Language server
+# Using the language server
 
 Ok, now let's talk about how to use the language server.
 An editor needs to have a language server client and connect to our server.
@@ -959,11 +960,11 @@ I looked at three editors: neovim, vs-code, and a custom web-based-editor.
 ## Neovim
 
 To get a language server running with neovim is very easy because it has a built-in language client and
-neovim is build to be hacked.
+neovim is built to be hacked.
 
 ### Installing the Program
 
-First `Qlue-ls` needs to be available as executable binary on the system, neovim runs on.
+First, `Qlue-ls` needs to be available as executable binary on the system, neovim runs on.
 You could just build the binary from source.
 But to make it more convenient, I added the binary into two "repositories":
 
@@ -997,20 +998,21 @@ vim.api.nvim_create_autocmd({ 'FileType' }, {
   end,
 })
 ```
-When you open a `sparql` file (a file with suffix `.rq`),
-this runs the command `qlue-ls server` and connects the language client to this process.
+
+When you open a `sparql` file (a file with suffix `.rq`), this runs the command `qlue-ls server` and
+connects the language client to this process.
 
 ## VS-code
 
 In vs-code, there is no built-in language-client.
-Instead, you have to create a vs-code-extention that acts as a language-client.
+Instead, you have to create a vs-code-extension that acts as a language-client.
 I will do that in the future™.
 
 ## The Browser
 
-Okay, now the for the cherry on top:
+Okay, now the cherry on top:
 Let's connect this thing to a web-based editor (an editor that runs in a browser).
-"But wait!" you might say, "browser is JavaScript land".
+"But wait!" you might say, "Browser is JavaScript land!".
 And you would be right, until 2017.
 
 ### WebAssembly
