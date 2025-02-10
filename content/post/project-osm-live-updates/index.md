@@ -407,7 +407,7 @@ An empty query result, would confirm that the `http://example.com/updated` graph
 
 **Results**
 
-The query revealed that the graphs differed in approx. 1.5 million triples before the update process. After the update, this number was reduced to two triples where only the encoding of special characters differed. This shows that the tool has correctly applied all the changes from the OsmChange files to the `http://example.com/updated` graph. 
+The query revealed that the graphs differed in approx. 1.5 million triples before the update process. After the update, this number was reduced to two triples where only the encoding of special characters differed. This shows that the tool has correctly applied all the changes from the OsmChange files to the `http://example.com/updated` graph.
 
 The encoding differences occur because OSM tag values are free text with undefined encoding, which can lead to variations in the representation of special characters (e.g. line breaks). During processing, our tool decodes and re-encodes these strings before adding them to the database. While these encoding variations may appear in the SPARQL query results, they do not affect the actual information content of the tags and are therefore ignored during correctness checking.
 
