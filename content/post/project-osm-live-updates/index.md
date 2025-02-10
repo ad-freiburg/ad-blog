@@ -362,7 +362,7 @@ INSERT DATA { TRIPLES ... }
 
 # <a href="testing"></a>3. Discussion
 
-In this section, we evaluate the results of our implementation, testing the tool’s ability to correctly update the database and analyzing its performance. Additionally, we propose potential improvements to enhance its functionality and efficiency.
+In this section, we evaluate the results of our implementation, testing the tool's ability to correctly update the database and analysing its performance. We also suggest potential improvements to increase its functionality and efficiency.
  
 ## <a href="correctness"></a>3.1. Correctness
 
@@ -403,19 +403,19 @@ WHERE {
 }
 ```
 
-If the query result is empty, it confirms that the updated graph contains the same triples as the latest graph, proving the tool correctly processes changes from the OsmChange files.
+An empty query result, would confirm that the `http://example.com/updated` graph contains the same triples as the `http://example.com/latest` graph, proving that the tool is correctly processing changes from the OsmChange files.
 
 **Results**
 
-The query showed that before we started the update process, there where ca. 1.5 Million triples in the database different. After updateding this number reduced to two triples, for which only the encoding of spwecial characters differed. This shows that the tool correctly applied all changes from the OsmChange files to the `http://example.com/updated` graph. 
+The query revealed that the graphs differed in approx. 1.5 million triples before the update process. After the update, this number was reduced to two triples where only the encoding of special characters differed. This shows that the tool has correctly applied all the changes from the OsmChange files to the `http://example.com/updated` graph. 
 
-The encoding differences arise because OSM tag values are free text with undefined encoding, which can lead to variations in how special characters (e.g., newlines) are represented. During processing, our tool decodes these strings and re-encodes them before inserting them into the database. While these encoding variations may appear in the SPARQL query results, they do not affect the actual information content of the tags and are therefore ignored during correctness verification.
+The encoding differences occur because OSM tag values are free text with undefined encoding, which can lead to variations in the representation of special characters (e.g. line breaks). During processing, our tool decodes and re-encodes these strings before adding them to the database. While these encoding variations may appear in the SPARQL query results, they do not affect the actual information content of the tags and are therefore ignored during correctness checking.
 
 ## <a id="performance"></a>3.2. Performance
 
-A practical benchmark for usability is are the [hourly diffs](https://planet.openstreetmap.org/replication/hour/) for the complete OSM planet data, which reflect all changes made to the global OSM database within hour-long intervals. To maintain synchronization with the OSM planet data, these files must be processed on average in less than an hour.
+A practical benchmark for usability are the [hourly diffs](https://planet.openstreetmap.org/replication/hour/) for the full OSM planet data, which reflect all changes made to the global OSM database on an hourly basis. To maintain synchronization with the OSM planet data, these files must be processed in less than an hour on average.
 
-To test our tool, we used a publicly available [QLever instance](https://qlever.cs.uni-freiburg.de/osm-planet) of the complete OSM planet data. To isolate the processing time, we skipped deletion and insertion operations on the SPARQL endpoint and instead wrote the update queries to an output file using the `-o` option. We also specified the start sequence number using `-s`, ensuring that only one change file is processed. The following command was used:
+We used a publicly available [QLever instance](https://qlever.cs.uni-freiburg.de/osm-planet) of the full OSM planet data to test our tool. To isolate the processing time, we skipped the delete and insert operations on the SPARQL endpoint and instead wrote the update queries to an output file using the `-o` option. We also specified the start sequence number using `-s` to ensure that only one change file was processed:
 
 ```bash
 olu https://qlever.cs.uni-freiburg.de/api/osm-planet -d https://planet.openstreetmap.org/replication/minute/ -s -o sparqlUpdateOutput.txt
@@ -423,7 +423,7 @@ olu https://qlever.cs.uni-freiburg.de/api/osm-planet -d https://planet.openstree
 
 **Results**
 
-We processed the change file, achieving a processing time of 44 minutes. This result demonstrates that the tool can handle updates efficiently enough to keep a SPARQL instance synchronized with the OSM planet data. While the number of changes in each diff can vary, leading to occasional delays, these variations tend to average out over longer periods, ensuring that updates remain within the required timeframe.
+We achieved a processing time of 44 minutes for the change file. This result demonstrates that the tool can handle updates efficiently enough to keep a SPARQL instance synchronized with the OSM planet data. While the number of changes in each diff can vary, leading to occasional delays, these variations tend to average out over longer periods, ensuring that updates remain within the required timeframe.
 
 ## <a id="improvements"></a>3.3. Improvements
 
@@ -431,15 +431,15 @@ While our tests demonstrate that `olu` is performant enough to handle updates fo
 
 - **Multithreading Support**: Currently, `olu` does not support multithreading. Tasks such as filtering triples and creating dummy objects could be parallelized, reducing processing times and improving overall efficiency.
 
-- **Optimizing Deletion Queries**: The deletion query presented in Section 2.7 is designed to be generalized, accommodating all OSM objects without requiring knowledge of the exact triples generated by osm2rdf. While this approach ensures flexibility and future-proofing, it is not optimized for performance. By narrowing the query to specific namespaces that correspond to triples actually present in the database, the deletion process could be made significantly faster.
+- **Optimizing Deletion Queries**: The deletion query presented in Section 2.7 is designed to be generalized, so that all OSM objects can be deleted without requiring knowledge of the exact triples generated by osm2rdf. While this approach provides flexibility and future proofing, it is not optimized for performance. By restricting the query to specific namespaces that correspond to triples actually present in the database, the deletion process could be made significantly faster.
 
-- **Efficient Insertion of Triples**: For an hourly diff of the complete OSM dataset, approximately 16 million triples must be inserted into the database. Optimizing this process is essential for scalability. One potential improvement could be leveraging the [*SPARQL LOAD*](https://www.w3.org/TR/sparql11-update/#load) operation, which allows the SPARQL endpoint to directly read an RDF document and insert triples. This method could reduce the number of HTTP requests and improve performance. However, this feature is not supported by all SPARQL endpoints, which may limit its applicability.
+- **Efficient Insertion of Triples**: An hourly diff of the full OSM dataset requires about 16 million triples to be inserted into the database. Optimizing this process is essential for scalability.One potential improvement could be leveraging the [*SPARQL LOAD*](https://www.w3.org/TR/sparql11-update/#load) operation, which allows the SPARQL endpoint to directly read an RDF document and insert triples. This method could reduce the number of HTTP requests and improve performance. However, this feature is not supported by all SPARQL endpoints, which may limit its applicability.
 
 **Support for Bounding Boxes**
 
-[*Geofabrik*](https://download.geofabrik.de) offers a comprehensive catalogue of OSM subsets for most countries and smaller regions, such as the federal state of Bremen, which was used for testing in Chapter 3.1. While these subsets are useful, they have limitations: the selection of regions is fixed, and change files are only provided on a daily basis.
+[*Geofabrik*](https://download.geofabrik.de) offers a comprehensive catalog of OSM subsets for most countries and smaller regions, such as the federal state of Bremen, which was used for testing in Chapter 3.1. While these subsets are useful, they have limitations: the selection of regions is fixed, and change files are only provided on a daily basis.
 
-A valuable enhancement to `olu` would be the ability to specify a bounding box as an option. This feature would enable the tool to efficiently update smaller subsets of the OSM dataset by using planet-wide diffs from OpenStreetMap. Instead of relying on predefined subsets, users could define custom regions of interest, allowing for greater flexibility when working with localized datasets and more frequent updates.
+A valuable addition to `olu` would be the ability to specify a bounding box as an option. This feature would allow the tool to efficiently update smaller subsets of the OSM dataset using planet-wide diffs from OpenStreetMap. Rather than relying on pre-defined subsets, users would be able to define their own regions of interest, allowing greater flexibility when working with localized datasets and more frequent updates.
 
 # <a id="conclusion"></a>4. Conclusion and Future Work
 
