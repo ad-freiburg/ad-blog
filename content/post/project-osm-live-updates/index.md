@@ -360,11 +360,11 @@ The filtered triples are added to the database using the following SPARQL update
 INSERT DATA { TRIPLES ... }
 ```
 
-# <a href="#testing"></a>3. Discussion
+# <a href="testing"></a>3. Discussion
 
 In this section, we evaluate the results of our implementation, testing the tool’s ability to correctly update the database and analyzing its performance. Additionally, we propose potential improvements to enhance its functionality and efficiency.
  
-## <a href="#correctness"></a>3.1. Correctness
+## <a href="correctness"></a>3.1. Correctness
 
 We tested the implementation using OSM data provided by [*Geofabrik*](https://download.geofabrik.de), focusing on the subset for the federal state of [Bremen](https://download.geofabrik.de/europe/germany/bremen.html). Geofabrik offers full datasets and daily change files for specified regions. For testing, we downloaded a three-month-old dataset and the latest dataset, converted them to RDF using `osm2rdf` with the options `--add-way-node-order --write-ogc-geo-triples none`, and imported the triples into two empty graphs: `http://example.com/updated` and `http://example.com/latest`.
 
@@ -411,7 +411,7 @@ The query showed that before we started the update process, there where ca. 1.5 
 
 The encoding differences arise because OSM tag values are free text with undefined encoding, which can lead to variations in how special characters (e.g., newlines) are represented. During processing, our tool decodes these strings and re-encodes them before inserting them into the database. While these encoding variations may appear in the SPARQL query results, they do not affect the actual information content of the tags and are therefore ignored during correctness verification.
 
-## <a id="#performance"></a>3.2. Performance
+## <a id="performance"></a>3.2. Performance
 
 A practical benchmark for usability is are the [hourly diffs](https://planet.openstreetmap.org/replication/hour/) for the complete OSM planet data, which reflect all changes made to the global OSM database within hour-long intervals. To maintain synchronization with the OSM planet data, these files must be processed on average in less than an hour.
 
@@ -425,9 +425,7 @@ olu https://qlever.cs.uni-freiburg.de/api/osm-planet -d https://planet.openstree
 
 We processed the change file, achieving a processing time of 44 minutes. This result demonstrates that the tool can handle updates efficiently enough to keep a SPARQL instance synchronized with the OSM planet data. While the number of changes in each diff can vary, leading to occasional delays, these variations tend to average out over longer periods, ensuring that updates remain within the required timeframe.
 
-## <a id="#improvements"></a>3.3. Improvements
-
-**Performance**
+## <a id="improvements"></a>3.3. Improvements
 
 While our tests demonstrate that `olu` is performant enough to handle updates for the complete OSM dataset, there remains room for optimization. The tool’s performance is influenced by several factors, including the efficiency of the SPARQL endpoint and the size of the OSM dataset being processed. A straightforward approach to improve performance would be to use a faster SPARQL endpoint or work with a smaller subset of the OSM data. However, there are also opportunities to enhance the implementation itself:
 
@@ -443,7 +441,7 @@ While our tests demonstrate that `olu` is performant enough to handle updates fo
 
 A valuable enhancement to `olu` would be the ability to specify a bounding box as an option. This feature would enable the tool to efficiently update smaller subsets of the OSM dataset by using planet-wide diffs from OpenStreetMap. Instead of relying on predefined subsets, users could define custom regions of interest, allowing for greater flexibility when working with localized datasets and more frequent updates.
 
-# <a id="#conclusion"></a>4. Conclusion and Future Work
+# <a id="conclusion"></a>4. Conclusion and Future Work
 
 In this work, we presented the implementation of our tool, `olu`, designed to update SPARQL endpoints containing OpenStreetMap (OSM) data. We demonstrated that `olu` produces correct results and offers sufficient performance for practical use. However, the tool currently does not support the update of [*GeoSPARQL*](https://en.wikipedia.org/wiki/GeoSPARQL) triples, such as `ogc:contains` or `ogc:intersects`. Generating these triples requires more than just resolving direct references between OSM objects, as is done in `olu`. It also necessitates identifying all OSM elements that are geometrically linked to updated objects, for instance, all areas containing a modified node or all ways intersecting a modified way. Addressing this limitation is both a challenging and significant task, making it a promising direction for future work and a valuable enhancement to the functionality of `olu`.
 
