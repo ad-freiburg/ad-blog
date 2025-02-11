@@ -123,6 +123,8 @@ The most complete and correct way is:
    - **Graph B - Graph A** → identifies inserted triples.
 6. **Generate SPARQL Update statements** based on the detected changes.
 
+![Pipeline](img/pipeline.png)
+
 ### **Advantages and Trade-offs**
 This approach is **slightly slower than the first one** since for each change, **two complete Wikidata entity dumps** must be retrieved and processed. However, it ensures that:
 ✅ **All changes are correctly detected**  
@@ -201,6 +203,8 @@ Despite these constraints, the chosen approach ensures **accuracy and reliabilit
 In this project, we explored various approaches to tracking **Wikidata changes** in a structured and machine-readable format. Initially, we attempted to extract changes using the **Wikidata API and HTML parsing**, but this method proved to be inefficient and difficult to generalize due to the varying structures of change representations.
 
 After further research and experimentation, we adopted a more reliable approach—**retrieving entity dumps for each revision and computing the differences using RDF graphs**. While slightly slower, this method ensured **completeness, accuracy, and proper formatting of SPARQL Update statements**.
+
+![Methods](img/compare.png)
 
 
 This project serves as a foundation for further improvements, such as **optimizing performance**, **integrating real-time tracking**, and **enhancing compatibility with other knowledge graph systems**.  
