@@ -92,7 +92,7 @@ It enables the editor (LSP-Client) and the Language support program (LSP-Server 
 ![](img/language-server-sequence.png)
 [^2]
 
-A key advantage of this architecture is the reusablitity.  
+A key advantage of this architecture is its reusablitity.  
 The language support has to be written only once and not over and over again for every development tool.
 
 ![](img/lsp-languages-editors.png)[^7]
@@ -101,7 +101,7 @@ The language support has to be written only once and not over and over again for
 
 My goal is to create a language server for [SPARQL](https://www.w3.org/TR/sparql11-query/#rQueryUnit).
 The language server should be able to **format** queries, give **diagnostic** reports and suggest **completions**.
-To work in the [Qlever UI](https://qlever.cs.uni-freiburg.de/), the Language Server should be accessible from an editor which runs in the browser.
+To work in the [Qlever UI](https://qlever.cs.uni-freiburg.de/), the language server should be accessible from an editor which runs in the browser.
 
 # The Language Server Protocol
 
@@ -449,7 +449,7 @@ SELECT * WHERE {
     ?s2 pre:p1 "object2"
 }
 ```
-My Tree-sitter parser would generate this parse-tree:
+My tree-sitter parser would generate this parse-tree:
 ```lsip
 (unit
   (SelectQuery
@@ -511,7 +511,7 @@ So the question is not how resilient it is, the problem is how good the quality 
 Tree-sitter produces GLR parsers.
 It explores, nondeterministically, many different possible LR (bottom-up) parses.
 Then it chooses the "the best one".
-In the words of [Alex Kladov](https://github.com/matklad), the creator of [rust-anayzer](https://github.com/rust-lang/rust-analyzer), this leads to the following behavior:
+In the words of [Alex Kladov](https://github.com/matklad), the creator of [rust-analyzer](https://github.com/rust-lang/rust-analyzer), this leads to the following behavior:
 >(...) Tree-sitter \[can\] recognize many complete valid small fragments of a tree, but it might have trouble
 > assembling them into incomplete larger fragments.
 
@@ -549,8 +549,8 @@ After a few iterations, I came up with the following algorithm.
 
 ---
 
-**Input**: String (sequence of characters)  
-**Output**: Sequence of TextEdit's
+**Input**: string (sequence of characters)  
+**Output**: sequence of textedits
 
 ---
 
@@ -560,25 +560,25 @@ Use the [parser](#parser-the-engine-under-the-hood) to compute a sytax tree.
 ![](img/SyntaxTree.svg)
 
 **Step 2**: Separate  
-For each node kind, define a separator string. Then compute edits to speparate its child with this separator.
+For each kind of node, define a separator string. Then compute edits to speparate its child with this separator.
 
 ![](img/FormattingSeparation.svg)
 
 **Step 3**: Augment  
-For each note compute augmentation edits. These insert before, after, or in a node.  
+For each node, compute augmentation edits. Insert these before, after, or in a node.  
 
 ![](img/FormattingAugmentation.svg)
 
 ---
 
 {{< notice "note" >}}
-In my implementation **Step 2** and **Step 3** are executed in a recursive manner.  
-When traversing the tree, a indentation level is parsed down the tree and increased based on the node kind.  
+In my implementation, **Step 2** and **Step 3** are executed in a recursive manner.  
+When traversing the tree, a indentation level is parsed down the tree and increased based on the kind of the node.  
 
-**Step 2** and **3** are, in its essence, a [catamorphism](https://en.wikipedia.org/wiki/Catamorphism)
+**Step 2** and **3** are, in their essence, a [catamorphism](https://en.wikipedia.org/wiki/Catamorphism)
 from a syntax tree to a sequence of edits.  
-Here of course a syntax tree is a [endofunctor](https://en.wikipedia.org/wiki/Functor#endofunctor) in the category 
-of types and functions, but i digress.
+Here, of course, a syntax tree is a [endofunctor](https://en.wikipedia.org/wiki/Functor#endofunctor) in the category 
+of types and functions, but I am digressing.
 {{< /notice >}}
 
 ---
@@ -653,7 +653,7 @@ SELECT * WHERE {
 ```
 
 I added some optional formatting, like aligning prefix declarations and predicates.
-Here is an example for a query with every non default option:
+Here is an example of a query with every non default option:
 
 ```sparql
 prefix n1:     <...>
@@ -689,7 +689,7 @@ filter_same_line = true
 #### Formatting comments
 
 This algorithm fails when comments appear in the input string.  
-For example this query:
+For example, the following query
 
 ```sparql
 SELECT ?a # comment
@@ -698,14 +698,14 @@ WHERE {
 }
 ```
 
-Is formatted to:
+is formatted to
 ```sparql
 SELECT ?a # comment WHERE {
   ?a ?b ?c
 }
 ```
 
-So let's fix this really quick, how hard can it be?  Right...?  
+So let's fix this really quickly, how hard can it be?  Right...?  
 
 ---
 
@@ -715,7 +715,7 @@ The only difference is that comments can appear anywhere in the syntax tree:
 ![](img/FormattingComments.svg)
 
 **Step 1.5**: Extract comments  
-When collecting the edits just ignore the comment-nodes.  
+When collecting the edits, just ignore the comment-nodes.  
 
 ![](img/FormattingExtractComments.svg)
 
@@ -727,21 +727,21 @@ For each comment store:
 - the end position of the node it "attaches" to
 
 The "attach" node is the first previous non-comment sibling or the parent.  
-(every comment has a parent)
+(Every comment has a parent.)
 
 ![](img/FormattingCommentAttach.svg)
 
 Then do **Step 2**, **Step 3** and **Step 4** as before.  
-But dont remove redundant edits in **Step 4**.
+But don't remove redundant edits in **Step 4**.
 
 {{< notice note >}}
 
-Since I compute a spearation edit between each node, I can savely assume that each comment got "deleted"  
-(exept if it is the first or last child of the root but lets ignore this edge case).
+Since I compute a separation edit between each node, I can safely assume that each comment got "deleted"  
+(except if it is the first or last child of the root but let's ignore this edge case).
 
 {{< /notice >}}
 
-**Step 5**: Merge Comments  
+**Step 5**: Merge comments  
 Merge the extracted comments into the sequence of edits.
 
 {{< notice note >}}
@@ -749,7 +749,7 @@ Merge the extracted comments into the sequence of edits.
 Since edits got consolidated in **Step 4**, I can assume that the edits left in the sequence are non-consecutive.
 {{< /notice >}}
 
-The location of the comments "anchor" is either at the start of a separation edit:
+The location of the comment's "anchor" is either at the start of a separation edit:
 
 ![](img/FormattingInsertingCommentsCase1.svg)
 
@@ -760,18 +760,18 @@ Or contained in a merged edit:
 In the second case, simply split the edit.  
 This is safe, since it was merged in the first place.
 
-Then we edit the following textedit and remove leading whitespace, exept linebreaks.  
+Then, we edit the following textedit and remove the leading whitespace, except at linebreaks.  
 Then there are 3 cases:
 
 ![](img/FormattingEditTheEdit.svg)
 
 If the edit is just whitespace, then replace it with a "linebreak"-edit.  
 If the first non-whitespace character is not a linebreak, insert a "linebreak"-edit.  
-If the first non-whitespace character is a linebreak, dont do anything.
+If the first non-whitespace character is a linebreak, don't do anything.
 
 ---
 
-Figuring this all out and implementing it properly took me about a week.
+Figuring out this all and implementing it properly took me about a week.
 
 #### Ideas for the future
 
@@ -784,7 +784,7 @@ SELECT ?v1 ?v3 ?v4 ?v5 ?v6 ?v7 ?v8 ?v9 ?v10
        ?v25 ?v26 ?v27 ?v28 ?v29 ?v30 ?v31
 WHERE {}
 ```
-- **small nested queries**: should be compressed
+- **Small nested queries**: should be compressed
 ```sparql
 SELECT ?castle WHERE {
     osmrel:51701 ogc:contains ?castle .
@@ -805,7 +805,7 @@ SELECT ?castle WHERE {
 
 When the client sends a `textDocument/hover` request, the server responds with information about a given position in a text-document.
 
-This is useful to give inexperienced users documentation about how some constructs work:
+This is useful to give inexperienced users a documentation about how some constructs work:
 
  ![](img/examples/hover-filter.png)
 
@@ -863,14 +863,14 @@ Giving hints to make queries more concise:
 
 ### Code Actions
 
-The `textDocument/codeAction` request is send from the client to the server to request a set of commands for a given range in a textdocument. These commands can have arbitrary effect, but in most cases change the text-document through text-edits.
+The `textDocument/codeAction` request is sent from the client to the server to request a set of commands for a given range in a textdocument. These commands can have arbitrary effects, but in most cases, they change the textdocument through textedits.
 
 {{< notice note >}}
-The change of the text-document is always done by the client (editor).
-The server provides the text-edits but its up to the client to apply them since it "owns" the text-document.
+The change of the textdocument is always done by the client (editor).
+The server provides the textedits, but its up to the client to apply them, since it "owns" the textdocument.
 {{< /notice >}}
 
-Often, code-actions correspond to a diagnostic they resolve. Such code-actions are called "quickfix".
+Often, code actions correspond to a diagnostic they resolve. Such code actions are called "quickfix".
 The exemplary code action I implemented is "Shorten URI".
 The idea is to shorten a URI into its compact ["Curie"](https://www.w3.org/TR/2010/NOTE-curie-20101216/) form.
 
@@ -878,19 +878,19 @@ The idea is to shorten a URI into its compact ["Curie"](https://www.w3.org/TR/20
 | ---------------------------------------- | --------------------------------------- |
 | ![](img/examples/code-action-before.png) | ![](img/examples/code-action-after.png) |
 
-This code-action is powered by [curies.rs](https://github.com/biopragmatics/curies.rs).
+This code action is powered by [curies.rs](https://github.com/biopragmatics/curies.rs).
 
 ### Completion Suggestions
 The key feature for a SPARQL language server is, in my opinion, code-completion.
-Here the editor provides suggestions to the user.
-In SPARQL this is not just a convenience. Without smart completion suggestions a user has to know the ontology by heart. Its also a massive efficiency boost for experianced users.
+Here, the editor provides suggestions to the user.
+In SPARQL, this is not just a convenience. Without smart completion suggestions, a user has to know the ontology by heart. Its also a massive efficiency boost for experienced users.
 
 Here is a possible structure for completions:
 
 #### 1. Static
 
-The simplest kind of completions is just to provide static snippets of keywords or structures to the user.
-For this just the "Location" of the cursor is relevant, the context of the content of the knowledge-graph does not influence the suggestions.
+The simplest kind of completion is just to provide static snippets of keywords or structures to the user.
+For this, just the "location" of the cursor is relevant, the context of the content of the knowledge-graph does not influence the suggestions.
 
 Here are a few examples i implemented:
 
@@ -901,34 +901,34 @@ Here are a few examples i implemented:
 
 #### 2. Dynamic
 
-Dynamic completions are more complex. They use all information available to provide context based suggestions.
+Dynamic completions are more complex. They use all information available to provide context-based suggestions.
 
-This again could be split into two categories:
+This again can be split into two categories:
 
 #### 2.1. Offline
 
 Here, the language server only uses "locally available" information:
 That is: text in the editor and the data bundled with the language server (for example known prefixes).
 
-A simple example for this are suggestions of already defined variables:
+A simple example for these are suggestions of already defined variables:
   
 ![](img/examples/cmp_variable.png)
-This uses the parse-tree to find all variables.
+This uses the parse tree to find all variables.
 Currently, this is done very stupidly, as this also suggests variables when they are out of scope:
 
 ![](img/examples/cmp_variable_dumb.png)
 
 #### 2.1. Online
 
-Here, the language Server uses data from a SPARQL-endpoint to provide completion suggestions.
+Here, the language server uses data from a SPARQL-endpoint to provide completion suggestions.
 {{< notice warning >}}
 This is not implemented yet!
 {{< /notice >}}
 
 Here is an example from the Qlever-OSM-endpoint: <htps://qlever.cs.uni-freiburg.de/api/osm-planet/>.
-[**O**pen**S**treet**M**ap](https://www.openstreetmap.org/) (OSM) is a Project that collects Geodata that is publicly accessible. Basically Google-maps, just without Google.
+[**O**pen**S**treet**M**ap](https://www.openstreetmap.org/) (OSM) is a project that collects geodata that is publicly accessible. Basically Google-maps, just without Google.
 This data can be represented in an RDF knowledge graph and queried using SPARQL.
-For example this query returns every bicycle parking spot in [Freiburg](https://www.openstreetmap.org/relation/62768):
+For example, this query returns every bicycle parking spot in [Freiburg](https://www.openstreetmap.org/relation/62768):
 ```sparql
 PREFIX geo: <http://www.opengis.net/ont/geosparql#>
 PREFIX osmkey: <https://www.openstreetmap.org/wiki/Key:>
@@ -942,7 +942,7 @@ SELECT ?bicycle_parking ?geometry WHERE {
 }
 ```
 
-Now, I want to know the same thing just for Berlin.  
+Now, I want to know the same thing, just for Berlin.  
 Unfortunately, I forgot that the relation ID of Berlin is `62422`...  
 A good online-contextual-completion can help me:
 
@@ -964,7 +964,7 @@ neovim is built to be hacked.
 
 ### Installing the Program
 
-First, `Qlue-ls` needs to be available as executable binary on the system, neovim runs on.
+First, `Qlue-ls` needs to be available as an executable binary on the system, neovim runs on.
 You could just build the binary from source.
 But to make it more convenient, I added the binary into two "repositories":
 
@@ -1002,9 +1002,9 @@ vim.api.nvim_create_autocmd({ 'FileType' }, {
 When you open a `sparql` file (a file with suffix `.rq`), this runs the command `qlue-ls server` and
 connects the language client to this process.
 
-## VS-code
+## VS-Code
 
-In vs-code, there is no built-in language-client.
+In VS-Code, there is no built-in language-client.
 Instead, you have to create a vs-code-extension that acts as a language-client.
 I will do that in the future™.
 
@@ -1013,18 +1013,18 @@ I will do that in the future™.
 Okay, now the cherry on top:
 Let's connect this thing to a web-based editor (an editor that runs in a browser).
 "But wait!" you might say, "Browser is JavaScript land!".
-And you would be right, until 2017.
+And you would have been right, until 2017.
 
 ### WebAssembly
 
-[WebAssembly](https://webassembly.org/) is a open standard defined by the [World Wide Web Consortium](https://www.w3.org/).
-It defines a Bytecode to run programs withing the browser.
+[WebAssembly](https://webassembly.org/) is an open standard defined by the [World Wide Web Consortium](https://www.w3.org/).
+It defines a bytecode to run programs withing the browser.
 All big browsers support it.
 
-If your program can be converted (compiled) to this WebAssembly(WASM) Bytecode, it can execute in the Browser.
+If your program can be converted (compiled) to this WebAssembly(WASM) bytecode, it can execute in the browser.
 ![](img/WebAssembly-data-flow-architecture.png)[^8]
-So now we need to build a compiler to convert Rust to WASM Bytecode...
-Unfortunately, [some strangers on the Internet](https://github.com/rustwasm/team) already did that.
+So, now, we need to build a compiler to convert Rust to WASM bytecode...
+Unfortunately, [some strangers on the internet](https://github.com/rustwasm/team) already did that.
 The project is called [wasm-pack](https://rustwasm.github.io/wasm-pack/).
 
 It's very organic and simple, you just annotate the method or struct you want to "export" to WASM.
@@ -1038,7 +1038,7 @@ pub fn init_language_server(writer: web_sys::WritableStreamDefaultWriter) -> Ser
 ```
 
 Then wasm-pack builds WASM-bytecode and JavaScript "glue code".
-This glue code does a lot off stuff to bridge the gap between JavaScript and WASM.
+This glue code does a lot of stuff to bridge the gap between JavaScript and WASM.
 
 ```javascript
 ...
@@ -1065,8 +1065,8 @@ server.listen(...);
 
 #### Tree-Sitter in WebAssembly
 
-As stated earlier, tree-sitter creates a parser in c and I wrote my program in Rust.
-Turns our compiling a Rust program that calls external C functions to WebAssembly creates something
+As stated earlier, tree-sitter creates a parser in C and I wrote my program in Rust.
+It turns out compiling a Rust program that calls external C functions to WebAssembly creates something
 called "**ABI-Incompatibilities**".
 I wish I could tell you how I solved that, but to be honest, I don't want to talk about this experience, since it was extremely painful.
 
@@ -1088,7 +1088,7 @@ None of them have built-in language clients, but all of them have extensions tha
 - CodeMirror: [@shopify/codemirror-language-client](https://github.com/shopify/theme-tools), [codemirror-languageserver](https://github.com/FurqanSoftware/codemirror-languageserver), [codemirror-languageservice](https://github.com/remcohaszing/codemirror-languageservice)
 - ACE Editor: [ace-linters](https://github.com/mkslanc/ace-linters)
 
-But to be fair, the ones for CodeMirror don't really look stable.
+But, to be fair, the ones for CodeMirror don't really look stable.
 
 I decided to go with Monaco for a couple reasons:
 
@@ -1109,16 +1109,16 @@ A good editor needs syntax highlighting. (The thing that makes the colors.)
 | ---------------------------------------- | ------------------------------------- |
 | ![](img/examples/highlighting_off.png)   | ![](img/examples/highlighting_on.png) |
 
-For Monaco-Editor there are 2 options:
+For Monaco-Editor, there are 2 options:
 
-- [Monarch](https://microsoft.github.io/monaco-editor/monarch.html): build specifically for Monaco, well suited for simple languages
+- [Monarch](https://microsoft.github.io/monaco-editor/monarch.html): built specifically for Monaco, well suited for simple languages
 - [TextMate Grammar](https://macromates.com/manual/en/language_grammars): feature of the [TextMate](https://macromates.com/) Editor, widely used standard in text editors 
 
 I went with TextMate Grammar.
 It's more complex but also more powerful and can be used with other editors.
 
 TextMate Grammars use the [Oniguruma](https://github.com/kkos/oniguruma) regex engine.
-Basically you use write patters that identify the tokens you want to highlight.
+Basically, you use writing patters that identify the tokens you want to highlight.
 
 Here is a simple example:
 
@@ -1150,15 +1150,15 @@ Here is a simple example:
 
 ### Plugging everything together
 
-Now this actually falls under "hoops I needed to jump through".
-But I think its quite esthetic.
+Now, this actually falls under "hoops I needed to jump through".
+But I think its quite aesthetic.
 
-Here are the Pieces we have so far:
+Here are the pieces we have so far:
 
 The DOM-Element, the Monoco-Editor-Worker, the TextMate-Worker, the Language-Server.
-With Worker i mean [Web Worker](https://de.wikipedia.org/wiki/Web_Worker). Web-Worker's allow JavaScript code to be executed separated from the main-thread.
+With Worker, I mean [Web Worker](https://de.wikipedia.org/wiki/Web_Worker). Web-Workers allow JavaScript code to be executed separately from the main-thread.
 
-All that's left is a Worker that forwards the Language-server WASM component.
+All that's left is a Worker that forwards the language-server WASM component.
 
 Here is the architecture:
 
@@ -1166,20 +1166,20 @@ Here is the architecture:
 
 # How does Qlue-ls compare against other software?
 
-Now we have a language server we can use in various Editors that has limited capabilities.
+Now we have a language-server we can use in various editors that have limited capabilities.
 How does this compare against other software that's out there?
 
 Here is what I found:
 
-| Tool                                                                                | Description                                                                                                               | Platform     | Mainainer                                                             | FOSS          |
+| Tool                                                                                | Description                                                                                                               | Platform     | Maintainer                                                             | FOSS          |
 | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------- | ------------- |
-| [sparql-langauge-server](https://github.com/stardog-union/stardog-language-servers) | SPARQL language server build in TypeScript                                                                                | web & native | [Stardog](https://www.stardog.com/)                                   | ✅  Apache-2.0 |
-| [RDF and SPARQL plugin](https://plugins.jetbrains.com/plugin/13838-rdf-and-sparql)  | A RDF and SPARQL Plugin for JetBrains IDEs                                                                                | native       | [Sharedvocabs Ltd](https://plugins.jetbrains.com/vendor/sharedvocabs) | ❌ 5€/month    |
+| [sparql-langauge-server](https://github.com/stardog-union/stardog-language-servers) | SPARQL language-server build in TypeScript                                                                                | web & native | [Stardog](https://www.stardog.com/)                                   | ✅  Apache-2.0 |
+| [RDF and SPARQL plugin](https://plugins.jetbrains.com/plugin/13838-rdf-and-sparql)  | A RDF and SPARQL plugin for JetBrains IDEs                                                                                | native       | [Sharedvocabs Ltd](https://plugins.jetbrains.com/vendor/sharedvocabs) | ❌ 5€/month    |
 | [Qlever-UI](https://github.com/ad-freiburg/qlever-ui)                               | A custom [codemirror](https://codemirror.net/) editor for the [Qlever](https://github.com/ad-freiburg/QLever) triplestore | web          | [ad-freiburg](https://ad.informatik.uni-freiburg.de/)                 | ✅  Apache-2.0 |
 | [YASGUI](https://github.com/TriplyDB/Yasgui)                                        | A lightweight, web-based SPARQL editor                                                                                    | web          | [Triply](https://triply.cc/en-US)                                     | ✅  MIT        |
-| [sparql-formatter](https://github.com/sparqling/sparql-formatter/tree/main)         | A SPARQL formatter build in JavaScript                                                                                    | web          | [SPARQLing](https://github.com/sparqling)                             | ?             |
+| [sparql-formatter](https://github.com/sparqling/sparql-formatter/tree/main)         | A SPARQL formatter built in JavaScript                                                                                    | web          | [SPARQLing](https://github.com/sparqling)                             | ?             |
 
-Let's look at how these tools compare in the aspects discussed in this article. (**personal opinion**)
+Let's look at these tools' comparison concerning the aspects discussed in this article. (**personal opinion**)
 
 | Feature                      | Qlue-ls | Stardog's SPARQL-ls | JetBrains Plugin | Qlever-UI              | YASGUI |
 | ---------------------------- | ------- | ------------------- | ---------------- | ---------------------- | ------ |
@@ -1196,12 +1196,12 @@ Let's look at how these tools compare in the aspects discussed in this article. 
 | ------ | --------------- |
 | ⭐⭐⭐    | nearly perfect  |
 | ⭐⭐     | could be better |
-| ⭐      | bearly working  |
+| ⭐      | barely working  |
 | ❌      | not implemented |
 
 {{< notice warning >}}
-These observations came from a brief inspection. It's possible they are better than I think they are!
-For example `YASGUI` also supports custom queries for completion. I did not have the time to test this properly!
+These observations came from a brief inspection. It's possible that they are better than I think they are!
+For example, `YASGUI` also supports custom queries for completion. I did not have the time to test this properly!
 I know that `Qlever-UI` also uses custom queries, so the distinction between the two may be unfair.
 {{< /notice >}}
 
@@ -1210,7 +1210,7 @@ I know that `Qlever-UI` also uses custom queries, so the distinction between the
 Since [sparql-formatter](https://github.com/sparqling/sparql-formatter/tree/main) is "just" a formatter, it's not really fair to compare it like the other tools.
 So let's do a direct comparison:
 
-I build a scraper that collected all 381 example queries from the [Wikidata Query Service](https://query.wikidata.org/).
+I built a scraper that collected all 381 example queries from the [Wikidata Query Service](https://query.wikidata.org/).
 Then I formatted the query with `Qlue-ls` and `sparql-formatter` and compared the two results using diff.
 Here are the differences:
 
@@ -1221,21 +1221,21 @@ Here are the differences:
 `sparql-formatter` expects correct queries, while `Qlue-ls` also works with incomplete queries.
 The quality of the result depends on how the parser handles the error.
 #### Concrete vs Abstract
-Then the two function slightly different.
+Then the two functions slightly differ.
 `Qlue-ls` uses a Concrete Syntax Tree (*CST*) and `sparql-formatter` uses an Abstract Syntax Tree (*AST*).
 
 While a *CST* represent the **complete** syntactic structure of the input (including parentheses, punctuation ...),
 an *AST* is an abstracted representation. It omits syntactic details and only keeps the essential elements.
 
-For example: an input like `(22 * (3 - 1) - 2)`
-The trees would be:
+For example: for an input like `(22 * (3 - 1) - 2)`
+the trees would be:
 
 | CST          | AST          |
 | ------------ | ------------ |
 | ![](img/cst.png) | ![](img/ast.png) |
 
-While you can use both for formatting, a *CST* guaranties that no token gets lost or is added.
-For example `sparql-formatter` adds a "." here:
+While you can use both for formatting, a *CST* guarantees that no token gets lost or is added.
+For example, `sparql-formatter` adds a "." here:
 
 | before                     | after                     |
 | -------------------------- | ------------------------- |
@@ -1276,7 +1276,7 @@ TypeError: Cannot read properties of undefined (reading 'varType')
 
 None I know of.
 
-### Opinion based differences
+### Opinion-based differences
 
 #### Where-Clause newline
 
@@ -1308,40 +1308,40 @@ sparql-formatter will add a linebreak if the line get to long.
 | ![](img/examples/format_error_3_ql.png) | ![](img/examples/format_diff_4_sf.png) |
 ### Summary
 
-`sparql-formatter` has line length based line breaks, but has a few runtime errors, adds tokens (non-breaking) and has inconsistent capitalization.
+`sparql-formatter` has line-length-based line breaks, but has a few runtime errors, adds tokens (non-breaking) and has inconsistent capitalization.
 
-`Qlue-ls` is error resilient and has no known runtime errors.
+`Qlue-ls` is error-resilient and has no known runtime errors.
 
-Overall the two create surprisingly similar outputs.
-I opened up an issue for the bugs I found so maybe in the future we will produce the same output (aside the `CST`/`AST` stuff).
+Overall, the two create surprisingly similar outputs.
+I opened up an issue for the bugs I found, so maybe, in the future, we will produce the same output (beside the `CST`/`AST` stuff).
 
 I also wanted to do a performance comparison.
 But creating arbitrarily long random SPARQL queries is a side quest I don't have the time for.
 
 # Future work
 
-`Qlue-ls` is right now (07-01-2025) still in the alpha phase.
+`Qlue-ls` is still in the alpha phase right now (07-01-2025).
 It was my first Rust project and first contact with linked-data.
 I'm proud of my work, but I'm sure there is a lot to improve!
 
-Aside the code quality, efficiency, and so on, here is the roadmap for this project.
+Aside the code quality, efficiency and so on - here is the roadmap for this project.
 
 ## Stronger Parser
 
-As stated earlier Tree-Sitter was nice to get going fast, but it's not the right solution for this problem.
-I need a Parser that **deterministically** gives me the exact "location" within the parse tree for any position in the editor.
-This could be achieved with a resilient "LL(1)" parser.
-There is a [article](https://matklad.github.io/2023/05/21/resilient-ll-parsing-tutorial.html) by [Alex Kladov](https://github.com/matklad), the creator of [rust-analyzer](https://github.com/rust-lang/rust-analyzer) (**the** rust language server) that goes into detail on this topic. This will be the topic of my Bachelor Thesis.
+As stated earlier, tree-sitter was nice to get going fast, but it's not the right solution for this problem.
+I need a parser that **deterministically** gives me the exact "location" within the parse-tree for any position in the editor.
+This could be achieved with a resilient "LL(1)"-parser.
+There is an [article](https://matklad.github.io/2023/05/21/resilient-ll-parsing-tutorial.html) by [Alex Kladov](https://github.com/matklad), the creator of [rust-analyzer](https://github.com/rust-lang/rust-analyzer) (**the** rust language server) that goes into detail regarding this topic. This will be the topic of my Bachelor Thesis.
 
 ## Query Sparql endpoint
 
 Currently, `Qlue-ls` it not firing any queries against a SPARQL-endpoint.
-This will open a new world of cool Features and make this Language server actually useful.
+This will open a new world of cool features and make this language server actually useful.
 
 There are three reasons I did not implement this yet:
-1. I think this will open a box of cool new Problems I don't have the Time to solve (and i don't want to do it for free)
-2. I currently ship to WASM **and** x86 targets, this makes this a bit more complex
-3. This opens the box of **async** and I heard that is another level of complexity in Rust
+1. I think this will open a box of cool new problems I don't have the time to solve (and I don't want to do it for free).
+2. I currently ship to WASM **and** x86 targets, which makes this a bit more complex.
+3. This opens the box of **async** and I heard that that is another level of complexity in Rust.
 
 ## Enhance existing features
 
@@ -1350,7 +1350,7 @@ It could also try to keep things more concise.
 
 Diagnostics and code-actions can be extended majorly.
 
-I did not implement this since its mostly repetitive extra work that does not bring any new insights.
+I did not implement this since it's mostly repetitive extra work that does not bring any new insights.
 Also, since all existing features depend on the parse-tree, I want to build a stronger parser first!
 # Acknowledgements
 
