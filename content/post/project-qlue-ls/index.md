@@ -23,7 +23,7 @@ And a live demo on [qlue-ls.com](https://qlue-ls.com/).
 # TL;DR
 
 I built a [sparql-language-server](https://github.com/IoannisNezis/Qlue-ls) from scratch in [Rust](https://www.rust-lang.org/), powered by [tree-sitter](https://tree-sitter.github.io/tree-sitter/).
-To showcase the language server I built a [web editor](https://sparql.nezis.de/) using [Monaco](https://microsoft.github.io/monaco-editor/).
+To showcase the language server I built a [web editor](https://qlue-ls.com/) using [Monaco](https://microsoft.github.io/monaco-editor/).
 To run the language server within the browser, I used [WebAssembly](https://webassembly.org/)
 
 # Content
@@ -50,7 +50,7 @@ To run the language server within the browser, I used [WebAssembly](https://weba
         - [Attaching](#attaching)
     - [VS-code](#vs-code)
     - [The Browser](#the-browser)
-        - [WebAssembly](#webassembly)
+        - [WebAssembly](#webassembly-wasm)
             - [Tree-Sitter in WebAssembly](#tree-sitter-in-webassembly)
         - [The Editor](#the-editor)
         - [TextMate](#textmate)
@@ -73,11 +73,11 @@ In the past, domain-specific development environments were very common.
 | Java      | Eclipse                 |
 | Microsoft | Visual Studio           |
 | C/C++     | Turbo C++               |
-| python    | PyCharm                 |
+| Python    | PyCharm                 |
 | R         | RStudio                 |
 | LaTeX     | TeXworks or Overleave   |
 
-These programs contain source-code editors, but also provide a suit of integrated tools that support the development process of their respective domains.
+These programs contain source-code editors, but also provide a suite of integrated tools that support the development process of their respective domains.
 That's why they are also referred to as IDE's (**I**ntegrated **D**evelopment **E**nvironment).
 While these development environments still dominate, modern development environments seem to go into a different direction.
 
@@ -129,7 +129,7 @@ There are also notifications[^4] and error responses, but we will omit them for 
 
 ## Document synchronization
 
-For the language server to do anything, it's required to "see" the workspace.
+For the language server to be able to do anything, it has to "*see*" the workspace.
 
 The LSP-specification defines 3 [Document Synchronization](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_synchronization) methods for this purpose:
  - [`textDocument/didOpen`](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didOpen)
@@ -142,15 +142,17 @@ Whenever a document is being opened, changed or closed, the client is sending th
 The [textDocument/didChange](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didChange) notification[^4] supports full and incremental synchronization.
 The server and client negotiate this during [initialization](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize).
 
-Incremental changes were more diffucult than expected.
+{{< notice info >}}
+Incremental synchronization was more diffucult to implement than expected.
 This is mainly because of the translation between different encodings.
 Editors give the position in the text-document (row, column) based on the utf-16 string representation.
-While the chars them self are encoded in utf-8.
-Of course, utf-8 is a variable length encoding, so different characters can have different byte-sizes.
+While the chars themself are encoded in UTF-8.
+Of course, UTF-8 is a variable length encoding, so different characters can have different byte-sizes.
 
 ![](img/encodings.png)
 
 This was a bit confusing to get right.
+{{< /notice >}}
 
 Through these messages, the language server has a "mirrored" version of the editor state.
 
@@ -161,7 +163,6 @@ Through these messages, the language server has a "mirrored" version of the edit
 	"params": {
 		"contentChanges": [
 			{
-				"rangeLength": 6, //deprecated
 				"text": "42",
 				"range": {
 					"end": {
@@ -190,7 +191,7 @@ Through these messages, the language server has a "mirrored" version of the edit
 
 When initialization and synchronization work, the real fun begins.  
 Now we can implement complex language features and provide actual smarts to the editor,
-As long as both the client and server support the capability.
+as long as both the client and server support the capability.
 
 Here is an **incomplete** list of language feature capabilities that made it into the specification
 
@@ -201,12 +202,12 @@ Here is an **incomplete** list of language feature capabilities that made it int
 | [Document highlight](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_documentHighlight)   | Highlight  all references to a symbol                         | Planned                 |
 | [Document link]()                                                                                                                                  | Handle links in a document                                    | Planned                 |
 | [Hover](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_hover)                            | Show information about the symbol hovered above                     | In progess              |
-| [Folding range](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_hover)                    | Indentify  foladable ranges in the document.                  | Not planned             |
+| [Folding range](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_hover)                    | Identify  foldable ranges in the document.                  | Not planned             |
 | [Document symbols](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_documentSymbol)        | Identify all symbols in a document                            | Not planned             |
 | [Inline value](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_inlineValue)               | Show values in the editor                                     | Not Planned             |
 | [Completion proposals](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_completion)        | Give completion proposals to the user                         | In progress             |
 | [Publish diagnostics](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_publishDiagnostics) | Send information like hints, warnings or errors to the editor | In progress             |
-| [Pull diagnostics](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_pullDiagnostics)       | Request Information like hints, warnings or Errors              | In progress             |
+| [Pull diagnostics](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_pullDiagnostics)       | Request information like hints, warnings or errors              | In progress             |
 | [Code action](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_codeAction)                 | Suggest changes                                               | In progress             |
 | [Formatting](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_formatting)                  | Format the whole document                                     | Done                    |
 | [Range formatting](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_rangeFormatting)       | Format the provided range in a document                       | Not planned             |
@@ -218,7 +219,7 @@ Let's talk about what I actually did.
 
 I chose to use [Rust](https://www.rust-lang.org/) for this project since it's fancy and I like shiny things.  
 Rust is the most admired programming language in the [Stack overflow developer survey 2024](https://survey.stackoverflow.co/2024/technology#2-programming-scripting-and-markup-languages),
-and i was curious to find out why. After this project, I can confirm that Rust is a brilliant language, but the learing curve is quiet steep.
+and I was curious to find out why. After this project, I can confirm that Rust is a brilliant language, but the learing curve is quite steep.
 
 The error handling, incredibly smart compiler, functional approach and rich ecosystem enable a smooth developing experience.
 That being said, the very strict compiler makes it hard to get stuff done quickly, however the resulting code is a lot more robust.
@@ -231,10 +232,10 @@ Here is the module structure of my crate[^5]:
 
 Okay first things first, we need to speak **JSON-RPC**.  
 After that we can implement some tool to analyze SPARQL queries.  
-When we got the analysis tool running, we can use it to provide some language features.
+When we get the analysis tool running, we can use it to provide some language features.
 
 Assume we set up the editor (client) to connect to our language server.  
-It will send an utf-8 byte-stream. We need to interpret the bytes and respond.
+It will send an UTF-8 byte-stream. We need to interpret the bytes and respond.
 
 The first message will look like something like this:
 
@@ -285,6 +286,13 @@ pub enum RequestId {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct InitializeRequest {
+    #[serde(flatten)]
+    pub base: RequestMessageBase,
+    pub params: InitializeParams,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct InitializeParams {
     pub process_id: ProcessId,
@@ -308,11 +316,14 @@ pub struct ClientInfo {
 ```
 
 For **se**rializing and **de**serializing I used [serde](https://serde.rs/).  
-Note that in Rust the notion of "inheritance" does not exist. It uses "traits" to define shared behavior.  
-I solved this issue with `#[serde(flatten)]`, which inlines the data from a struct into a parent struct.  
-Another issue was the naming convention.  
-In JSON-RPC the fields are written in *camelCase*, but Rust uses *snake_case*.  
-Serde also offers a solution for that: the `#[serde(rename_all = "camelCase")]` annotation.
+
+{{< notice note >}}
+  In Rust the notion of "inheritance" does not exist. It uses "traits" to define shared behavior.  
+  I solved this issue with `#[serde(flatten)]`, which inlines the data from a struct into a parent struct.  
+  Another issue was the naming convention.  
+  In JSON-RPC the fields are written in *camelCase*, but Rust uses *snake_case*.  
+  Serde also offers a solution for that: the `#[serde(rename_all = "camelCase")]` annotation.
+{{< /notice >}}
 
 This is basically how I read and write messages.
 I defined structs for the basic [lifecycle massages](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize):
@@ -321,7 +332,7 @@ I defined structs for the basic [lifecycle massages](https://microsoft.github.io
 | --------------------------------------------------------------------------------------------------------------------- | ------ | ------------ | ---------------------------------------------- |
 | [initialize](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize)  | client | request      | initialize connection, comunicate capabilities |
 | [initalized](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialized) | client | notification | signals reception of initialize response        |
-| [shutdown](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#shutdown)      | client | request      | shutdown server, dont exit                     |
+| [shutdown](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#shutdown)      | client | request      | shutdown server, don't exit                     |
 | [exit](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#exit)              | client | notification | exit the server process                        |
 
 Then I defined the basic structs for  [document synchronization](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_synchronization)
@@ -334,15 +345,13 @@ Then I defined the basic structs for  [document synchronization](https://microso
 
 With these messages defined, we can open and close a connection to a client and keep a synchronized state of the client's documents.
 
-To run this native I also needed to listen to stdin and parse the [Header](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#headerPart) from raw bytes, but i spare you that experience.
-
 ## Parser: the Engine under the hood
 
 Okay, now we want to build some tools to analyze the given text,
 and provide some smarts.
 
 First we need to "understand" the given text.
-Understanding arbitrary text is quiet the challenge, and we only recently made some advancements in that area.
+Understanding arbitrary text is quite the challenge, and we only recently made some advancements in that area.
 Luckily, all SPARQL queries follow a strict structure, called a grammar, which is defined in its [specification](https://www.w3.org/TR/sparql11-query/#rQuery).
 A grammar is basically a set of production rules that map nonterminal-symbols to other nonterminal-symbols or terminal-symbols. Every valid SPARQL query can be produced by applying those rules until only terminal symbols are left.
 For some grammars, we can build a program that reconstructs which production rules got used to produce a given string. Such a program is called **parser**. The result of a parser, the rules that got used, is called **syntax tree**.
@@ -415,29 +424,11 @@ tree-sitter playground
 ```
 
 The generated parser is written in C.
-For some C-reasons I won't get into right now, tree-sitter can generate rust bindings that allow us to call the c-functions from our rust-program (something I will regret later).
+For some C-reasons I won't get into right now, tree-sitter can generate rust bindings that allow us to call the C-functions from our rust-program (something I will regret later).
 It provides some functions to parse and navigate the resulting concrete-syntax-tree.
 
-{{< notice example >}}
-Here is an example of the format function:
-```rust
-   let mut parser = Parser::new();
-   match parser.set_language(&tree_sitter_sparql::LANGUAGE.into()) {
-    Ok(()) => {
-        let tree = parser
-            .parse(text.as_bytes(), None)
-            .expect("could not parse");
-        let formatted_text =
-            format_helper(&text, &mut tree.walk(), 0, "  ", "", &format_settings);
-        return formatted_text;
-    }
-    Err(_) => panic!("Could not setup parser"),
-}
-```
-{{< /notice >}}
-
 A cool feature of tree-sitter is [queries](https://tree-sitter.github.io/tree-sitter/using-parsers#pattern-matching-with-queries).
-A query is built out of one or more patterns. Each pattern is an [S-expression](https://en.wikipedia.org/wiki/S-expression).
+A tree-sitter-query is built out of one or more patterns. Each pattern is an [S-expression](https://en.wikipedia.org/wiki/S-expression).
 Tree-sitter can match these patterns against the syntax tree and return all matches.
 
 {{< notice example >}}
@@ -506,20 +497,19 @@ And here is the query:
 
 Very resilient.
 Tree-sitter recovers from basically anything and conserves information from very incomplete input.
-So the question is not how resilient it is, the problem is how good the quality of the information it conserves is.
+
+The problem is that the way it conserves information is not optimal for our use case.
 
 Tree-sitter produces GLR parsers.
-It explores, nondeterministically, many different possible LR (bottom-up) parses.
+It  nondeterministically explores many different possible LR (bottom-up) parses.
 Then it chooses the "the best one".
 In the words of [Alex Kladov](https://github.com/matklad), the creator of [rust-analyzer](https://github.com/rust-lang/rust-analyzer), this leads to the following behavior:
 >(...) Tree-sitter \[can\] recognize many complete valid small fragments of a tree, but it might have trouble
 > assembling them into incomplete larger fragments.
 
-This is very useful for the use-case of syntax highlighting. You want to highlight as many tokens as possible, the larger context in which they appear is often not so important.
+This is very useful for the use case of syntax highlighting. You want to highlight as many tokens as possible, the larger context in which they appear is often not so important.
 
 In our use-case, however, it's the other way around.
-
-Let's look at a few examples.
 
 ## Implemented Capabilities
 
@@ -584,14 +574,14 @@ of types and functions, but I am digressing.
 ---
 
 **Step 4**: Consolidate  
-Sort edits by starting point and merge consolidate consecutive edits.  
+Sort edits by starting point and consolidate consecutive edits.  
 Optionally also remove redundant edits.
 
 ![](img/FormattingConsolidation.svg)
 
 ---
 
-The SPARQL grammar is quite large (138 rules), so implementing this in datail was a bit tedious.  
+The SPARQL grammar is quite large (138 rules), so implementing this in detail was a bit tedious.  
 
 #### Results
 
@@ -665,10 +655,10 @@ prefix n12345: <...>
 select * 
 where {
   ?var n1:p "ding" ;
-       n12:p "foo" ;
-       n123:p "bar" ;
-       n1234:p "baz" ;
-       n12345:p "out of filler" ;
+    n12:p "foo" ;
+    n123:p "bar" ;
+    n1234:p "baz" ;
+    n12345:p "out of filler" ;
 }
 ```
 
@@ -760,7 +750,7 @@ Or contained in a merged edit:
 In the second case, simply split the edit.  
 This is safe, since it was merged in the first place.
 
-Then, we edit the following textedit and remove the leading whitespace, except at linebreaks.  
+Then, we edit the following textedit and remove the leading whitespace, except linebreaks.  
 Then there are 3 cases:
 
 ![](img/FormattingEditTheEdit.svg)
@@ -815,9 +805,9 @@ This is useful to give inexperienced users a documentation about how some constr
 
 Display the structure of the query;
 ![](img/examples/hover-graph.png)
-In a serious implementation, since these graph-patterns can get quiet complex, I would use [mermaid.js](https://mermaid.js.org/) to generate diagrams. This would require a custom plugin in the editor to render these diagrams.
+In a serious implementation, since these graph-patterns can get quite complex, I would use [mermaid.js](https://mermaid.js.org/) to generate diagrams. This would require a custom plugin in the editor to render these diagrams.
 
-If the language server can query the knowledge graph autonomously (not implemented yet),
+If the language server can query the knowledge graph (not implemented yet),
 it could display additional information retrieved from the knowledge graph,
 for example the label of a resource:
 ![](img/examples/hover-curie.png)
@@ -914,7 +904,7 @@ A simple example for these are suggestions of already defined variables:
   
 ![](img/examples/cmp_variable.png)
 This uses the parse tree to find all variables.
-Currently, this is done very stupidly, as this also suggests variables when they are out of scope:
+Currently, this is done very naively, as this also suggests variables when they are out of scope:
 
 ![](img/examples/cmp_variable_dumb.png)
 
@@ -926,7 +916,7 @@ This is not implemented yet!
 {{< /notice >}}
 
 Here is an example from the Qlever-OSM-endpoint: <htps://qlever.cs.uni-freiburg.de/api/osm-planet/>.
-[**O**pen**S**treet**M**ap](https://www.openstreetmap.org/) (OSM) is a project that collects geodata that is publicly accessible. Basically Google-maps, just without Google.
+[**O**pen**S**treet**M**ap](https://www.openstreetmap.org/) (OSM) is a publicly accessible project that collects geodata. Basically Google Maps, just without Google.
 This data can be represented in an RDF knowledge graph and queried using SPARQL.
 For example, this query returns every bicycle parking spot in [Freiburg](https://www.openstreetmap.org/relation/62768):
 ```sparql
@@ -1015,16 +1005,17 @@ Let's connect this thing to a web-based editor (an editor that runs in a browser
 "But wait!" you might say, "Browser is JavaScript land!".
 And you would have been right, until 2017.
 
-### WebAssembly
+### WebAssembly (WASM)
 
 [WebAssembly](https://webassembly.org/) is an open standard defined by the [World Wide Web Consortium](https://www.w3.org/).
-It defines a bytecode to run programs withing the browser.
+It defines a bytecode to run programs within the browser.
 All big browsers support it.
 
-If your program can be converted (compiled) to this WebAssembly(WASM) bytecode, it can execute in the browser.
+If your program can be converted (compiled) to this WebAssembly bytecode, it can execute in the browser.
 ![](img/WebAssembly-data-flow-architecture.png)[^8]
-So, now, we need to build a compiler to convert Rust to WASM bytecode...
-Unfortunately, [some strangers on the internet](https://github.com/rustwasm/team) already did that.
+
+So, now, we need to write js-glue-code to call the Rust functions.  
+Fortunately, [some strangers on the internet](https://github.com/rustwasm/team) already did that.
 The project is called [wasm-pack](https://rustwasm.github.io/wasm-pack/).
 
 It's very organic and simple, you just annotate the method or struct you want to "export" to WASM.
@@ -1037,7 +1028,6 @@ pub fn init_language_server(writer: web_sys::WritableStreamDefaultWriter) -> Ser
 }
 ```
 
-Then wasm-pack builds WASM-bytecode and JavaScript "glue code".
 This glue code does a lot of stuff to bridge the gap between JavaScript and WASM.
 
 ```javascript
@@ -1049,8 +1039,8 @@ export function init_language_server(writer) {
 ...
 ```
 
-To actually run this in the browser, I needed to jump through a couple more hoops but I spare you the details.
-I packaged the result and uploaded it to [npm](https://www.npmjs.com/package/qlue-ls): a JavaScript repository.
+To actually run this in the browser, I needed to jump through a couple more hoops but I spare you the details.  
+I packaged the result and uploaded it to [npm](https://www.npmjs.com/package/qlue-ls) - a JavaScript repository.
 Now we can install the package using npm and access it from a JavaScript file:
 
 ```bash
@@ -1118,7 +1108,7 @@ I went with TextMate Grammar.
 It's more complex but also more powerful and can be used with other editors.
 
 TextMate Grammars use the [Oniguruma](https://github.com/kkos/oniguruma) regex engine.
-Basically, you use writing patters that identify the tokens you want to highlight.
+Basically, you write patters that identify the tokens you want to highlight.
 
 Here is a simple example:
 
@@ -1202,7 +1192,7 @@ Let's look at these tools' comparison concerning the aspects discussed in this a
 {{< notice warning >}}
 These observations came from a brief inspection. It's possible that they are better than I think they are!
 For example, `YASGUI` also supports custom queries for completion. I did not have the time to test this properly!
-I know that `Qlever-UI` also uses custom queries, so the distinction between the two may be unfair.
+I know that `Qlever-UI` also uses custom queries, so the comparison between the two may be unfair.
 {{< /notice >}}
 
 ## Qlue-ls vs sparql-formatter
@@ -1221,7 +1211,6 @@ Here are the differences:
 `sparql-formatter` expects correct queries, while `Qlue-ls` also works with incomplete queries.
 The quality of the result depends on how the parser handles the error.
 #### Concrete vs Abstract
-Then the two functions slightly differ.
 `Qlue-ls` uses a Concrete Syntax Tree (*CST*) and `sparql-formatter` uses an Abstract Syntax Tree (*AST*).
 
 While a *CST* represent the **complete** syntactic structure of the input (including parentheses, punctuation ...),
@@ -1333,15 +1322,14 @@ I need a parser that **deterministically** gives me the exact "location" within 
 This could be achieved with a resilient "LL(1)"-parser.
 There is an [article](https://matklad.github.io/2023/05/21/resilient-ll-parsing-tutorial.html) by [Alex Kladov](https://github.com/matklad), the creator of [rust-analyzer](https://github.com/rust-lang/rust-analyzer) (**the** rust language server) that goes into detail regarding this topic. This will be the topic of my Bachelor Thesis.
 
-## Query Sparql endpoint
+## Query SPARQL endpoint
 
 Currently, `Qlue-ls` it not firing any queries against a SPARQL-endpoint.
-This will open a new world of cool features and make this language server actually useful.
+This will open a new world of cool features and make this language server much more useful.
 
-There are three reasons I did not implement this yet:
-1. I think this will open a box of cool new problems I don't have the time to solve (and I don't want to do it for free).
-2. I currently ship to WASM **and** x86 targets, which makes this a bit more complex.
-3. This opens the box of **async** and I heard that that is another level of complexity in Rust.
+There are two reasons I did not implement this yet:
+1. I currently ship to WASM **and** x86 targets, which makes this a bit more complex.
+2. This opens the box of **async** and I heard that that is another level of complexity in Rust.
 
 ## Enhance existing features
 
