@@ -36,7 +36,7 @@ To run the language server within the browser, I used [WebAssembly](https://weba
     - [Capabilities](#capabilities)
 - [Implementation](#implementation)
     - [speakingJSON-RPC](#speaking-json-rpc)
-    - [Parser: the Engine under the Hood](#parser:-the-engine-under-the-hood)
+    - [Parser: the Engine under the Hood](#parser-the-engine-under-the-hood)
         - [Tree-sitter](#tree-sitter)
     - [Implemented Capabilities](#implemented-capabilities)
         - [Formatting](#formatting)
@@ -360,31 +360,25 @@ Here is an example:
 
 **Query**:
 ```sparql
-SELECT * WHERE {
-  ?s ?p ?p
-}
+SELECT * WHERE {}
 ```
 
 **Syntax tree:**
+
+![](img/SyntaxTree.svg)
+
+Here is the same syntax tree in a textual representation:
 ```lisp
-(unit ; [0, 0] - [3, 0]
-  (SelectQuery ; [0, 0] - [2, 1]
-    (SelectClause ; [0, 0] - [0, 8]
+(unit ; [0, 0] - [1, 0]
+  (select_query ; [0, 0] - [0, 17]
+    (select_clause ; [0, 0] - [0, 8]
       "SELECT" ; [0, 0] - [0, 6]
       "*") ; [0, 7] - [0, 8]
-    (WhereClause ; [0, 9] - [2, 1]
+    (where_clause ; [0, 9] - [0, 17]
       "WHERE" ; [0, 9] - [0, 14]
-      (GroupGraphPattern ; [0, 15] - [2, 1]
+      (group_graph_pattern ; [0, 15] - [0, 17]
         "{" ; [0, 15] - [0, 16]
-        (GroupGraphPatternSub ; [1, 2] - [1, 10]
-          (TriplesBlock ; [1, 2] - [1, 10]
-            (TriplesSameSubjectPath ; [1, 2] - [1, 10]
-              (VAR) ; [1, 2] - [1, 4]
-              (PropertyListPathNotEmpty ; [1, 5] - [1, 10]
-                (VAR) ; [1, 5] - [1, 7]
-                (ObjectList ; [1, 8] - [1, 10]
-                  (VAR)))))) ; [1, 8] - [1, 10]
-        "}")))) ; [2, 0] - [2, 1]
+        "}")))) ; [0, 16] - [0, 17]
 ```
 
 ### Tree-sitter
@@ -762,6 +756,15 @@ If the first non-whitespace character is a linebreak, don't do anything.
 ---
 
 Figuring out this all and implementing it properly took me about a week.
+
+{{< notice warning >}}
+  I think there is a simpler approach to handle comments in formatting.  
+  Instead of *fiddling* in comment edits into the edit sequence,  
+  it should be possible to handle them in the "**Step 2** - separation".  
+  Simply by checking if there are comments between two nodes and changing the separator edit right then and there.  
+  I will implement this approach in the future™.
+
+{{< /notice >}}
 
 #### Ideas for the future
 
