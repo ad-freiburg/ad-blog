@@ -6,7 +6,7 @@ authorAvatar: "img/ada.jpg"
 tags: ["wikidata", "updates", "recentchanges", "sparql", "triples", "rdf", "dumps", "python"]
 categories: ["project"]
 image: "img/writing.jpg"
-draft: true
+draft: false
 ---
 
 Retrieving the latest changes that has been applied to wikidata, in the SPARQL 1.1 Update Language. 
