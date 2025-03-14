@@ -60,7 +60,7 @@ ORDER BY DESC(?imdb_votes)
 <figure>
     <center>
     <div style="height: 200px; width: auto; overflow-x: scroll;">
-    <img id='query-result' src="/img/query_result.png" style="width:800px;margin: 0"/>
+    <img id='query-result' src="img/query_result.png" style="width:800px;margin: 0"/>
     </div>
     <figcaption>Query result</figcaption>
     </center>
@@ -75,7 +75,7 @@ When we take a look at the analysis tree, we can see that the Service query has 
 
 <figure>
     <center>
-    <img id='rti' src="/img/analysis.png" style="margin: 0"/>
+    <img id='rti' src="img/analysis.png" style="margin: 0"/>
     <figcaption>Runtime information tree (original)</figcaption>
     </center>
     <br>
@@ -104,7 +104,7 @@ This significantly improves the efficiency and might even help queries complete 
 
 <figure>
     <center>
-    <img id='rti2' src="/img/analysis2.png" style="margin: 0"/>
+    <img id='rti2' src="img/analysis2.png" style="margin: 0"/>
     <figcaption>Runtime information tree (improved)</figcaption>
     </center>
     <br>
@@ -147,7 +147,7 @@ While other SPARQL query engines might collect information on the query executio
 The runtime information of the Service query in the previous example can now be visualized in QLever UI like this:
 <figure>
     <center>
-    <img id='service-rti' src="/img/ws_rti.png" style="margin: 0; width: 800px;"/>
+    <img id='service-rti' src="img/ws_rti.png" style="margin: 0; width: 800px;"/>
     <figcaption>RuntimeInformation of the Service query</figcaption>
     </center>
     <br>
