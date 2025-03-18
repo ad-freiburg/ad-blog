@@ -46,8 +46,8 @@ To run the language server within the browser, I used [WebAssembly](https://weba
         - [Completion Suggestions](#completion-suggestions)
 - [Using the Language server](#using-the-language-server)
     - [Neovim](#neovim)
-        - [Installing the Programm](#installing-the-programm)
-        - [Attaching](#attaching)
+        - [Installing Qlue-ls](#installing-qlue-ls)
+        - [Setup connection to qlue-ls](##setup-connection-to-qlue-ls)
     - [VS-code](#vs-code)
     - [The Browser](#the-browser)
         - [WebAssembly](#webassembly-wasm)
@@ -533,8 +533,8 @@ After a few iterations, I came up with the following algorithm.
 
 ---
 
-**Input**: string (sequence of characters)  
-**Output**: sequence of textedits
+**Input**: string (sequence of characters) representing a *SPARQL* query  
+**Output**: sequence of textedits, when applied, formatting the input
 
 ---
 
@@ -955,7 +955,7 @@ I looked at three editors: neovim, vs-code, and a custom web-based-editor.
 To get a language server running with neovim is very easy because it has a built-in language client and
 neovim is built to be hacked.
 
-### Installing the Program
+### Installing Qlue-ls
 
 First, `Qlue-ls` needs to be available as an executable binary on the system, neovim runs on.
 You could just build the binary from source.
@@ -965,13 +965,13 @@ The Rust repository [crate.io](https://crates.io/crates/qlue-ls). To install fro
 ```shell
 cargo install qlue-ls
 ```
-And the python repository [Pypi](https://pypi.org/project/qlue-ls/). To install from there, run:
+And the python repository [PyPi](https://pypi.org/project/qlue-ls/). To install from there, run:
 ```shell
 pipx install qlue-ls
 ```
 The python package is built with the help of [maturin](https://github.com/PyO3/maturin).
 
-### Attaching
+### Setup connection to qlue-ls
 
 All you need is a `init.lua` file in your config directory with the following snippet:
 
@@ -1042,7 +1042,14 @@ export function init_language_server(writer) {
 ...
 ```
 
-To actually run this in the browser, I needed to jump through a couple more hoops but I spare you the details.  
+To actually run this in the browser, I needed to jump through a couple more hoops:
+
+- load the wasm Module
+    - vite requires two plugins: (`vite-plugin-wasm` and `vite-plugin-top-level-await`)
+- setup the language client in monaco
+- create a web-wroker as proxy for the WASM component
+- setup up the in/out streams
+
 I packaged the result and uploaded it to [npm](https://www.npmjs.com/package/qlue-ls) - a JavaScript repository.
 Now we can install the package using npm and access it from a JavaScript file:
 
@@ -1174,23 +1181,23 @@ Here is what I found:
 
 Let's look at these tools' comparison concerning the aspects discussed in this article. (**personal opinion**)
 
-| Feature                      | Qlue-ls | Stardog's SPARQL-ls | JetBrains Plugin | Qlever-UI              | YASGUI |
-| ---------------------------- | ------- | ------------------- | ---------------- | ---------------------- | ------ |
-| Formatting                   | ⭐⭐⭐     | ❌                   | ⭐⭐⭐              | ⭐⭐⭐<br>(using Qlue-ls) | ⭐⭐     |
-| Hover (Offline)              | ⭐       | ⭐                   | ⭐⭐               | ❌                      | ❌      |
-| Hover (Online)               | ❌       | ❌                   | ❌                | ⭐⭐                     | ❌      |
-| Diagnostics                  | ⭐⭐      | ⭐                   | ⭐⭐               | ❌                      | ⭐      |
-| Code-actions                 | ⭐⭐      | ❌                   | ⭐⭐               | ❌                      | ❌      |
-| Completion - offline-static  | ⭐⭐      | ⭐                   | ⭐⭐⭐              | ⭐⭐                     | ❌      |
-| Completion - offline-dynamic | ⭐       | ⭐                   | ⭐                | ⭐⭐                     | ⭐      |
-| Completion - online-dynamic  | ❌       | ❌                   | ❌                | ⭐⭐                     | ⭐      |
+| Feature                      | Qlue-ls | Stardog's SPARQL-ls | JetBrains Plugin | Qlever-UI                 | YASGUI |
+| ---------------------------- | ------- | ------------------- | ---------------- | ------------------------- | ------ |
+| Formatting                   | ⭐⭐⭐  | ❌                  | ⭐⭐⭐           | ⭐⭐⭐<br>(using Qlue-ls) | ⭐⭐   |
+| Hover (Offline)              | ⭐      | ⭐                  | ⭐⭐             | ❌                        | ❌     |
+| Hover (Online)               | ❌      | ❌                  | ❌               | ⭐⭐                      | ❌     |
+| Diagnostics                  | ⭐⭐    | ⭐                  | ⭐⭐             | ❌                        | ⭐     |
+| Code-actions                 | ⭐⭐    | ❌                  | ⭐⭐             | ❌                        | ❌     |
+| Completion - offline-static  | ⭐⭐    | ⭐                  | ⭐⭐⭐           | ⭐⭐                      | ❌     |
+| Completion - offline-dynamic | ⭐      | ⭐                  | ⭐               | ⭐⭐                      | ⭐     |
+| Completion - online-dynamic  | ❌      | ❌                  | ❌               | ⭐⭐                      | ⭐     |
 
 | Symbol | Meaning         |
 | ------ | --------------- |
-| ⭐⭐⭐    | nearly perfect  |
-| ⭐⭐     | could be better |
-| ⭐      | barely working  |
-| ❌      | not implemented |
+| ⭐⭐⭐ | nearly perfect  |
+| ⭐⭐   | could be better |
+| ⭐     | simplistic      |
+| ❌     | not implemented |
 
 {{< notice warning >}}
 These observations came from a brief inspection. It's possible that they are better than I think they are!
