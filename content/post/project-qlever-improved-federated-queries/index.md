@@ -1,6 +1,6 @@
 ---
 title: "Project QLever: Improved Federated Queries"
-date: 2025-03-12T11:02:42+01:00
+date: 2025-03-19T11:02:42+01:00
 author: "Moritz Dom"
 authorAvatar: "img/ada.jpg"
 tags: ["QLever"]
@@ -71,7 +71,7 @@ ORDER BY DESC(?imdb_votes)
 
 ## Efficient Computation
 
-When we take a look at the analysis tree, we can see that the Service query has been joined with the rest of the query on the `?imdb_id` variable.
+When we take a look at the runtime information tree, we can see that the Service query has been joined with the rest of the query on the `?imdb_id` variable.
 
 <figure>
     <center>
@@ -161,5 +161,4 @@ This also works for nested Service queries, as long as each Service endpoint is 
 
 Federated queries are a powerful feature of the SPARQL query language, allowing the user to extend queries beyond a single dataset.
 With the presented improvements targeting both efficiency and correctness, usability of the QLever Service operation has improved significantly.
-Future work might include additional communication with QLever Service endpoints, such as cancelling the query execution if the user
-aborts the query early.
+Future work might include additional communication with QLever Service endpoints using the presented WebSocket client, such as cancelling the query execution if the user aborts the query early.
