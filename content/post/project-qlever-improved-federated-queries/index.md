@@ -9,9 +9,9 @@ image: "img/title.png"
 draft: true
 ---
 
-[QLever](https://qlever.cs.uni-freiburg.de/wikidata) is a SPARQL query engine used to search [RDF](https://www.w3.org/RDF/)(Resource Description Framework) databases.
+[QLever](https://qlever.cs.uni-freiburg.de/wikidata) is a SPARQL query engine used to search [RDF](https://www.w3.org/RDF/) (Resource Description Framework) databases.
 Within a SPARQL query the `SERVICE` keyword can be used to define a federated query computed by a different endpoint, allowing information from datasets hosted on different endpoints to be embedded into the same query.
-This blog-post will highlight some improvements to the implementation of the QLever Service operation.
+This blog post will highlight some improvements to the implementation of the QLever Service operation.
 
 <!--more-->
 
@@ -20,7 +20,7 @@ This blog-post will highlight some improvements to the implementation of the QLe
 - [What is a Federated Query?](#what-is-a-federated-query)
 - [Efficient Computation](#efficient-computation)
 - [Result format](#result-format)
-- [RuntimeInformation for Federated Queries](#runtimeinformation-for-federated-queries)
+- [Runtime Information for Federated Queries](#runtime-information-for-federated-queries)
 - [Conclusion](#conclusion)
 
 ## What is a Federated Query?
@@ -30,7 +30,7 @@ It allows the user to define a Federated Query that will be sent to and processe
 
 Let's take a look at an example:
 
-We are interested in a list of all movies that were directed by the [Coen brothers](https://en.wikipedia.org/wiki/Coen_brothers). As it turns out, we can find movies and their `imdb_id`, as well as the Coen brothers, Ethan and Joel, in the Wikidata database. This results in the titles of the movies directed by the Coen brothers, but we are also interested in their rating and votes on [IMDb](https://imdb.com)(Internet Movie Database). Unfortunately they are not available in the Wikidata database.
+We are interested in a list of all movies that were directed by the [Coen brothers](https://en.wikipedia.org/wiki/Coen_brothers). As it turns out, we can find movies and their `imdb_id`, as well as the Coen brothers, Ethan and Joel, in the Wikidata database. This results in the titles of the movies directed by the Coen brothers, but we are also interested in their rating and votes on [IMDb](https://imdb.com) (Internet Movie Database). Unfortunately they are not available in the Wikidata database.
 
 Using a Service query to a SPARQL endpoint that provides the IMDb dataset, we can extend our previous result with these two columns.
 
@@ -64,7 +64,6 @@ ORDER BY DESC(?imdb_votes)
     </div>
     <figcaption>Query result</figcaption>
     </center>
-    <br>
 </figure>
 
 ---
@@ -115,11 +114,10 @@ This significantly improves the efficiency and might even help queries complete 
 ## Result Format
 
 For receiving the query result of a SPARQL query, there are a couple of standardized result formats commonly used like e.g. CSV, TSV or JSON.
-Previously, QLever requested the result of Service queries from Service endpoints to be in TSV(Tab-separated-values)-format.
+Previously, QLever requested the result of Service queries from Service endpoints to be in TSV(Tab-separated values) format.
 This resulted in some Service queries to not work as expected, e.g. when the Service result contained literals with escaped characters, datatypes or blank nodes.
 
 Instead, QLever now uses the [SPARQL 1.1 Query Results JSON](https://www.w3.org/TR/sparql11-results-json/) format, representing each binding as a JSON-object containing a `type`, `value`, and optionally, `xml:lang` and `datatype` fields. For Example:
-
 
 | TSV | JSON |
 | --- | --- |
@@ -132,9 +130,9 @@ It also allows QLever to receive additional information besides the query result
 
 ---
 
-## RuntimeInformation for Federated Queries
+## Runtime Information for Federated Queries
 
-During the computation of a query, the QLever engine collects so-called `RuntimeInformation` about the query execution.
+During the computation of a query, the QLever engine collects so-called "runtime information" about the query execution.
 This information includes the computation time, and the size of the result for each operation in the query.
 A QLever endpoint provides this information to the client using a WebSocket endpoint.
 A client such as [QLever UI](https://github.com/ad-freiburg/qlever-ui) can fetch and display this information, allowing the user to analyze the queries performance.
@@ -148,7 +146,7 @@ The runtime information of the Service query in the previous example can now be 
 <figure>
     <center>
     <img id='service-rti' src="img/ws_rti.png" style="margin: 0; width: 800px;"/>
-    <figcaption>RuntimeInformation of the Service query</figcaption>
+    <figcaption>Runtime information of the Service query</figcaption>
     </center>
     <br>
 </figure>
@@ -161,4 +159,4 @@ This also works for nested Service queries, as long as each Service endpoint is 
 
 Federated queries are a powerful feature of the SPARQL query language, allowing the user to extend queries beyond a single dataset.
 With the presented improvements targeting both efficiency and correctness, usability of the QLever Service operation has improved significantly.
-Future work might include additional communication with QLever Service endpoints using the presented WebSocket client, such as cancelling the query execution if the user aborts the query early.
+Future work might include additional communication with QLever Service endpoints using the presented WebSocket client, such as canceling the query execution if the user aborts the query early.
