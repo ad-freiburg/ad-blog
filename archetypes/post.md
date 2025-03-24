@@ -6,6 +6,5 @@ authorAvatar: "img/ada.jpg"
 tags: []
 categories: []
 image: "img/writing.jpg"
-draft: true
 ---
 
