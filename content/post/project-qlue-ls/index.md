@@ -143,7 +143,7 @@ The [textDocument/didChange](https://microsoft.github.io/language-server-protoco
 The server and client negotiate this during [initialization](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize).
 
 {{< notice info >}}
-Incremental synchronization was more diffucult to implement than expected.
+Incremental synchronization was more difficult to implement than expected.
 This is mainly because of the translation between different encodings.
 Editors give the position in the text-document (row, column) based on the utf-16 string representation.
 While the chars themself are encoded in UTF-8.
@@ -904,10 +904,9 @@ Here, the language server only uses "locally available" information:
 That is: text in the editor and the data bundled with the language server (for example known prefixes).
 
 A simple example for these are suggestions of already defined variables:
-  
 ![](img/examples/cmp_variable.png)
 This uses the parse tree to find all variables.
-Currently, this is done very naively, as this also suggests variables when they are out of scope:
+Currently, this is done very naively, as this also suggests variables that are out of scope:
 
 ![](img/examples/cmp_variable_dumb.png)
 
@@ -1323,7 +1322,7 @@ But creating arbitrarily long random SPARQL queries is a side quest I don't have
 It was my first Rust project and first contact with linked-data.
 I'm proud of my work, but I'm sure there is a lot to improve!
 
-Aside the code quality, efficiency and so on - here is the roadmap for this project.
+Besides the code quality, efficiency and so on - here is the roadmap for this project.
 
 ## Stronger Parser
 
