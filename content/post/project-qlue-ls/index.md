@@ -964,7 +964,7 @@ The Rust repository [crate.io](https://crates.io/crates/qlue-ls). To install fro
 ```shell
 cargo install qlue-ls
 ```
-And the python repository [PyPi](https://pypi.org/project/qlue-ls/). To install from there, run:
+And the python repository [PyPI](https://pypi.org/project/qlue-ls/). To install from there, run:
 ```shell
 pipx install qlue-ls
 ```
