@@ -29,7 +29,7 @@ For more information go to the [hugo website](https://gohugo.io/installation/)
 To create a new post first run the following `hugo` command that creates
 a skeleton post to be edited with your favorite text editor.
 
-    hugo new post/<your-title>/index.md
+    hugo new post/<my-title>/index.md
 
 It then tells you which file it created. This file can now be filled with all
 your awesome content ✍️
@@ -64,11 +64,11 @@ the following command
 
     hugo serve
 
-If `hugo` runs on a different machine than the browser you want to use, run:
+If `hugo` runs on a different machine than the browser you want to use,
+run the follwing command, where `<hostname>` is the hostname of the machine
+where `hugo` is running:
 
     hugo serve --bind "::" --baseURL <hostname>
-
-Where `<hostname>` is the hostname of the machine where `hugo` is running.
 
 The above preview only generates the site in-memory, to generate the static
 HTML run the following command
@@ -86,4 +86,4 @@ in a post using double `$` for example `$$x_{1,2} = \frac{-b \pm \sqrt{b^s
 
 ### Adding Static Content
 
-Static content, like images, can be added to the `content/<your-title>/img/` folder.
+Static content, like images, can be added to the `content/<my-title>/img/` folder.
