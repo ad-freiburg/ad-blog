@@ -6,7 +6,7 @@ authorAvatar: "img/ada.jpg"
 tags: ["QLever", "SPARQL", "RDF", "SPARQL+Text", "Text Search", "Combined Search"]
 categories: ["project"]
 image: "img/Bibliothek.jpg"
-draft: true
+draft: false
 ---
 
 The [QLever](https://qlever.cs.uni-freiburg.de/) engine already provided a connection between [SPARQL](https://www.w3.org/TR/sparql11-query/) and text search. This text search was missing one of the most important parts which is a good scoring metric. With the possibility to use [TF-IDF](#inverse-document-frequency-idf) and [BM25](#best-match-25-bm25) scores for text index building and text search the usability of this side of [QLever](https://qlever.cs.uni-freiburg.de/) is increased. The addition of a Magic Service Query for text search provides easier access to the feature while adding even more possibilities to formulate queries.
@@ -39,11 +39,11 @@ In this blog post it is discussed which search methods [QLever](https://qlever.c
 
 # Search Methods
 
-Searching is the key concept of database engines. For a given query or request from a user the engine should return a gratifying result. To achieve this there are different types of searches for different use cases. A pure database search with e.g. [SQL](https://de.wikipedia.org/wiki/SQL) or [SPARQL](https://www.w3.org/TR/sparql11-query/) provides a 100% semantic accuracy meaning the queried properties are always fulfilled. At the same time the search is restricted to these exact properties which may be unwanted. Text searches however can only approximate the semantic accuracy or importance of a result. The positive side of this is the obvious possibility to search text but also getting results with possibly more information than just a single database entry.
+Searching is the key concept of database engines. For a given query or request from a user the engine should return a gratifying result. To achieve this there are different types of searches for different use cases. A pure database search with e.g. [SQL](https://de.wikipedia.org/wiki/SQL) or [SPARQL](https://www.w3.org/TR/sparql11-query/) provides a 100% semantic accuracy ensuring that the queried properties are always fulfilled. At the same time the search is restricted to these exact properties which may be unwanted. Text searches however can only approximate the semantic accuracy or importance of a result. The positive side of this is the obvious possibility to search text but also getting results with possibly more information than just a single database entry.
 
 ## SPARQL
 
-[SPARQL](https://www.w3.org/TR/sparql11-query/) as a query language works on a seemingly easy knowledge base. This knowledge base is called [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) (Resource Description Framework). The key feature of [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) is formulating all data as triples. These triples consist of a subject, predicate and object similar to basic sentences in latin languages (see <a href="#fig1">Figure 1</a>) . It has a similar query structure to [SQL](https://de.wikipedia.org/wiki/SQL) but with a more straightforward approach since the request happens on a complete dataset and not multiple tables (see <a href="#fig2">Figure 2</a>).
+[SPARQL](https://www.w3.org/TR/sparql11-query/) as a query language works on a seemingly simple knowledge base. This knowledge base is called [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) (Resource Description Framework). The key feature of [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) is formulating all data as triples. These triples consist of a subject, predicate and object similar to basic sentences in latin languages (see <a href="#fig1">Figure 1</a>) . It has a similar query structure to [SQL](https://de.wikipedia.org/wiki/SQL) but with a more straightforward approach since the request happens on a complete dataset and not multiple tables (see <a href="#fig2">Figure 2</a>).
 
 <figure id='fig1' style="text-align: center;">
 
@@ -171,8 +171,8 @@ $$
 
 <figure id='fig3' style="text-align: center;">
 
-![Visualisation of k parameter](img/BM25_K_Visualisation.png)
-<figcaption>Figure 3: Visualisation of the <a href="#k-parameter">k-parameter</a> in <a href="#best-match-25-bm25">BM25</a>.</figcaption>
+![Visualization of k parameter](img/BM25_K_Visualization.png)
+<figcaption>Figure 3: Visualization of the <a href="#k-parameter">k-parameter</a> in <a href="#best-match-25-bm25">BM25</a>.</figcaption>
 </figure>
 
 &NewLine;
@@ -208,8 +208,8 @@ $$
 
 <figure id='fig4' style="text-align: center;">
 
-![Visualisation of k parameter](img/BM25_B_Visualisation.png)
-<figcaption>Figure 4: Visualisation of the <a href="#b-parameter">b-parameter</a> in <a href="#best-match-25-bm25">BM25</a>.</figcaption>
+![Visualization of k parameter](img/BM25_B_Visualization.png)
+<figcaption>Figure 4: Visualization of the <a href="#b-parameter">b-parameter</a> in <a href="#best-match-25-bm25">BM25</a>.</figcaption>
 </figure>
 
 &NewLine;
@@ -247,8 +247,8 @@ $$
 
 <figure id='fig5' style="text-align: center;">
 
-![Visualisation of k parameter](img/BM25_B_Visualisation_Color_Plot.png)
-<figcaption>Figure 5: Visualisation of the <a href="#b-parameter">b-parameter</a> in <a href="#best-match-25-bm25">BM25</a> with heatmaps.</figcaption>
+![Visualization of k parameter](img/BM25_B_Visualization_Color_Plot.png)
+<figcaption>Figure 5: Visualization of the <a href="#b-parameter">b-parameter</a> in <a href="#best-match-25-bm25">BM25</a> with heatmaps.</figcaption>
 </figure>
 
 &NewLine;
@@ -261,11 +261,11 @@ With all that said: Parameter optimization is a large topic with score formulas 
 
 [TF-IDF](#inverse-document-frequency-idf) needs the following information to be calculated:
 - The TF for all words in all documents
-- The number of documents a word occurs in for all words
+- The number of documents a word occurs in for all words of all documents
 
 [BM25](#best-match-25-bm25) needs the following information to be calculated:
 - The TF for all words in all documents
-- The number of documents a word occurs in for all words in all documents
+- The number of documents a word occurs in for all words of all documents
 - The document length of all documents, the number of all documents -> average document length
 
 The only difference in the required information is the document length and the number of all documents. It is explained why this doesn't make a big difference time wise.
@@ -312,7 +312,7 @@ To use the scores the text index has to be build with the correct flags. Afterwa
 
 ## Building the text index with TF-IDF or BM25 scores
 
-To build the text index with the new scores, new flags were set in place:
+To build the text index with the new scores, new flags were added:
 
 Setting the [_scoring metric_](#text-search):
 - Flag(s): --set-scoring-metric, -S
@@ -379,4 +379,4 @@ The main benefit for the user is the possibility to bind the score variable whic
 
 # Conclusion
 
-While the old version of [QLever](https://qlever.cs.uni-freiburg.de/) computed scores internally they were never shown thus useless for the user. Making them visible was an easy way to give the user more information in the search results. But the explicit scores from the `wordsfile.tsv` are in general rather useless since they don't provide a good scoring metric to sort results after. The benefit of them is a low computational cost. The addition of [TF-IDF](#inverse-document-frequency-idf) and [BM25](#best-match-25-bm25) scores fixes the problem of a  qualitative scoring metric and therefore improves the text search side of [QLever](https://qlever.cs.uni-freiburg.de/) but have the problem of larger computational cost. To make scores in general more accessible the [Text Search Service](#text-search-service-explained) provides a form of customization to the user. It also makes the sorting of scores easier since no knowledge about the internal creation of variables is needed. These features together with the internal code refactoring were steps to modernize the text search side of [QLever](https://qlever.cs.uni-freiburg.de/) and help in keeping it a good choice for a [SPARQL](https://www.w3.org/TR/sparql11-query/)+Text search engine.
+While the old version of [QLever](https://qlever.cs.uni-freiburg.de/) computed scores internally they were never shown thus useless for the user. Making them visible was an easy way to give the user more information in the search results. The explicit scores from the `wordsfile.tsv` are in general rather useless since they don't provide a good scoring metric to sort results after but the benefit of them is a low computational cost. The addition of [TF-IDF](#inverse-document-frequency-idf) and [BM25](#best-match-25-bm25) scores fixes the problem of a qualitative scoring metric and therefore improves the text search side of [QLever](https://qlever.cs.uni-freiburg.de/) but have the problem of larger computational cost. To make scores in general more accessible the [Text Search Service](#text-search-service-explained) provides a form of customization to the user. It also makes the sorting of scores easier since no knowledge about the internal creation of variables is needed. These features together with the internal code refactoring were steps to modernize the text search side of [QLever](https://qlever.cs.uni-freiburg.de/) and help in keeping it a good choice for a [SPARQL](https://www.w3.org/TR/sparql11-query/)+Text search engine.
