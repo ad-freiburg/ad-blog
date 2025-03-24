@@ -14,11 +14,12 @@ Clone the repository.
 
 ### Getting hugo
 
-To preview and/or update and post to the blog you currently need **version 0.145.0** (or above)
-of the `hugo` static site generator.
+To preview and/or update and post to the blog you currently need
+**version 0.145.0** (or above) of the `hugo` static site generator.
 
 > [!WARNING]
-> Depending on your Linux, the `hugo` version in your packet-manager repositoty may be to old.
+> Depending on your Linux, the `hugo` version in your packet-manager
+> repositoty may be to old.
 > In this case install `hugo` the [binary-asset provided on github](https://github.com/gohugoio/hugo/releases/tag/v0.145.0)
 
 For more information go to the [hugo website](https://gohugo.io/installation/)
@@ -28,7 +29,7 @@ For more information go to the [hugo website](https://gohugo.io/installation/)
 To create a new post first run the following `hugo` command that creates
 a skeleton post to be edited with your favorite text editor.
 
-    hugo new post/my-awesome-title/index.md
+    hugo new post/<your-title>/index.md
 
 It then tells you which file it created. This file can now be filled with all
 your awesome content ✍️
@@ -37,7 +38,7 @@ The skeleton contains YAML formatted metadata with the following fields. Below
 that you will add Markdown formatted content (the Post).
 
     ---
-    title: "My Awesome Title"
+    title: "My Title"
     date: 2018-04-12T12:43:04+02:00
     author: "Ada Lovelace"
     authorAvatar: "img/ada.jpg"
@@ -61,17 +62,20 @@ Markdown format.
 You can then preview your new post using the web server built into `hugo` with
 the following command
 
-    hugo serve -D
+    hugo serve
 
-Here `-D` enables showing of `draft: true` posts.
+If `hugo` runs on a different machine than the browser you want to use, run:
+
+    hugo serve --bind "::" --baseURL <hostname>
+
+Where `<hostname>` is the hostname of the machine where `hugo` is running.
 
 The above preview only generates the site in-memory, to generate the static
 HTML run the following command
 
-    hugo -D
+    hugo
 
-Again, adding `-D` also generates draft posts. The HTML pages for the site are
-stored in the `./public` folder.
+The HTML pages for the site are stored in the `./public` folder.
 
 ### Adding Mathematical Formulæ
 
