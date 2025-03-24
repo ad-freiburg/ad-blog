@@ -326,7 +326,7 @@ For **se**rializing and **de**serializing I used [serde](https://serde.rs/).
 {{< /notice >}}
 
 This is basically how I read and write messages.
-I defined structs for the basic [lifecycle massages](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize):
+I defined structs for the basic [lifecycle messages](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize):
 
 | message                                                                                                               | sender | type         | effect                                         |
 | --------------------------------------------------------------------------------------------------------------------- | ------ | ------------ | ---------------------------------------------- |
