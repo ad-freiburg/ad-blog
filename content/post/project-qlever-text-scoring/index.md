@@ -150,7 +150,7 @@ BM25(d,q)=IDF(q)\cdot \frac{f(d,q)\cdot(k+1)}{f(d,q)+k\cdot(1-b+b\cdot \frac{|d|
 $$
 where:
 $$
-d=\text{document length},\ avgdl = \text{average document length}
+|d|=\text{document length},\ avgdl = \text{average document length}
 $$
 and:
 $$
@@ -222,7 +222,7 @@ $$
 \frac{predictedTF}{1-b+b\cdot \frac{|d|}{avgdl}}=\frac{c\cdot \frac{|d|}{avgdl}}{1-b+b\cdot \frac{|d|}{avgdl}}=\frac{c\cdot \frac{|d|}{avgdl}}{ \frac{|d|}{avgdl}}=c
 $$
 $$
-c\in \mathbb{R}^{0,+}
+c\in \mathbb{R}
 $$
 The reason **b** isn't set to **1** is:
 $$
@@ -277,11 +277,11 @@ typeof(InvertedIndex) = Map(Word -> Vector(Pair(Document, TF)))
 
 To build this map one has to iterate over all documents and therefore can detect all words. At the same time it is possible to get the information of how long each document is and create a map for this as well. This leads to the information being gathered in one pass over all documents. To compute the scores another pass is needed.
 
-These two passes and the possibly huge hash map make the scores rather intensive to compute and score.
+These two passes and the possibly huge hash map make the scores rather intensive to compute.
 
 # Text Search in QLever
 
-[QLever](https://qlever.cs.uni-freiburg.de/) has one main option when it comes to the text index: It can construct a text index from all literals in the [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) database and/or use a `wordsfile.tsv` and a `docsfile.tsv`.
+Before continuing it should be known that [QLever](https://qlever.cs.uni-freiburg.de/) has one main option when it comes to the text index: It can construct a text index from all literals in the [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) database and/or use a `wordsfile.tsv` and a `docsfile.tsv`.
 
 ## Showing scores
 
@@ -297,7 +297,7 @@ Another really rigid process was the reading and writing of the text index from 
 
 ## Implementing new scores
 
-As described above in the [algorithm](#algorithm-to-calculate-tf-idf-and-bm25) section an inverted index is built while iterating over all documents meaning the `docsfile.tsv` and/or the literals of the [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) database. In many implementations the inverted index maps words to a list of pairs of documents and term frequencies. In the current implementation of [QLever](https://qlever.cs.uni-freiburg.de/) this would work as well but only during the building of the inverted index. During the writing of the scores to the text index file the order the scores are retrieved is different from the order they were created in. This leads to a search for a particular document in that list. To avoid a runtime expensive search the implementation uses an inner hash map which connects documents to term frequencies.
+As described above in the [algorithm](#algorithm-to-calculate-tf-idf-and-bm25) section an inverted index is built while iterating over all documents meaning the `docsfile.tsv` and/or the literals of the [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) database. In many implementations the inverted index maps words to a list of pairs of documents and term frequencies. In the current implementation of [QLever](https://qlever.cs.uni-freiburg.de/) this would only work during the building of the inverted index. During the writing of the scores to the text index file the order the scores are retrieved is different from the order they were created in. This leads to a search for a particular document in that list. To avoid a runtime expensive search the implementation uses an inner hash map which connects documents to term frequencies.
 
 If [TF-IDF](#inverse-document-frequency-idf) or [BM25](#best-match-25-bm25) is used as scoring metric during the text index building the steps are as follows:
 - Iterate over all documents and/or literals and build the inverted index. At the same time build a hash map to connect documents to their length.
@@ -379,4 +379,4 @@ The main benefit for the user is the possibility to bind the score variable whic
 
 # Conclusion
 
-While the old version of [QLever](https://qlever.cs.uni-freiburg.de/) computed scores internally they were never shown thus useless for the user. Making them visible was an easy way to give the user more information in the search results. The explicit scores from the `wordsfile.tsv` are in general rather useless since they don't provide a good scoring metric to sort results after but the benefit of them is a low computational cost. The addition of [TF-IDF](#inverse-document-frequency-idf) and [BM25](#best-match-25-bm25) scores fixes the problem of a qualitative scoring metric and therefore improves the text search side of [QLever](https://qlever.cs.uni-freiburg.de/) but have the problem of larger computational cost. To make scores in general more accessible the [Text Search Service](#text-search-service-explained) provides a form of customization to the user. It also makes the sorting of scores easier since no knowledge about the internal creation of variables is needed. These features together with the internal code refactoring were steps to modernize the text search side of [QLever](https://qlever.cs.uni-freiburg.de/) and help in keeping it a good choice for a [SPARQL](https://www.w3.org/TR/sparql11-query/)+Text search engine.
+While the old version of [QLever](https://qlever.cs.uni-freiburg.de/) computed scores internally they were never shown thus useless for the user. Making them visible was an easy way to give the user more information in the search results. The explicit scores from the `wordsfile.tsv` are in general less useful compared to [TF-IDF](#inverse-document-frequency-idf) or  [BM25](#best-match-25-bm25) since they don't provide a good scoring metric to sort results after but the benefit of them is a low computational cost. The addition of [TF-IDF](#inverse-document-frequency-idf) and [BM25](#best-match-25-bm25) scores fixes the problem of a qualitative scoring metric and therefore improves the text search side of [QLever](https://qlever.cs.uni-freiburg.de/) but both metrics have the problem of a larger computational cost. To make scores in general more accessible the [text search service](#text-search-service-explained) provides a form of customization to the user. It also makes the sorting of scores easier since no knowledge about the internal creation of variables is needed. These features together with the internal code refactoring were steps to modernize the text search side of [QLever](https://qlever.cs.uni-freiburg.de/) and help in keeping [QLever](https://qlever.cs.uni-freiburg.de/) a good choice for a [SPARQL](https://www.w3.org/TR/sparql11-query/)+Text search engine.
