@@ -9,7 +9,7 @@ image: "img/Bibliothek.jpg"
 draft: false
 ---
 
-The [QLever](https://qlever.cs.uni-freiburg.de/) engine already provided a connection between [SPARQL](https://www.w3.org/TR/sparql11-query/) and text search. This text search was missing one of the most important parts which is a good scoring metric. With the possibility to use [TF-IDF](#inverse-document-frequency-idf) and [BM25](#best-match-25-bm25) scores for text index building and text search the usability of this side of [QLever](https://qlever.cs.uni-freiburg.de/) is increased. The addition of a Magic Service Query for text search provides easier access to the feature while adding even more possibilities to formulate queries.
+The [QLever](https://qlever.cs.uni-freiburg.de/) engine already provided a connection between [SPARQL](https://www.w3.org/TR/sparql11-query/) and text search. This text search was missing one of the most important parts which is a good scoring metric. With the possibility to use [TF-IDF](#inverse-document-frequency-idf) and [BM25](#best-match-25-bm25) scores the usability of the text search side of [QLever](https://qlever.cs.uni-freiburg.de/) is increased. The addition of a Magic Service Query for text search provides easier access to the feature while adding even more possibilities to formulate queries.
 
 <!--more-->
 
@@ -120,7 +120,7 @@ The problem of text search is: Given a query of one or multiple words from a use
 
 One simple ranking metric is [_term frequency_](#term-frequency-tf) short TF. TF checks how often the search word occurs in a text and ranks texts accordingly.
 $$
-f(d, q) = \text{\# }q \text{ occurs in }d
+f(d, q) = \text{\#}q \text{ occurs in }d
 $$
 where:
 $$
@@ -164,7 +164,7 @@ To better understand this metric one can change the [BM25](#best-match-25-bm25) 
 
 ##### K-Parameter
 
-To better examine the effects of the [_k-parameter_](#k-parameter),  **b** is set to **0** changing the equation further to:
+To see only the effects of the [_k-parameter_](#k-parameter)  **b** is set to **0** changing the equation further to:
 $$
 ModBM25(TF)=\frac{TF\cdot(k+1)}{TF+k}
 $$
@@ -281,27 +281,30 @@ These two passes and the possibly huge hash map make the scores rather intensive
 
 # Text Search in QLever
 
-Before continuing it should be known that [QLever](https://qlever.cs.uni-freiburg.de/) has one main option when it comes to the text index: It can construct a text index from all literals in the [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) database and/or use a `wordsfile.tsv` and a `docsfile.tsv`.
+Before continuing it should be known that [QLever](https://qlever.cs.uni-freiburg.de/) has one main option when it comes to the text index: It can construct a text index from all literals in the [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) database and/or use external files containing the needed data.
 
 ## Showing scores
 
-In the old version of [QLever](https://qlever.cs.uni-freiburg.de/) the scores were already pre-computed in the `wordsfile.tsv` and never shown to the user. Therefore the first step to have useful scores available in [QLever](https://qlever.cs.uni-freiburg.de/) was to show the already computed scores. This was rather straightforward by just adding a column to the output and reading the correct information of the text index file.
+In the old version of [QLever](https://qlever.cs.uni-freiburg.de/) scores were already pre-computed in the external files and never shown to the user. Therefore the first step to have useful scores available in [QLever](https://qlever.cs.uni-freiburg.de/) was to show the already computed scores.
 
 ## Background improvements
 
 To cleanly implement the new scoring metrics some other refactoring had to be done.
 
-First the parsing of the words- and docsfile were old and coded in one place with other functions of the text index. Extracting and modernizing them helped to improve overall code quality and helped with the implementation of the other scores.
+First the parsing of the external files was old and coded in one place with other functions of the text index. Extracting and modernizing it helped to improve overall code quality and helped with the implementation of the other scores.
 
-Another really rigid process was the reading and writing of the text index from and to disk. Once again extracting and splitting the functions up helped to reduce the complexity of the code file for the text index while also setting an easier to modify base to implement the other scores.
+Another really rigid internal process was saving the scores in the index and reading them when queried. Once again extracting and splitting the functions up helped to reduce the complexity of the code file for the text index. It also set an easier to modify base to implement the other scores.
 
 ## Implementing new scores
 
-As described above in the [algorithm](#algorithm-to-calculate-tf-idf-and-bm25) section an inverted index is built while iterating over all documents meaning the `docsfile.tsv` and/or the literals of the [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) database. In many implementations the inverted index maps words to a list of pairs of documents and term frequencies. In the current implementation of [QLever](https://qlever.cs.uni-freiburg.de/) this would only work during the building of the inverted index. During the writing of the scores to the text index file the order the scores are retrieved is different from the order they were created in. This leads to a search for a particular document in that list. To avoid a runtime expensive search the implementation uses an inner hash map which connects documents to term frequencies.
+As described above in the [algorithm](#algorithm-to-calculate-tf-idf-and-bm25) section an inverted index is built while iterating over all documents of the external file and/or the literals of the [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) database. In the case of [QLever](https://qlever.cs.uni-freiburg.de/) the inverted index for scores has an inner hash map. So in pseudo code:
+```
+typeof(InvertedIndex) = Map(Word -> Map(Document -> TF)))
+```
 
-If [TF-IDF](#inverse-document-frequency-idf) or [BM25](#best-match-25-bm25) is used as scoring metric during the text index building the steps are as follows:
+If [TF-IDF](#inverse-document-frequency-idf) or [BM25](#best-match-25-bm25) is used as scoring metric during the text index building the steps executed are as follows:
 - Iterate over all documents and/or literals and build the inverted index. At the same time build a hash map to connect documents to their length.
-- During the writing of blocks to the text index file calculate the score on demand using the inverted index and document length map.
+- During the writing of the text index file calculate the score on demand using the inverted index and document length map.
 
 In the query retrieval (if scores are asked for):
 - Read the scores from the text index file and return them in the table
@@ -344,22 +347,26 @@ PREFIX textSearch: <https://qlever.cs.uni-freiburg.de/textSearch/>
 
 SELECT * WHERE {
 	SERVICE textSearch: {
-		?t textSearch:text-search [textSearch:contains-word "prefix*" ; textSearch:bind-match ?prefix_match ; textSearch:bind-score ?prefix_score] .
-		?t textSearch:text-search [textSearch:contains-entity ?entity ; textSearch:bind-score ?entity_score] .
+		?text textSearch:contains [textSearch:word "prefix*" ; textSearch:prefix-match ?prefix_match ; textSearch:score ?prefix_score] .
+		?text textSearch:contains [textSearch:entity ?entity ; textSearch:score ?entity_score] .
 	}
 }
 ```
-Which can also be expressed as:
+
+Can be also expressed as:
+
 ```sparql
+PREFIX textSearch: <https://qlever.cs.uni-freiburg.de/textSearch/>
+
 SELECT * WHERE {
 	SERVICE textSearch: {
-		?t textSearch:text-search ?config1 .           # Bind first config to text variable
-		?config1 textSearch:contains-word "prefix*" .  # Specify word or prefix to search in text
-		?config1 textSearch:bind-match ?prefix_match . # Bind prefix completion variable
-		?config1 textSearch:bind-score ?prefix_score . # Bind score variable
-		?t textSearch:text-search ?config2 .           # Bind second config to text variable
-		?config2 textSearch:contains-entity ?entity .  # Specify entity to search in text
-		?config2 textSearch:bind-score ?entity_score . # Bind score variable
+		?text textSearch:contains ?occurence1 .             # Bind first config to text variable
+		?occurence1 textSearch:word "prefix*" .             # Specify word or prefix to search in text
+		?occurence1 textSearch:prefix-match ?prefix_match . # Bind prefix completion variable
+		?occurence1 textSearch:score ?prefix_score .        # Bind score variable
+		?text textSearch:contains ?occurence2 .             # Bind second config to text variable
+		?occurence2 textSearch:entity ?entity .             # Specify entity to search in text
+		?occurence2 textSearch:score ?entity_score .        # Bind score variable
 	}
 }
 ```
@@ -371,7 +378,7 @@ SELECT * WHERE {
 
 &NewLine;
 
-It works by connecting text variables like `?t` in this case to one or multiple configurations. Those configurations are either representing a word or an entity search. For the word search the configuration has to specify a word or prefix to search for and has options to bind the prefix match and the score to variables. For the entity search the configuration has to specify an entity to search for which can be a literal, IRI or variable and has the option to bind the score to a variable. To get a full grasp of what this feature provides see the [documentation on GitHub](https://github.com/ad-freiburg/qlever/blob/b76c0c864f124a20b7a59b83a74e3346649c5747/docs/text_search.md).
+It works by connecting text variables like `?text` in this case to one or multiple configurations. Those configurations are either representing a word or an entity search. For the word search the configuration has to specify a word or prefix to search for and has options to bind the prefix match and the score to variables. For the entity search the configuration has to specify an entity to search for which can be a literal, IRI or variable and has the option to bind the score to a variable. To get a full grasp of what this feature provides see the [documentation on GitHub](https://github.com/ad-freiburg/qlever/blob/b76c0c864f124a20b7a59b83a74e3346649c5747/docs/text_search.md).
 
 ## Benefits of Text Search Service 
 
@@ -379,4 +386,4 @@ The main benefit for the user is the possibility to bind the score variable whic
 
 # Conclusion
 
-While the old version of [QLever](https://qlever.cs.uni-freiburg.de/) computed scores internally they were never shown thus useless for the user. Making them visible was an easy way to give the user more information in the search results. The explicit scores from the `wordsfile.tsv` are in general less useful compared to [TF-IDF](#inverse-document-frequency-idf) or  [BM25](#best-match-25-bm25) since they don't provide a good scoring metric to sort results after but the benefit of them is a low computational cost. The addition of [TF-IDF](#inverse-document-frequency-idf) and [BM25](#best-match-25-bm25) scores fixes the problem of a qualitative scoring metric and therefore improves the text search side of [QLever](https://qlever.cs.uni-freiburg.de/) but both metrics have the problem of a larger computational cost. To make scores in general more accessible the [text search service](#text-search-service-explained) provides a form of customization to the user. It also makes the sorting of scores easier since no knowledge about the internal creation of variables is needed. These features together with the internal code refactoring were steps to modernize the text search side of [QLever](https://qlever.cs.uni-freiburg.de/) and help in keeping [QLever](https://qlever.cs.uni-freiburg.de/) a good choice for a [SPARQL](https://www.w3.org/TR/sparql11-query/)+Text search engine.
+While the old version of [QLever](https://qlever.cs.uni-freiburg.de/) had precomputed scores they were never shown thus useless for the user. Making them visible was an easy way to give the user more information in the search results. These so called explicit scores from the external files are in general less useful compared to [TF-IDF](#inverse-document-frequency-idf) or [BM25](#best-match-25-bm25) since they don't provide a good scoring metric to sort results after but the benefit of them is a low computational cost. Also they can be adapted if the user creates an index themselves increasing the benefit of them. The addition of [TF-IDF](#inverse-document-frequency-idf) and [BM25](#best-match-25-bm25) scores adds qualitative scoring metrics to [QLever](https://qlever.cs.uni-freiburg.de/) and therefore improves the text search side of it, but both metrics have the problem of a larger computational cost. To make scores in general more accessible the [text search service](#text-search-service-explained) provides a form of customization to the user. It also makes the sorting of scores easier since no knowledge about the internal creation of variables is needed. These features together with the internal code refactoring were steps to modernize the text search side of [QLever](https://qlever.cs.uni-freiburg.de/) and help in keeping [QLever](https://qlever.cs.uni-freiburg.de/) a good choice as a [SPARQL](https://www.w3.org/TR/sparql11-query/)+Text search engine.
