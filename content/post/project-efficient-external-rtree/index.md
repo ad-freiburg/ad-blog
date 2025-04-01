@@ -1,11 +1,12 @@
 ---
 title: "An efficient external R-tree for very large datasets"
-date: 2025-03-31T22:41:50+01:00
+date: 2025-03-31T12:41:50+01:00
 author: "Noah Nock"
-authorAvatar: ""
+authorAvatar: "img/ada.jpg"
 tags: ["rtree", "spatial", "index", "qlever", "sparql", "external"]
 categories: ["project"]
-image: ""
+image: "img/title.png"
+draft: false
 ---
 
 Information retrieval on large datasets is fundamental to our modern world. For the purpose of finding certain datapoints within a query region on geo spatial datasets, one can use numerous different algorithms and data structures. Probably the best pick for this application is the R-tree. While the basic concept of the R-tree is widely known, there is a lack of efficient algorithms that can build a R-tree on very large datasets without exceeding the capabilities of the working memory. In this project I designed and implemented a R-tree that can work on datasets of every size, while maintaining fast querying times and memory efficient building.
