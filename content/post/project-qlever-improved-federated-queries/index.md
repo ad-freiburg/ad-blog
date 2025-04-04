@@ -6,7 +6,7 @@ authorAvatar: "img/ada.jpg"
 tags: ["QLever"]
 categories: ["project"]
 image: "img/title.png"
-draft: true
+draft: false
 ---
 
 [QLever](https://qlever.cs.uni-freiburg.de/wikidata) is a SPARQL query engine used to search [RDF](https://www.w3.org/RDF/) (Resource Description Framework) databases.
