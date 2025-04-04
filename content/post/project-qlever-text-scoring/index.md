@@ -9,13 +9,13 @@ image: "img/Bibliothek.jpg"
 draft: false
 ---
 
-The [QLever](https://qlever.cs.uni-freiburg.de/) engine already provided a connection between [SPARQL](https://www.w3.org/TR/sparql11-query/) and text search. This text search was missing one of the most important parts which is a good scoring metric. With the possibility to use [TF-IDF](#inverse-document-frequency-idf) and [BM25](#best-match-25-bm25) scores the usability of the text search side of [QLever](https://qlever.cs.uni-freiburg.de/) is increased. The addition of a Magic Service Query for text search provides easier access to the feature while adding even more possibilities to formulate queries.
+The [QLever](https://qlever.cs.uni-freiburg.de/) engine can be used to query databases. Besides the classic queries it also provides a text search. This text search was missing one of the most important parts which is a good scoring metric. Scoring metrics are used to sort results by their estimated importance. To further increase the usability a new way to formulate text search queries has been added which simplifies the process of querying text.
 
 <!--more-->
 
 # Introduction
 
-In this blog post it is discussed which search methods [QLever](https://qlever.cs.uni-freiburg.de/) provides and, in detail, how simple text search metrics evolved. The text search metrics explained and partially analyzed are [_term frequency_](#term-frequency-tf), [_inverse document frequency_](#inverse-document-frequency-idf) and the [_best match 25_](#best-match-25-bm25) formula. Afterwards it is explained what steps have been taken to implement these scoring metrics into [QLever](https://qlever.cs.uni-freiburg.de/). The implementation led to another feature which is the Magic Service Query for text search, also called text search service. A short explanation how to use this feature will be given.
+In this blog post it is discussed which search methods [QLever](https://qlever.cs.uni-freiburg.de/) provides and, in detail, how simple text search metrics evolved. The text search metrics explained and partially analyzed are [_term frequency_](#term-frequency-tf), [_inverse document frequency_](#inverse-document-frequency-idf) and the [_best match 25_](#best-match-25-bm25) formula. Afterwards it is explained what steps have been taken to implement these scoring metrics into [QLever](https://qlever.cs.uni-freiburg.de/).  The next section will explain how to use the new scoring metrics. In this part the new way to formulate text queries, called [text search service](#text-search-service-explained), is explained and an example is given.
 
 # Table of contents
 
@@ -39,11 +39,11 @@ In this blog post it is discussed which search methods [QLever](https://qlever.c
 
 # Search Methods
 
-Searching is the key concept of database engines. For a given query or request from a user the engine should return a gratifying result. To achieve this there are different types of searches for different use cases. A pure database search with e.g. [SQL](https://de.wikipedia.org/wiki/SQL) or [SPARQL](https://www.w3.org/TR/sparql11-query/) provides a 100% semantic accuracy ensuring that the queried properties are always fulfilled. At the same time the search is restricted to these exact properties which may be unwanted. Text searches however can only approximate the semantic accuracy or importance of a result. The positive side of this is the obvious possibility to search text but also getting results with possibly more information than just a single database entry.
+Searching is a key concept of database engines. For a given query or request from a user the engine should return a gratifying result. To achieve this there are different types of searches for different use cases. Using query languages like [SQL](https://de.wikipedia.org/wiki/SQL) or [SPARQL](#sparql) on respective databases provides a 100% semantic accuracy ensuring that the queried properties are always fulfilled. At the same time the search is restricted to these exact properties which may be unwanted. Text searches however can only approximate the semantic accuracy or importance of a result. The positive side of this is the obvious possibility to search text but also getting results with possibly more information than just simple database entries.
 
 ## SPARQL
 
-[SPARQL](https://www.w3.org/TR/sparql11-query/) as a query language works on a seemingly simple knowledge base. This knowledge base is called [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) (Resource Description Framework). The key feature of [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) is formulating all data as triples. These triples consist of a subject, predicate and object similar to basic sentences in latin languages (see <a href="#fig1">Figure 1</a>) . It has a similar query structure to [SQL](https://de.wikipedia.org/wiki/SQL) but with a more straightforward approach since the request happens on a complete dataset and not multiple tables (see <a href="#fig2">Figure 2</a>).
+[SPARQL](https://www.w3.org/TR/sparql11-query/) as a query language works on a seemingly simple knowledge base. This knowledge base uses the [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) (Resource Description Framework). The key concept of the [RDF](https://en.wikipedia.org/wiki/Resource_Description_Framework) is formulating all data as triples. These triples consist of a subject, predicate and object similar to basic sentences in latin languages (see <a href="#fig1">Figure 1</a>). Queries can be formulated with variables marked with a `?`. All entries that fit the specified criteria are returned (see <a href="#fig2">Figure 2</a>).
 
 <figure id='fig1' style="text-align: center;">
 
