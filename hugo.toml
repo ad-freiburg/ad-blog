@@ -1,4 +1,4 @@
-baseurl = "/"
+baseurl = "https://ad-blog.cs.uni-freiburg.de/"
 languageCode = "en-US"
 canonifyurls = true
 
