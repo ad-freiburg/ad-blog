@@ -8,7 +8,7 @@ categories: ["project"]
 image: "img/title_img.png"
 ---
 
-The current string function implementation in the SPARQL engine QLever incorrectly discards datatype and language tags. In this project, we improved QLever’s compliance with the SPARQL specification by handling language tags and datatypes in string expressions such as SUBSTR, UCASE, STRAFTER or CONCAT.
+In this project, we improved the handling of language tags and datatypes in string expressions such as `SUBSTR`, `UCASE`, `STRAFTER`, and `CONCAT` in the SPARQL engine QLever, making it more compliant with the SPARQL specification. Prior to this project, QLever dropped all language tags and datatypes when literals were processed in string expressions.
 
 ## Table of Contents
 - [Introduction](#introduction)
@@ -16,16 +16,26 @@ The current string function implementation in the SPARQL engine QLever incorrect
 - [Conclusion](#conclusion)
 
 ## Introduction
-SPARQL defines several string expressions — such as `SUBSTR`, `UCASE`, `LCASE`, `STRAFTER`, `STRBEFORE`, or `CONCAT` — that operate on RDF literals. A requirement of the SPARQL 1.1 specification is that such expressions must correctly handle language tags and datatypes. For example, a call like `SUBSTR("Grüße"@de, 1, 3)` should return a result that also carries the `@de` language tag.\
+SPARQL defines several string expressions — such as `SUBSTR`, `UCASE`, `LCASE`, `STRAFTER`, `STRBEFORE`, or `CONCAT` — that operate on literals. A requirement of the SPARQL 1.1 specification is that such expressions must correctly handle language tags and datatypes. For example, a call like `SUBSTR("Grüße"@de, 1, 3)` should return a result that also carries the `@de` language tag.\
 \
+Die StringExpressions operieren auf Literalen / Verarbeiten Literale. JEde dieser Functionen greift auf das Enstrpechende Literal mit Hilfe der Methode StringValueGetter zu, welche den "content" des Literals zurückgibt.
+Die Implementierung der String Expression nutze ein Template `StringExpressionImpl` (for an expression that works on string literals), welches die StringVAlueGetter verwendet, um auf den content des Literals zurückzugreifen. Dabei abhäning von Typ des Literals implizit die STR() function angewendet.
+Bsp:
+using SubstrExpression = StringExpressionImpl<3, SubstrImpl, NumericValueGetter, NumericValueGetter>;
+ SubstrImpl 
+
 Prior to this project, QLever dropped all language tags and datatypes when evaluating these functions. As a result, the engine's behavior deviated from the SPARQL standard, and tests that verified correct semantic behavior failed. Below is an example screenshot showing failing tests of the `SUBSTR` expression.
 <figure style="text-align: center;">
     <center><img src="./img/substr_error.png" alt="distribution of section lengths for each index" width="700"/></center>
     <figcaption style="font-size: 20px;">Failing test of SUBSTR() in the SPARQL testsuite for QLever</figcaption>
 </figure>
 
+
 ## Implementation
-To address the incorrect handling of language tags and datatypes in string functions, we extended QLever’s existing ValueGetter infrastructure. Previously, string expressions used a `StringValueGetter` that returned only the raw string content of a literal, discarding any additional information such as language tags or datatypes.\
+To address the not yet implemented handling of language tags and datatypes in string exprssions, we extended QLever’s existing ValueGetter infrastructure. Die ValueGetter Structur die in den String Expressions genutzt wurde besteht aus StringValueGetter
+
+
+Previously, string expressions used a `StringValueGetter` that returned only the raw string content of a literal, discarding any additional information such as language tags or datatypes.\
 \
 We introduced additional `LiteralValueGetter` variants. These make it possible to retain and propagate metadata like language tags during expression evaluation. The infrastructure supports variants that either apply the `STR()` function implicitly or restrict processing to only valid string literals, depending on the context of the expression.\
 The `LiteralValueGetter` is now used in string expressions that take and return strings.
