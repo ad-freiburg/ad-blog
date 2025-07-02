@@ -16,20 +16,19 @@ In this project, we improved the handling of language tags and datatypes in stri
 - [Conclusion](#conclusion)
 
 ## Introduction
-SPARQL defines several string expressions — such as `SUBSTR`, `UCASE`, `LCASE`, `STRAFTER`, `STRBEFORE`, or `CONCAT` — that operate on literals. A requirement of the SPARQL 1.1 specification is that such expressions must correctly handle language tags and datatypes. For example, a call like `SUBSTR("Grüße"@de, 1, 3)` should return a result that also carries the `@de` language tag.\
+SPARQL defines several string expressions — such as `SUBSTR`, `UCASE`, `LCASE`, `STRAFTER`, `STRBEFORE`, or `CONCAT` — that operate on literals.
+According to the SPARQL 1.1 specification, these functions must handle metadata associated with literals, such as language tags (e.g., `"Hallo"@de` for a German word) or datatypes (e.g., a string explicitly typed as `xsd:string`).
+For example, applying an UCASE to a literal like "Hallo"@de (a German-language string) should return "HALLO"@de, maintaining the language tag.\
 \
-Die StringExpressions operieren auf Literalen / Verarbeiten Literale. JEde dieser Functionen greift auf das Enstrpechende Literal mit Hilfe der Methode StringValueGetter zu, welche den "content" des Literals zurückgibt.
-Die Implementierung der String Expression nutze ein Template `StringExpressionImpl` (for an expression that works on string literals), welches die StringVAlueGetter verwendet, um auf den content des Literals zurückzugreifen. Dabei abhäning von Typ des Literals implizit die STR() function angewendet.
-Bsp:
-using SubstrExpression = StringExpressionImpl<3, SubstrImpl, NumericValueGetter, NumericValueGetter>;
- SubstrImpl 
-
-Prior to this project, QLever dropped all language tags and datatypes when evaluating these functions. As a result, the engine's behavior deviated from the SPARQL standard, and tests that verified correct semantic behavior failed. Below is an example screenshot showing failing tests of the `SUBSTR` expression.
+Before this project, QLever dropped all language tags and datatypes when evaluating these functions. As a result, the engine's behavior deviated from the SPARQL standard, and tests that verified correct semantic behavior failed. Below is an example screenshot showing failing tests of the `SUBSTR` expression.
 <figure style="text-align: center;">
     <center><img src="./img/substr_error.png" alt="distribution of section lengths for each index" width="700"/></center>
     <figcaption style="font-size: 20px;">Failing test of SUBSTR() in the SPARQL testsuite for QLever</figcaption>
 </figure>
 
+The problem was caused by how QLever internally evaluated string expressions. It used a general template function called StringExpressionImpl, which relies on a helper function named StringValueGetter. This component extracts only the plain string content from a literal, without preserving its language tag or datatype.
+
+For example, in the case of the UCASE function, QLever would apply the uppercasing operation to the raw string "Hallo", producing "HALLO". However, the resulting literal no longer included the original language tag @de, since StringValueGetter did not pass this metadata along. As a result, "Hallo"@de became "HALLO" instead of the correct "HALLO"@de.
 
 ## Implementation
 To address the not yet implemented handling of language tags and datatypes in string exprssions, we extended QLever’s existing ValueGetter infrastructure. Die ValueGetter Structur die in den String Expressions genutzt wurde besteht aus StringValueGetter
