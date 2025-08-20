@@ -6,7 +6,7 @@ authorAvatar: "img/ada.jpg"
 tags: [QLever, SPARQL 1.1, SPARQL Expressions, C++]
 categories: ["project"]
 image: "img/project-extension-for-qlever-implementing-missing-sparql-expressions/sparql_expresssions_blog_image.jpg"
-draft: true
+draft: false
 ---
 
 [QLever](https://qlever.cs.uni-freiburg.de/ "QLever") is a database query language engine that follows the [SPARQL 1.1 Query Language standard](https://www.w3.org/TR/sparql11-query/ "SPARQL 1.1 Query Language standard"). It provides an efficient and highly optimized backend for querying RDF ([Resource Description Framework](https://en.wikipedia.org/wiki/Resource_Description_Framework, "Resource Description Framework")) databases based on descriptive triples. Some SPARQL expressions defined by SPARQL 1.1 were still missing, the objective of my project was to implement them.
