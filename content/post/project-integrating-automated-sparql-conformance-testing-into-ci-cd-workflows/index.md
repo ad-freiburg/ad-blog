@@ -8,7 +8,7 @@ categories: []
 image: "img/website-all.png"
 ---
 
-TODO SUMMARY
+In this project, I integrated the official SPARQL 1.1 conformance test suite directly into QLever’s CI/CD pipeline to make conformance testing automatic and developer-friendly. Which helped in increasing conformance from 23.8% to 87.6%.
 
 ---
 
@@ -153,7 +153,7 @@ Together, the server, website, and bot form a complete feedback ecosystem: the C
 Waiting for CI pipelines can be frustrating, especially for projects with long build times. To address this, I extended qlever-control, QLever’s command-line tool, to support local conformance testing. This allows developers to run the full test suite against a local QLever binary or QLever in container and to analyze individual tests by automatically building the required index, starting a local server, and enabling interactive querying. This setup lets developers reproduce and debug failing tests locally before opening or updating a pull request. By executing tests locally, developers get immediate feedback without waiting for CI pipelines to complete, saving time and costs. It also encourages earlier detection of issues. Catching bugs before code is pushed also ensures shorter review cycles and a more effecient development workflow.
 
 ## Conclusion {#conc}
-Since integrating the automated SPARQL conformance testing workflow, QLever’s conformance has improved dramatically. When I first began this work, QLever successfully passed only 23.83% of the official conformance tests. Today, it passes 75.3%, and if we also count the “semi-passed” tests, cases where QLever intentionally diverges from the SPARQL standard, the success rate rises to 87.6%.
+Since integrating the automated SPARQL conformance testing workflow, QLever’s conformance has improved dramatically. When I first began this work, QLever successfully passed only 23.8% of the official conformance tests. Today, it passes 75.3%, and if we also count the “semi-passed” tests, cases where QLever intentionally diverges from the SPARQL standard, the success rate rises to 87.6%.
 
 This progress isn’t just a number. It shows how continuous testing, automated feedback, and transparent result visualization can directly guide development toward higher standards conformance. By making it easy to see where QLever’s results differed from the expected outcomes, developers could systematically identify, understand, and fix gaps in conformance.
 
