@@ -32,15 +32,25 @@ foodas jdkas daksjd
 
 ### RDF
 
-The [Resource Description Framework](https://www.w3.org/TR/rdf11-concepts) (RDF) is a model for representing information. Every piece of information is represented as a triple with a subject, predicate and object. RDF data is commonly visualized as a directed graph with labeled edges with the triple's components being nodes or the label on the edge as shown below.
+The [Resource Description Framework](https://www.w3.org/TR/rdf11-concepts) (RDF) is a model for representing information. Every piece of information is represented as a triple with a subject, predicate and object. RDF data is commonly visualized as a directed graph with labeled edges. The subject and predicate are represented as nodes and the predicate as the edge's label. Stating that the <span style='color:red'>City Hamburg</span> <span style='color:blue'>has the name</span> <span style='color:green'>"Hansestadt Hamburg"</span> could be done as
 
-{{< figure src="img/triple.svg" caption="RDF triple with a <span style='color:red'>subject</span>, <span style='color:blue'>predicate</span> and <span style='color:green'>object</span> stating that Foo bar baz" width="500px" >}}
+{{< figure src="img/triple.svg" caption="RDF triple with a <span style='color:red'>subject</span>, <span style='color:blue'>predicate</span> and <span style='color:green'>object</span>" width="500px" >}}
 
-*IRIs* and *literals* are called **resources** and used to denote anything we describe. *Blank Nodes* are used in triples when only stating that something exists without naming it. The subject may be an IRI or a blank node, the predicate is always an IRI and the object may be an IRI, a literal or a blank node. An RDF graph is a set of RDF triples.
+<!--*IRIs* and *literals* are called **resources** and used to denote anything we describe. *Blank Nodes* are used in triples when only stating that something exists without naming it. The subject may be an IRI or a blank node, the predicate is always an IRI and the object may be an IRI, a literal or a blank node. -->
+An RDF graph is simply a set of RDF triples. The following graph states that *Freiburg* and *Hamburg* are cities and gives their respective population sizes and names.
 
-{{< figure src="img/graph.svg" caption="An RDF graph stating that *Freiburg* and *Hamburg* are cities and giving their respective population sizes and names" width="750px" >}}
+{{< notice type="note" >}}
+Values enclosed by `<...>` are IRIs (a generalization of URLs and URIs) which denote the objects that we describe. Values enclosed by `"..."` are literals which can have an optional datatype like string, float, integer or many more.
+{{< /notice >}}
+
+{{< figure src="img/graph.svg" width="750px" >}}
 
 An RDF dataset is a collection of RDF graphs. It consists of one designated RDF graph - the default graph and arbitrarily many IRI and RDF graph pairs - the named graphs.
+
+To recap: an <span style='color:purple'>RDF dataset</span> is made up of one <span style='color:fuchsia'>default graph</span> and arbitrily many <span style='color:fuchsia'>named graphs</span>. Each <span style='color:fuchsia'>RDF graph</span> consists of <span style='color:teal'>RDF triples</span>.
+
+//TODO: mark the IRI of the graph somehow
+{{< figure src="img/dataset.svg" width="750px" >}}
 
 ### SPARQL
 
@@ -86,11 +96,14 @@ QLever is a extremly fast graph database for storing an RDF dataset which can be
 
 To enable it's fast performance QLever stores the data in a custom index format. Before the addition of update this index was built once for a RDF dataset. QLever then uses this index to compute query results. Building the index is quick but can take a couple of hours for the largest datasets, which can contain hundreds of billions of triples.
 
-Remember that all RDF data is made up of RDF triples with a subject, predicate and object. A *permutation* is a structure that contains the triples with the triples components in a specific order (*permuted triple*), e.g. Predicate-Subject-Object. The triples in a permutation are ordered with respect to the permuted triples. Both the order of the triples and the order of the triples components are thus given by the permutation. QLever stores the triples each in all 6 possible permutations. This allows easy acces to the triples in all the constellations that may be required.  
+Remember that all RDF data is made up of RDF triples with a subject, predicate and object. A *permutation* is a structure that contains the triples with the triples' components in a specific order (*permuted triple*), e.g. Predicate-Subject-Object. The triples in a permutation are ordered with respect to the permuted triples. Both the order of the triples and the order of the triples components are thus given by the permutation. QLever stores the triples each in all 6 possible permutations. This allows easy acces to the triples in all the constellations that may be required.  
 
 Permutations are divided up into *blocks*. Blocks have metadata which contain the first and last triple and the consecutive region on disk that the block is stored on. The borders of the blocks are determined heuristically when building the index. Storing this metadata of the blocks allows quick access to exactly the required blocks for an operation eliminting the need to scan the whole permutation.
 
-Conceptually for a RDF dataset
+{{< notice type="example">}}
+<!-- TODO: integrate the example into the text above to aid understandability. -->
+
+Assume an RDF dataset with 4 triples:
 
 ```turtle
 <Hamburg> <is-a> <City> .
@@ -99,21 +112,17 @@ Conceptually for a RDF dataset
 <Freiburg> <population> "250000" .
 ```
 
-for the SPO (Subject-Predicate-Object) permutation we would store
+Looking at how the data is stored in the two permutations below one notices three differences:
 
-```text
-<Hamburg> <is-a> <City> <Hamburg> <population> "2000000"
-<Freiburg> <is-a> <City> <Freiburg> <population> "250000"
-```
+- the <span style='color:red'>subject</span>, <span style='color:blue'>predicate</span> and <span style='color:green'>object</span> are stored in different orders inside the <span style='color:teal'>permuted triples</span>,
+- the <span style='color:teal'>permuted triples</span> are in a different order and
+- the <span style='color:fuchsia'>blocks</span> contain different <span style='color:teal'>permuted triples</span>
 
-while for PSO (Predicate-Subject-Object) it would be
+{{< figure src="img/spo.svg" caption="SPO (Subject-Predicate-Object) permutation" width="750px" >}}
 
-```text
-<is-a> <Hamburg> <City> <is-a> <Freiburg> <City>
-<population> <Hamburg> "2000000" <population> <Freiburg> "250000"
-```
+{{< figure src="img/pso.svg" caption="PSO (Predicate-Subject-Object) permutation" width="750px" >}}
 
-where the different lines are stored in different blocks.
+{{< /notice >}}
 
 ## Problem Statement
 
@@ -142,9 +151,38 @@ Graph Store Protocol requests can approximately be translated into equivalent SP
 
 ### Correctness
 
-- bla bla extensive unit tests
-- test in production at ...
-- insert olympics from scratch -> diff = 0 etc.
+All major parts of the update implementation are thoroughly tested with unit tests. QLever and it's update implementation are already being used in production at [UniProt](https://sparql.uniprot.org/) and for a [live copy of Wikidata by the chair](https://qlever.dev/wikidata).
+
+To further test that update works correctly we can
+
+1. Create an index with the [Olympics](https://github.com/wallscope/olympics-rdf) data in the default graph. The default graph now contains the Olympics dataset and `<INSERTED>` contains no triples.
+2. Insert the data a second time into another graph `<INSERTED>` with `LOAD`. We can verify that both graphs now contain the same triples with a query from the [OSM Live Updates for SPARQL Endpoints](https://ad-blog.cs.uni-freiburg.de/post/osm-live-updates-for-sparql-endpoints/#a-idcorrectnessa31-correctness)
+   ```sparql
+   SELECT ?s ?p ?o WHERE {
+     {
+       {
+         GRAPH ql:default-graph {
+           ?s ?p ?o .
+         }
+       } MINUS {
+         GRAPH <INSERTED> {
+           ?s ?p ?o .
+         }
+       }
+     } UNION {
+       {
+         GRAPH <INSERTED> {
+           ?s ?p ?o .
+         }
+       } MINUS {
+         GRAPH ql:default-graph {
+           ?s ?p ?o .
+         }
+       }
+     }
+   }
+   ```
+3. Delete all triples in the default graph that are in `<INSERTED>` with `DELETE { ?s ?p ?o } WHERE { GRAPH <INSERTED> { ?s ?p ?o } }`. The default graph is now empty and `<INSERTED>` now contains the Olympics dataset.
 
 ### Completeness
 
@@ -161,14 +199,32 @@ The major parts of [Graph Store Protocol](#sparql-graph-store-http-protocol) are
 
 ### Performance (Impact)
 
-ToDo:
+Performance is impressive for a first iteration of the Update feature considering that the main focus was to achieve a high coverage of the [SPARQL Update](#sparql-update) and [Graph Store Protocol](#sparql-graph-store-http-protocol) standards. The current version is already able to catch up and keep up with the [Wikidata knowledge graph](https://qlever.dev/wikidata) for some time. The througput of updates is better for larger updates. The througput of updates detdeteriorates linearly with more triples being already updated. The impact of applied updates on queries can be high but depends heavily on the type of the query.
 
-- Benchmark with graphs
-- Wikidata updating
+We repeatedly delete 10000 random triples on a QLever instance to test how the update performance evolves with the number of already updated triples.
+We observere a linear increase for the deletion of the 10000 triples with the number of already inserted triples.
+
+{{< figure src="img/eval/update_over_time.png" width="750px" >}}
+
+To test the throughput for different update sizes we test updates that delete a different number of triples. The updates of the QLever instance are reset between runs. Each update size is tested 10 times and we take the mean. The plot shows the throughput (update size divided by the time for the update) against the update size.
+Under good conditions the throughput is around 350.000 triple per second.
+The throughput decreases significantly for update sizes below 1 million triples.
+
+{{< figure src="img/eval/triples_per_s_batch_size.png" width="750px" >}}
+
+Finally we evaluate the performance impact of applied updates to queries. To do this we run a curated set of queries when no updates are applied and when certain fractions of the dataset have been updated. We observe that updates can result in a big impact to the query performance, but the impact depends heavily on the nature of the query being run.
+
+[Predicate frequencies](https://qlever.dev/wikidata/kKNJ0F) counts the occurences of all predicates across the whole dataset. It sees a heavy performance impact with an 80% increase in the runtime of the query. This query requires the whole dataset to compute and as such will also come in contact with all the updates that have been applied. Heavy optimizations have also been done to make queries like this fast in (so far only un-updated) QLever.
+
+[Scientific articles](https://qlever.dev/wikidata/oCjDui) retrieves all scientific articles and their author if available. This query has a large result with around 42 mio. rows. Most of the query's time is soent on aggregations and only very little time is spent on `IndexScan`s. We see no increase in the execution time for this query.
+
+[People](https://qlever.dev/wikidata/cg6A8w) calculates people who were born and died on the same day of the year. For this query we see about a 4% in the runtime for the query with 0.1% of the dataset being updated.
+
+{{< figure src="img/eval/query_performance.png" width="750px" >}}
 
 ## Conclusion and Future Work
 
-The implementation supports the majority of SPARQL Update and Graph Store Protocol. We extended it with a method that we felt was missing. The implementation has been available in QLever for some time while developing and has been used in ... Updating is fast enough to keep up with the Wikidata knowledge graph with almost no delay.
+The implementation supports the majority of SPARQL Update and Graph Store Protocol. We extended it with a method that we felt was missing. The implementation has been available in QLever for some time while developing and has already been used in [the official UniProt SPARQL endpoint](https://sparql.uniprot.org/) and as a backend for [a Scholia instance run by the chair](https://qlever.scholia.wiki/). Updating is fast enough to keep up with the [Wikidata knowledge graph](https://qlever.dev/wikidata) with almost no delay.
 
 While QLever's updating should be fast enough for most needs, there are some areas that we want to improve. Both Update and GSP use the same base for updating, so both will see performance improvements from improvements in this area. We see this as the most important area to improve on.
 
@@ -178,7 +234,7 @@ While QLever's updating should be fast enough for most needs, there are some are
 The size of updates is currently limited because the whole update is processed as one piece. We want to process the update in chunks similar to how queries are computed. This will enable larger updates and we also expect a small performance improvement from this. Both Update and GSP will benefit from improvments in this area. For GSP it is also natural to parallelize the deserialization of the RDF data.
 
 Implementing the remaining parts of the standard (see [Completeness](#completeness)) will also be an area for future improvement. The missing parts are all niche and we expect that they are used sparsely. This assesment might change with user feedback, increasing the priority of features.
-A related area are the supported media types for the Graph Store Protocol for input and output of serialized RDF data. For output a wide range of media types (ToDo: list) is already supported. For input only *Turtle* and *N-Triples* are supported. Adding support for more media types here would make QLever more versatile.
+A related area are the supported media types for the Graph Store Protocol for input and output of serialized RDF data. For output a wide range of media types (CSV, TSV, Turtle, N-Triples, JSON, XML, Binary, QLever JSON) is already supported. For input only *Turtle* and *N-Triples* are supported. Adding support for more media types here would make QLever more versatile.
 
 There may also arise the need for extensions to the standardized functionality like the already implemented `TSOP`. This will depend on the needs of the users.
 
@@ -209,5 +265,3 @@ There may also arise the need for extensions to the standardized functionality l
 **
 
 -->
-
-[^1]: This is only the case because QLever has implicit graph existence. This means that QLever does not explicitly track the existence of graphs. This means that a graph exists iff there are triples in it. Explicit graph existence allows for empty graphs. If graph existence were explicit, then at a minimum additional operations for adding and removing a graph would be required.
