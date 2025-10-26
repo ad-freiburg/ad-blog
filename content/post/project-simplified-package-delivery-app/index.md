@@ -4,7 +4,6 @@ date: 2022-03-13T13:00:27+01:00
 author: "Ievgen Markhai"
 authorAvatar: "img/ievgen-markhai.jpg"
 tags: ["web-app", "pwa", "nuxt.js", "full-stack","node.js", "docker"]
-tags: ["web-app", "pwa", "nuxt.js", "full-stack","node.js","docker"]
 image: "img/package-tracker.markhai.com.png"
 draft: false
 ---
