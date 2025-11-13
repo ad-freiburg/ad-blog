@@ -48,7 +48,6 @@ The [Resource Description Framework](https://www.w3.org/TR/rdf11-concepts) (RDF)
 
 {{< figure src="img/rdf/triple.svg" caption="RDF triple with a <span style='color:var(--red)'>subject</span>, <span style='color:var(--blue)'>predicate</span> and <span style='color:var(--green)'>object</span>" width="500px" >}}
 
-<!--*IRIs* and *literals* are called **resources** and used to denote anything we describe. *Blank Nodes* are used in triples when only stating that something exists without naming it. The subject may be an IRI or a blank node, the predicate is always an IRI and the object may be an IRI, a literal or a blank node. -->
 An RDF graph is simply a set of RDF triples. The following graph states that *Freiburg* and *Hamburg* are cities and gives their respective population sizes and names.
 
 {{< notice type="note" >}}
@@ -67,7 +66,6 @@ To recap: an <span style='color:var(--purple)'>RDF dataset</span> is made up of 
 
 *SPARQL 1.1* is a collection of standards for interacting with RDF data. Relevant for this project are
 
-<!--- [*SPARQL 1.1 Query Language*](https://www.w3.org/TR/sparql11-query/) which defines a query language for querying RDF data [*SPARQL 1.1 Protocol for RDF*](https://www.w3.org/TR/sparql11-protocol/)-->
 - [*SPARQL 1.1 Protocol for RDF*](https://www.w3.org/TR/sparql11-protocol/) is a protocol for transmitting SPARQL queries and updates over HTTP
 - [*SPARQL 1.1 Update Language*](https://www.w3.org/TR/sparql11-update/) which defines a language for updating RDF data on top of *SPARQL 1.1 Protocol for RDF*
 - [*SPARQL 1.1 Graph Store HTTP Protocol*](https://www.w3.org/TR/sparql11-http-rdf-update/) which defines a protocol for updating RDF data using common HTTP methods
@@ -103,7 +101,7 @@ and five Graph Management operations for managing RDF graphs
 
 ### QLever
 
-QLever is an extremly fast graph database for storing an RDF dataset which can be queried and updated using SPARQL. QLever is written in C++ and actively being developed by the [Chair of Algorithms and Data Structures](https://ad.informatik.uni-freiburg.de/front-page-en) at the University Freiburg and [QLeverize AG](https://www.qleverize.com/).
+QLever is an extremly fast graph database for storing an RDF dataset which can be queried and updated using SPARQL. QLever is an open source project written in C++. It is under active developement in particular by the [Chair of Algorithms and Data Structures](https://ad.informatik.uni-freiburg.de/front-page-en) at the University Freiburg.
 
 To enable its fast performance QLever stores the data in a custom index format. Before the addition of update this index was built once for an RDF dataset. QLever then uses this index to compute query results. Building the index is quick but can take a couple of hours for the largest datasets, which can contain hundreds of billions of triples.
 
@@ -112,7 +110,6 @@ Remember that all RDF data is made up of RDF triples with a subject, predicate a
 Permutations are divided up into *blocks*. Blocks have metadata which contain the first and last triple and the consecutive region on disk that the block is stored on. The borders of the blocks are determined heuristically when building the index. Storing this metadata of the blocks allows quick access to exactly the required blocks for an operation eliminating the need to scan the whole permutation.
 
 {{< notice type="example">}}
-<!-- TODO: integrate the example into the text above to aid understandability. -->
 
 Assume an RDF dataset with 4 triples:
 
@@ -210,6 +207,12 @@ The major parts of [Graph Store Protocol](#sparql-graph-store-http-protocol) are
 
 ### Performance (Impact)
 
+{{< notice type="warning">}}
+
+QLever is under active development. The performance numbers presented below are a snpashot from September 2025 and have already been improved significantly since then.
+
+{{< /notice >}}
+
 Performance is impressive for a first iteration of the Update feature considering that the main focus was to achieve a high coverage of the [SPARQL Update](#sparql-update) and [Graph Store Protocol](#sparql-graph-store-http-protocol) standards. The current version is already able to catch up and keep up with the [Wikidata knowledge graph](https://qlever.dev/wikidata) for some time. The throughput of updates is better for larger updates. The throughput of updates deteriorates linearly with the number of already updates triples. The impact of applied updates on queries can be high but depends heavily on the type of the query.
 
 We repeatedly delete 10000 random triples on a QLever instance to test how the update performance evolves with the number of already updated triples.
@@ -248,31 +251,3 @@ Implementing the remaining parts of the standard (see [Completeness](#completene
 A related area are the supported media types for the Graph Store Protocol for input and output of serialized RDF data. For output a wide range of media types (CSV, TSV, Turtle, N-Triples, JSON, XML, Binary, QLever JSON) is already supported. For input only *Turtle* and *N-Triples* are supported. Adding support for more media types here would make QLever more versatile.
 
 There may also arise the need for extensions to the standardized functionality like the already implemented `TSOP`. This will depend on the needs of the users.
-
-<!--
-## Update Bottlenecks
-
-- Snapshots cause linear cost in # of updates applied so-far per Update
-  - Blocking Updates, execute queries against DeltaTriples directly -> no Snapshots required for chained Updates
-  - temporarily deactivate Snapshots -> Updates that don't depend on the state (and some few more) can still be executed
-  - multiple layered DeltaTriples, regularly (TM) compact them -> reduce size of top-most DeltaTriples that need to be snapshoted
-    - `write back` Updates to another Index (that's layered on-top) -> reduce size of DeltaTriples + increase query execution time
-  - mechanism for Chaining Updates in GSP, something with ndjson, operation type and the payload
-- Update processing is slow
-  - optimize transformations
-    - Batch ID lookup
-    - optimize data structures
-- Updates können persistiert werden. Ist das persistieren effizient? Wo sind beim lesen und schreiben Bottlenecks?
-- Große Updates (z.B. `LOAD` aber auch andere) gehen OOM. Updates werden in einem Stück verarbeitet.
-  - Updates, wie Query, blockweise verabeiten.
-    - Triples blockweise parsen
-    - Triples blockweise verarbeiten
-- viele LocatedTriples brauchen sehr viel RAM
-
-**
-1. Update dauert lange wenn es schon viele Updates gab
-  - std::set?
-2. Warum dauert Preparation so lange
-**
-
--->
