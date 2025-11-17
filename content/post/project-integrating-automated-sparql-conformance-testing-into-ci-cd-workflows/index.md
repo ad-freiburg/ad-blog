@@ -22,11 +22,11 @@ In this project, I integrated the official SPARQL 1.1 conformance test suite dir
 ----
 
 ## 1. Introduction {#intro}
-One of the challenges in software development is confidence, knowing that the changes you make today won’t quietly break features or standard conformance that worked yesterday.
+One of the challenges in software development is confidence, knowing that the changes you make today won’t quietly break features or standard compliance that worked yesterday.
 
 For my master’s project, I focused on this issue in QLever, a SPARQL query engine which is under active development. With frequent pull requests and new features being added, it’s crucial to ensure that changes don’t come at the cost of functionality or adherence to the SPARQL standard.
 
-During my [bachelor’s thesis](https://ad-blog.informatik.uni-freiburg.de/post/automated-standard-compliance-testing-for-qlever/), I had already worked on making the official SPARQL 1.1 conformance test suite executable against QLever and the results showed that QLever passed 23.83% of the conformance tests.  Since QLever aims to be 100% standard conformant, extending this work into a fully automated workflow was the natural next step to target higher conformance and make sure to not break existing conformance by spotting regressions early.
+During my [bachelor’s thesis](https://ad-blog.informatik.uni-freiburg.de/post/automated-standard-compliance-testing-for-qlever/), I had already worked on making the official SPARQL 1.1 conformance test suite executable against QLever and the results showed that QLever passed 23.83% of the conformance tests. Since QLever aims to be fully compliant with the SPARQL 1.1 standard, extending this work into a fully automated workflow was the natural next step to target higher conformance and make sure to not break existing compliance by spotting regressions early.
 
 Instead of relying on manual testing or hoping reviewers catch regressions, I set out to design a workflow that would make conformance testing easy, automatic, and developer-friendly. The core idea: integrate the SPARQL conformance test suite into QLever’s CI/CD pipeline, extend it with visualization and feedback mechanisms, and give developers the tools to run the tests locally.
 
