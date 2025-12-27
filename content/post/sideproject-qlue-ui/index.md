@@ -1,6 +1,6 @@
 ---
 title: "Qlue-UI, QLever-UI is dead. Long live the QLever-UI."
-date: 2025-01-12T12:43:04+02:00
+date: 2025-12-27
 author: "Ioannis Nezis"
 authorAvatar: "img/profile.png"
 tags: ["editor","SPARQL", "qlever","web-dev"]
