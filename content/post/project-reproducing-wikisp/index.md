@@ -5,21 +5,25 @@ author: "Luis Drayer"
 authorAvatar: "img/ada.jpg"
 tags: []
 categories: []
-image: "img/writing.jpg"
+image: "img/img.png"
 ---
 
 This project reimplements the WikiSP pipeline for semantic parsing from natural language questions to SPARQL queries. The reimplementation faithfully reproduces the original models’ behavior and evaluation metrics, while providing a complete, self-contained framework for dataset adaptation, training, prediction, and evaluation. It supports experiments with arbitrary datasets and base models, enabling controlled studies on dataset composition, size, quality, and model choice, and facilitating reproducible research in SPARQL semantic parsing.
+
+<!--more-->
 
 ## Content
 1. [Introduction](#introduction)
 2. [WikiSP Methodology](#methodology)
    - [Dataset Structure](#structure)
    - [Evaluation](#wikisp_eval)
+   - [Example Breakdown](#eval_ex)
 3. [Reimplemented Pipeline](#pipeline)
    - [Dataset Adaption](#adaption)
    - [Dataset Splitting](#splitting)
    - [Model setup and training](#setup_training)
    - [Evaluation](#eval)
+   - [Usage Example](#usage)
 4. [Results](#results)
    - [Comparing local WikiSP checkpoints to Paper Results](#comp1)
    - [Retrain Results](#retrain_results)
@@ -48,8 +52,9 @@ WikiSP does not provide a complete, reusable pipeline covering dataset adaptatio
 **Provided by WikiSP:**
 - Two pretrained model checkpoints
 - Saved predictions of the best-performing model on WikiWebQuestions Dev set (`best.json`); available in the [official WikiSP repository](https://github.com/stanford-oval/wikidata-emnlp23/blob/master/predicted_results/best.json)
-- A partial evaluation script
+- A partial evaluation script based on a MongoDB structure
 - High-level descriptions of the training methodology and selected hyperparameters
+- Their fine-tuned version of ReFinEd for Named Entity Disambiguation / Entity Linking
 
 **Missing components:**
 - A dataset adaptation or preprocessing pipeline matching WikiSP’s training format
@@ -117,7 +122,7 @@ The dev and test sets contain:
 
 The WikiSP evaluation pipeline consists of several steps, combining entity detection, SPARQL generation, postprocessing, and result-based evaluation.
 
-### 1. Named Entity Detection (NED)
+### 1. Named Entity Detection (NED) / Entity Linking
 The input English question is processed using [ReFinEd](https://github.com/amazon-science/ReFinED) to extract Wikidata entity IDs present in the question.  
 This step is imperfect by design; the model must handle missing or incorrect entities.
 
@@ -154,6 +159,129 @@ Note: examples where the model produces an empty prediction are excluded from ev
 2. **F1 Score**  
    F1 is computed based on the relative overlap between the predicted and gold query results, capturing partial correctness when predictions are not fully exact.
 
+
+## Example Breakdown {#eval_ex}
+
+To more easily understand this evaluation process, let us look at a concrete example from start to finish.
+
+Take this example of the adapted `QALD-7` dataset:
+
+```json
+{
+  "id": "test_29",
+  "utterance": "Which politicians were married to a German?",
+  "sparql": "PREFIX wd: <http://www.wikidata.org/entity/> PREFIX wdt: <http://www.wikidata.org/prop/direct/> SELECT DISTINCT ?uri WHERE { ?uri wdt:P106 wd:Q82955 . ?uri wdt:P26 ?spouse . { ?spouse wdt:P27 wd:Q183 . } UNION { ?spouse wdt:P19 / wdt:P17 wd:Q183 } }",
+  "results": [
+    "x": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q76893"
+    },
+    "x": {
+        "type": "uri",
+        "value": "http://www.wikidata.org/entity/Q78010"
+      },
+    "x": {
+      ...
+    }
+  ]
+}
+```
+
+### Name Entity Detection / Entity Linking
+
+First, the `utterance` is fed to `ReFinEd`:
+
+For utterance: `Which politicians were married to a German?`,
+`ReFinEd` finds the following Entities:
+`['Germans' with QID: Q42884]`.
+
+
+### SPARQL Generation
+
+The utterance and relevant entities from above are now combined into an alpaca-style prompt:
+
+```
+Below is an instruction that describes a task, paired with an input that provides further context.
+Write a response that appropriately completes the request.
+
+### Instruction:
+Given a Wikidata query with resolved entities, generate the corresponding SPARQL. Use property names instead of PIDs.
+
+### Input:
+Query: Which politicians were married to a German?
+Entities:Germans with QID Q42884;
+
+### Response:
+```
+
+This is fed to the actual model, which generates a matching SPARQL query under the response section of the prompt.
+
+This SPARQL query is then extracted from the model's output:
+
+`SELECT DISTINCT ?uri WHERE { ?uri wdt:occupation wd:politician . ?uri wdt:spouse ?spouse . ?spouse wdt:country_of_citizenship wd:Q42884 . }`
+
+As one can see, everything except for named entities provided by `ReFinEd` remains in its natural language form for now. Since `ReFinED` only resolves named entities and not abstract classes such as occupations, politician remains unresolved at this stage and must be recovered during postprocessing. The same thing would happen to actual named entities that `ReFinEd` missed as well.
+
+
+
+### Postprocessing
+
+In the next step, `PIDs` are resolved by querying Wikidata directly.
+
+In our example:
+
+```
+inserting country_of_citizenship for P27
+inserting spouse for P26
+inserting occupation for P106
+```
+
+
+With this, our query becomes:
+
+`SELECT DISTINCT ?uri WHERE { ?uri wdt:P106 wd:politician . ?uri wdt:P26 ?spouse . ?spouse wdt:P27 wd:Q42884 . }`
+
+After this, not yet resolved `QIDs` are resolved by querying Wikidata again.
+
+In our case:
+
+```
+inserting wd:Q82955 for politician
+```
+
+After this last step, our query has its final form:
+
+`SELECT DISTINCT ?uri WHERE { ?uri wdt:P106 wd:Q82955 . ?uri wdt:P26 ?spouse . ?spouse wdt:P27 wd:Q42884 . }`
+
+This can now be used to query `Wikidata` for the results.
+
+### Evaluation
+
+With this, we can now evaluate.
+
+First, we compare the SPARQL strings directly (after stripping the prefixes of the gold query):
+
+```
+Predicted: SELECT DISTINCT ?uri WHERE { ?uri wdt:P106 wd:Q82955 . ?uri wdt:P26 ?spouse . ?spouse wdt:P27 wd:Q42884 . }
+
+Gold: SELECT DISTINCT ?uri WHERE { ?uri wdt:P106 wd:Q82955 . ?uri wdt:P26 ?spouse . { ?spouse wdt:P27 wd:Q183 . } UNION { ?spouse wdt:P19 / wdt:P17 wd:Q183 } }
+
+```
+
+Due to these being different, we now compare the query results. When querying Wikidata using our predicted query, we get:
+
+`[]`, while the gold results are a long list of `QIDs` of politicians.
+
+As neither the queries nor the results match, this prediction is wrong and not counted as an Exact Match (`EM`).
+
+
+We also calculate the relative overlap of these result vectors to get the `F1` score, but because our prediction delivered an empty results list, `F1` is 0 in this case as well.
+
+In the case of this example, our model's prediction does not fail due to missing entities or postprocessing, but due to a structurally different understanding of the question and how Wikidata is structured. The predicted query is semantically plausible but over-constrains the spouse condition by requiring an explicit `P27` (country of citizenship) triple. In Wikidata, nationality information for spouses is often missing or indirectly encoded via place of birth. The gold query explicitly compensates for this data sparsity using a `UNION`, whereas the predicted query does not, resulting in an empty result set.
+
+---
+
+Exactly this is done with every example in the evaluated dataset in order to compute Exact Match (`EM`) and `F1` scores.
 
 ---
 
@@ -251,6 +379,89 @@ Additional functionality includes:
 
 - Comparing predictions not only to the gold SPARQL/results, but also to another model’s saved predictions  
 - Comparing to the dataset’s stored results as well as the fresh results from Wikidata, which may have changed since the dataset was created
+---
+
+## Usage Example {#usage}
+
+The following section will show how one would use this pipeline, to train a WikiSP-style model on purely WikiWebQuestions, QALD-7 and Alpaca data.
+
+### Adapting the original QALD-7 dataset
+
+[This](https://ad-publications.cs.uni-freiburg.de/grasp/benchmark/wikidata/qald7/) version of `QALD-7` can first be converted into the WikiSP-Train format using:
+
+Train:
+
+```
+make adapt-dataset \
+input_file_path=/extern/data/Datasets/Qald7/original_files/train.jsonl \
+jsonl_output_path=output/Qald7/train.jsonl \
+json_output_path=output/Qald7/train.json \
+adapt_mode=train
+```
+
+Test:
+
+```
+make adapt-dataset \
+input_file_path=/extern/data/Datasets/Qald7/original_files/test.jsonl \
+jsonl_output_path=output/Qald7/qald7_test.jsonl \
+json_output_path=output/Qald7/qald7_test.json \
+adapt_mode=train
+
+make adapt-dataset \
+input_file_path=output/Qald7/qald7_test.jsonl \
+jsonl_output_path=output/Qald7/test.jsonl \
+json_output_path=output/Qald7/test.json \
+adapt_mode=test
+```
+
+Splitting is not needed in the case of this dataset. As `eval.py` expects both a dev and test set, the test set should be duplicated in this case:
+
+```
+cp output/Qald7/test.jsonl output/Qald7/dev.jsonl
+```
+
+Files that are no longer needed can now be removed for clarity:
+
+```
+rm output/Qald7/qald7_test.json output/Qald7/qald7_test.jsonl output/Qald7/train.jsonl output/Qald7/test.json
+```
+
+We now have `output/Qald7/train.json` for training and `output/Qald7/test.jsonl` for evaluation!
+
+### Training a new model
+
+To now train a WikiSP-style model using this dataset, we can do:
+
+```
+make train \
+checkpoint_dir_path="output/MyWikiSP_WWQ_Q7_FullAlpaca/" \
+datasets="output/Qald7/train.json /extern/data/Datasets/WikiWebQuestions/TrainingData/train.json Alpaca" \
+scalings="20 5 1" \
+model_name=MyWikiSP_WWQ_Q7_FullAlpaca \
+eval_callback=True callback_data_path=/extern/data/Datasets/WikiWebQuestions/ \
+callback_eval_mode=dev \
+callback_comparison_path=/extern/data/PredictedResults/local_wikisp-q7_wwq_dev.json
+```
+
+This will automatically output a `.csv` file where each checkpoints performance on (in this case) WWQ dev is shown. All of the checkpoints produced during training will live in `checkpoint_dir_path`.
+
+### Evaluating on other datasets
+
+After choosing the checkpoint we want from training, we can now use the checkpoint as a full model in `eval.py`.
+
+To evaluate our newly trained model (here saved under `output/Models/MyWikiSP_WWQ_Q7_FullAlpaca`)'s performance on QALD-7, we run:
+
+```
+make eval \
+checkpoint_dir=output/Models/MyModels/MyWikiSP_WWQ_Q7_FullAlpaca/ \
+data_dir=output/Qald7/ \
+eval_mode=test \
+comparison_path=/extern/data/PredictedResults/local_wikisp-q7_q7_test.json 
+```
+
+And as such get both EM and F1 on `QALD-7`, but also EM with respect to the original `WikiSP_WWQ_Q7`'s predictions.
+
 ---
 
 Much more detailed instructions on how to actually use this pipeline can be found in the [Makefile](https://github.com/Ludraaa/Bachelorprojekt/blob/main/Makefile)!
@@ -707,7 +918,7 @@ This table shows evaluations of both the original WikiSP models, as well as the 
 - WikiWebQuestions
 - QALD-7
 - QALD-10
-- LC-QuAD22
+- LC-QuAD2
 
 <table>
   <!-- Dataset group header -->
