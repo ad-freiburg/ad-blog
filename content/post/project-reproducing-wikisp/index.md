@@ -12,6 +12,11 @@ This project reimplements the WikiSP pipeline for semantic parsing from natural 
 
 <!--more-->
 
+
+## [GitHub](https://github.com/Ludraaa/Bachelorprojekt)
+
+---
+
 ## Content
 1. [Introduction](#introduction)
 2. [WikiSP Methodology](#methodology)
