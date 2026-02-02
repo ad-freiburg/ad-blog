@@ -17,6 +17,13 @@ This project reimplements the WikiSP pipeline for semantic parsing from natural 
 
 ---
 
+## Disclaimer
+
+I used ChatGPT as a discussion partner, for interactive assistance with phrasing sentences, and for help with specific translation questions. I did not use ChatGPT to prewrite entire text passages. I used ChatGPT to identify spelling mistakes, correct grammatical errors, and improve sentence structure throughout this blog post.
+
+---
+
+
 ## Content
 1. [Introduction](#introduction)
 2. [WikiSP Methodology](#methodology)
