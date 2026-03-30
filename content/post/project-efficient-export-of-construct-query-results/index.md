@@ -9,7 +9,8 @@ image: "img/writing.jpg"
 ---
 The SPARQL CONSTRUCT query form allows clients to extract and transform RDF data into a new graph.
 In QLever, the original CONSTRUCT export pipeline was up to 2x slower than an equivalent SELECT export on the same data.
-This post describes the analysis of the original implementation, the design and implementation of an improved pipeline,
+This post describes the analysis of the original implementation, 
+the design and implementation of an improved implementation, 
 an empirical evaluation of the speedup achieved, 
 and a profiling-based analysis of the remaining overhead that motivates concrete directions for future work.
 
@@ -36,8 +37,14 @@ The RDF data model is based on the idea of making statements about resources (in
 in expressions of the form *subject-predicate-object*, known as *triples*.
 The *subject* denotes the resource, the *predicate* denotes traits or aspects of the resource, 
 and expresses a relationship between the *subject* and the *object*.[^2]
+RDF is a directed graph composed of triple statements.
+An RDF graph statement is represented by:
+(1) a node for the subject,
+(2) a directed edge from subject to object, representing a predicate, and
+(3) a node for the object.
+Each of these parts can be identified by a 
 
-Below is an example of multiple RDF triples, which are seperated by a dot (.) and a newline.
+Below is an example of multiple RDF triples from [^1].
 ```ntriples
 <Bob> <is a> <person>.
 <Bob> <is a friend of> <Alice>.
@@ -50,11 +57,6 @@ Below is an example of multiple RDF triples, which are seperated by a dot (.) an
 ```
 *Listing 1*
 
-RDF statements represent a graph in the following way: 
-Each RDF triple statement is represented by: 
-(1) a node for the subject, 
-(2) a directed edge from subject to object, representing a predicate, and 
-(3) a node for the object.
 A set of RDF triples is also called a *knowledge graph*, or *knowledge base*.
 
 ## SPARQL 
@@ -65,7 +67,7 @@ Triple patterns are like RDF triples except that each of the subject, predicate 
 A basic graph patterm *matches* a subgraph of the RDF data, 
 when RDF terms from that subgraph may be substituted for the variables and the result is RDF graph equivalent to the subgraph. [^3]
 The most common query form for SPARQL queries is `SELECT`: 
-It returnes the results of the query as a table of variable bindings. 
+It returns the results of the query as a table of variable bindings. 
 After the `SELECT` keyword, 
 one specifies which variable bindings should appear in the result table for the query.
 See the following example SPARQL SELECT query which queries for the following:
@@ -130,8 +132,71 @@ on a single commodity PC or server."[^4]
 It is a open source project  written in the programming language C++ developed 
 by the Chair of Algorithms and  Data Structures at the University of Freiburg [^5]
 
-TODO: explain how QLever works here. Also state why we are explaining that. because it makes it easier to understand
-what the construct export is and where it fits in in the qlever engine processes.
+## How QLever processes a query
+To understand where the CONSTRUCT export fits in, 
+it helps to see the big picture of what QLever does when it reveives a query.
+
+```
+┌──────────────────────────────────────────────┐
+│                    Client                    │
+└──────────────────────┬───────────────────────┘
+                       │ HTTP request
+                       │ (query string, output format, …)
+                       ▼
+┌──────────────────────────────────────────────┐
+│           (1) Parse HTTP request             │
+└──────────────────────┬───────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────┐
+│        (2) Parse SPARQL query string         │
+│              → ParsedQuery                   │
+└──────────────────────┬───────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────┐
+│          (3) Plan and optimize query         │
+│          -> QueryExecutionTree               │
+└──────────────────────┬───────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────┐
+│          (4) Export result                   │
+│   execute QueryExecutionTree -> IdTable      │
+│   decode integer IDs -> RDF terms            │
+│   [CONSTRUCT: instantiate graph template]    │
+│   serialize to requested output format       │
+└──────────────────────┬───────────────────────┘
+                       │ HTTP response
+                       │ (serialized bytes)
+                       ▼
+┌──────────────────────────────────────────────┐
+│                    Client                    │
+└──────────────────────────────────────────────┘
+Figure 2: The QLever query processing pipeline.
+```
+
+**1. Receiving and Parsing the HTTP request.**
+The client sends an HTTP GET or POST to QLevers HTTP server.
+QLever extracts the query string, the requested output format, and other parameters.
+
+**2. Parsing the SPARQL query.**
+The query string is passed to `SparqlParser::parseQuery()`, 
+which produces a `ParsedQuery`, which is a structured internal representation of the query.
+
+**3. Query planning and optimization**
+A `QueryPlanner` transforms the `ParsedQuery` into a `QueryExecutionTree`.
+The `QueryExecutionTree` is a tree of concrete operations (index scans, joins, filters, etc.) 
+that will be executed to evaluate the query.
+
+**4. Result export**.
+`ExportQueryExecutionTrees::computeResult()` executes the `QueryExecutionTree` against the index and serializes the
+result. 
+Executing the tree produces an `IdTable`, a table of 64-bit integer IDs.
+This table contains one column per query variable, and one row per query solution.
+The IDs must then be decoded back into readable RDF terms (Iris, Literalsl) 
+before they can be written into the output format and streamed back to the client as the HTTP response.
+This export step is exactly what this project is about.
 
 # Problem Statement
 To understand whether the old implementation of the CONSTRUCT query export had a meaningful performance problem, 
