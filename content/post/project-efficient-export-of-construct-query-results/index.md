@@ -124,13 +124,45 @@ but to export or transform it as RDF.
 Common use cases include extracting a subgraph from a large knowledge base for use in another system or producing a
 self-contained RDF file for exchange or archival.
 
-## QLever 
+## QLever
 "QLever is a graph database implementing the RDF and SPARQL standards.
-QLever can efficiently load and query very large datasets, 
-even with hundreds of billions of triples, 
+QLever can efficiently load and query very large datasets,
+even with hundreds of billions of triples,
 on a single commodity PC or server."[^4]
-It is a open source project  written in the programming language C++ developed 
+It is a open source project  written in the programming language C++ developed
 by the Chair of Algorithms and  Data Structures at the University of Freiburg [^5]
+
+### Vocabulary
+Conceptually, the **vocabulary** is a list of all distinct IRIs and literals that appear in the dataset.
+Each term is assigned a unique integer ID, with IDs assigned so that sorting by ID gives the natural order for each
+type of term: IRIs lexicographically, integers numerically, dates chronologically, and so on.
+
+All triples in the index, and all intermediate query results, are represented using these integer IDs rather than
+strings, which keeps memory usage low and makes comparisons fast.
+
+Each ID is technically a tagged 64-bit integer: a few bits encode the *type* of the value, and the remaining bits
+encode the value itself. For IRIs and string literals, the value bits are an index into the vocabulary array (the
+ID is a pointer to the term's string). For numeric types, dates, and a few others, the value bits encode the data
+directly, with no vocabulary lookup needed. The vocabulary therefore does not cover all IDs, it is the part of the
+ID space that maps to stored strings.
+
+The actual vocabulary implementation is more complex than this conceptual picture (it is split into an in-memory
+part and an on-disk part, with configurable rules for which terms go where), but the essential idea is a
+bidirectional mapping between IDs and RDF term strings.
+
+A small in-memory **local vocabulary** supplements the on-disk vocabulary during query execution: it holds terms
+produced at query time (e.g. by `BIND` expressions) that have no pre-assigned ID.
+
+### Index and index permutations
+Before QLever can answer queries, the dataset must be built into an **index**
+(a set of on-disk data structures optimized for fast triple lookup).
+Each triple `(subject, predicate, object)` is stored as three integer IDs, one per term.
+To support arbitrary triple access patterns efficiently, QLever stores the triples in six **permutations**:
+all six orderings of the three positions (SPO, SOP, PSO, POS, OSP, OPS).
+Each permutation is a sorted list of all triples in that order.
+A triple pattern that fixes the predicate and subject, for example, is answered by reading the contiguous block of
+matching rows from the PSO permutation.
+The actual implementation is more complex, but this is beyond the scope of this post.
 
 ## How QLever processes a query
 To understand where the CONSTRUCT export fits in, 
@@ -141,7 +173,7 @@ it helps to see the big picture of what QLever does when it reveives a query.
 │                    Client                    │
 └──────────────────────┬───────────────────────┘
                        │ HTTP request
-                       │ (query string, output format, …)
+                       │ (query string, requrested output format)
                        ▼
 ┌──────────────────────────────────────────────┐
 │           (1) Parse HTTP request             │
@@ -150,7 +182,7 @@ it helps to see the big picture of what QLever does when it reveives a query.
                        ▼
 ┌──────────────────────────────────────────────┐
 │        (2) Parse SPARQL query string         │
-│              → ParsedQuery                   │
+│              -> ParsedQuery                  │
 └──────────────────────┬───────────────────────┘
                        │
                        ▼
@@ -161,8 +193,13 @@ it helps to see the big picture of what QLever does when it reveives a query.
                        │
                        ▼
 ┌──────────────────────────────────────────────┐
-│          (4) Export result                   │
+│          (4) Evaluate query                  │
 │   execute QueryExecutionTree -> IdTable      │
+└──────────────────────┬───────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────┐
+│          (5) Serialize result                │
 │   decode integer IDs -> RDF terms            │
 │   [CONSTRUCT: instantiate graph template]    │
 │   serialize to requested output format       │
@@ -181,67 +218,58 @@ The client sends an HTTP GET or POST to QLevers HTTP server.
 QLever extracts the query string, the requested output format, and other parameters.
 
 **2. Parsing the SPARQL query.**
-The query string is passed to `SparqlParser::parseQuery()`, 
+The query string is passed to `SparqlParser::parseQuery()`,
 which produces a `ParsedQuery`, which is a structured internal representation of the query.
 
 **3. Query planning and optimization**
 A `QueryPlanner` transforms the `ParsedQuery` into a `QueryExecutionTree`.
 The `QueryExecutionTree` is a tree of concrete operations (index scans, joins, filters, etc.) 
-that will be executed to evaluate the query.
+that will be executed to evaluate the query on the given knowledge base.
 
-**4. Result export**.
-`ExportQueryExecutionTrees::computeResult()` executes the `QueryExecutionTree` against the index and serializes the
-result. 
-Executing the tree produces an `IdTable`, a table of 64-bit integer IDs.
-This table contains one column per query variable, and one row per query solution.
-The IDs must then be decoded back into readable RDF terms (Iris, Literalsl) 
-before they can be written into the output format and streamed back to the client as the HTTP response.
-This export step is exactly what this project is about.
+**4. Query evaluation.**
+The `QueryExecutionTree` is executed against the index, producing an `IdTable`.
+The `IdTable` is a table the IDs representing RDF terms, 
+with one column per query variable and one row per query solution.
 
-# Problem Statement
-To understand whether the old implementation of the CONSTRUCT query export had a meaningful performance problem, 
-we compare the time QLever takes to export a CONSTRUCT query against an equivalent SELECT query on the same data. 
-Both queries run the same WHERE clause and therefore do the same query evaluation work. 
-The only difference between them is the export step. 
-Any gap in export time between the two is attributable to the CONSTRUCT export pipeline itself.
+**5. Result serialization.**
+`ExportQueryExecutionTrees::computeResult()` transforms the `IdTable` into the requested output format.
+The integer IDs are decoded back into readable RDF terms (IRIs, Literals).
+For CONSTRUCT queries, the decoded terms are used to instantiate the graph template, producing the output triples.
+The result is then serialized and streamed back to the client as the HTTP response.
+
+# Motivation: The CONSTRUCT Export is Slow
+The goal of this project is to improve the performance of the CONSTRUCT query export in QLever.
+Before optimizing, we first establish that a meaningful performance gap actually exists.
+
+To isolate the cost of the CONSTRUCT export pipeline, we compare it against an equivalent SELECT query on the same data.
+Both queries run the same WHERE clause and therefore perform the same query evaluation work.
+The only difference is the export step.
+Any gap in export time is therefore attributable to the CONSTRUCT export pipeline itself.
 
 ## Benchmarking Setup
-To measure the cost of the CONSTRUCT export pipeline in isolation, we compare the time QLever takes to answer a
-CONSTRUCT query against an equivalent SELECT query on the same data. Both queries evaluate the same WHERE clause. Any
-perfomance gap between the two is therefore attributable to the CONSTRUCT pipeline itself.
-
-**Query.** We use the following query, which retrieves every triple in the dataset:
+**Query.** We use the following query, which X triples from the dataset:
 ```sparql
-SELECT ?s ?p ?o WHERE { ?s ?p ?o }
+SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT X
 ```
 
 For the CONSTRUCT variant, the template directly mirrors the SELECT projection:
 ```sparql
-CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }
+CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT X
 ```
 
 We vary the number of result rows using `LIMIT` (10,000 / 100,000 / 1,000,000) in order to see whether a potential
-perfomance gap scales with the number of rows.
+performance gap scales with the number of rows.
 
-**Output format.** SELECT queries are most commonly exported in tabular formats such as TSV or CSV (TODO: quote?).
-CONSTRUCT queries produce RDF graphs, which are most commonly serialized as Turtle or N-Triples (TODO: quote?).
-
-Not all formats are supported by both query forms.
-QLever silently falls back to a default when an unsupported format is requested (`turtle` is the default format for
-CONSTRUCT and `sparqlJson` the default format for SELECT query outputs).
-
-A fair comparison therefore requires formats that both  query forms support natively.
-The formats common to both are TSV, CSV, qleverJson.
-
-We benchmark `TSV`, `CSV`, and `qleverJson`  for the SELECT vs CONSTRUCT comparison.
-Additionally, we report `Turtle` times for CONSTRUCT queries in isolation, since `Turtle` is the most common output
-format for RDF graph export (next to `N-Triples`, which is not supported for construct-query exports at the moment.)
+**Output format.** We benchmark across multiple common export formats to get a representative picture.
+TSV, CSV, and `qleverJson` are supported by both query forms and are used for the SELECT vs. CONSTRUCT comparison.
+We additionally report `Turtle` times for CONSTRUCT queries in isolation, as `Turtle` is the most common serialization
+format for RDF graphs.
 
 **Methodology.** We use QLever's internal query time, which covers the full request handling but excludes network
 transfer. We run the query once before measuring to ensure the index is loaded into the OS page cache, then run the same
 query five times and report median of the 5  measurements.
 
-**Machine.** All measurements were taken at git `commit af00534d` from the master branch of the qlever repo [^5]) on a
+**Machine.** All measurements were taken at git `commit af00534d` from the master branch of the qlever repo [^5] on a
 machine with the following specifications:
 - CPU: AMD Ryzen 5 4600G
 - RAM: 30.7 GiB
@@ -250,8 +278,6 @@ machine with the following specifications:
 
 The binary was compiled in Release mode using GCC with the LLD linker:
 `cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_LINKER=/usr/bin/lld ..`
-
-TODO: rerun the benchmark at git commit a5e4bf705f003cb3b0477c068966a633a15fb378 (since I did the refactor afterwards)
 
 ## Results
 
@@ -273,53 +299,18 @@ TODO: rerun the benchmark at git commit a5e4bf705f003cb3b0477c068966a633a15fb378
 The `SELECT (ms)` and `CONSTRUCT (ms)` columns report the median wall-clock time in milliseconds over the five measured
 runs. The `Ratio` column is the CONSTRUCT time divided by the SELECT time.
 
-**Observation**: The CONSTRUCT export is consistently slower than the equivalent SELECT export acrross all formats and
-row counts. For TSV and CSV the CONSTRUCT export takes approximately 2x as long at 1 million rows. The ratio grows
-slightly with the number of rows (from ~1.6x at 10k rows to ~2x at 1M rows), indicating that the overhead of the
-CONSTRUCT export pipeline scales roughly linearly with the number or result rows.
-
-The ratio is lower for `qleverJson` (~1.6x at 1M rows). This is expected: qleverJson is a more verbose format that
-requires more seralization  work per row for both query forms, which reduces the relative share of CONSTRUCT-specific
-overhead in the total time. (TODO: does that really make sense?)
-
-For the turtle format, no SELECT comparison is possible since QLever does not support Turtle output for SELECT queries.
-The absolute CONSTRUCT times for Turtle are comparable to those for TSV and CSV, which makes sense since all three
-formats produce one line per output triple (whereas the qleverJson format produces more than that).
+**Observation**: 
+The CONSTRUCT export is consistently slower than the equivalent SELECT export across all formats and row counts. 
+For TSV and CSV the CONSTRUCT export takes approximately 2x as long at 1 million rows. 
+The ratio grows slightly with the number of rows (from ~1.6x at 10k rows to ~2x at 1M rows), 
+indicating that the overhead of the CONSTRUCT export pipeline scales roughly linearly with the number or result rows.
 
 In the next section we examine the original implementation of the CONSTRUCT Export pipeline to understand how we can
 improve it.
 
-# Original Implementation 
-## 1. Where it fits in
+# Original Implementation
 
-### index building 
-TODO:
-how an index is built, here we can also explain what the index is, what the vocabulary is etc.
-
-### query resolution
-
-Figure X (TODO) shows how a CONSTRUCT query is processed end-to-end in QLever.
-
-When a client sends an HTTP request containing a SPARQL CONSTRUCT query, the QLever engine processes it in three steps
-before the export begins.
-
-1) First, the query string is parsed into a `ParsedQuery`, which is a structured internal representation of the query
-(TODO: explain what "structured internal representation" means.) 
-2) Second, a `QueryPlanner` derives a `QueryExecutionTree` from the `ParsedQuery`, which is the physical execution plan
-for the query.
-3) Third, the `QueryExecutionTree` is executed against the index (TODO: explain what an index is first), producing the
- result of the where clause as a `Result` object. The `Result` contains an `IdTable`: a table of rows where each row
-represents a query solution and each cell holds a `ValueId`, which is a compact 64-bit integer encoding of an RDF term.
-The `Result` also contains a `LocalVocab` object, which is an in-memory vocabulary, which holds RDF terms created during
-query execution that are not present in the main on-disk vocabulary (TODO: explain what a vocabulary is.)
-
-This `Result` is the input to the CONSTRUCT export. For each row in the `IdTable`, the export instantiates the CONSTRUCT
- template: it resolves each `ValueId` back into a human-readable RDF term string (by looking the corresponding string
-representation up in the `LocalVocab` or the main `vocabulary` on disk), substitutes the resolved strings into the
-template positions, and emits the resulting triples into the requested output format, which is then streamed back to the
-client in the appropriate serialization format.
-
-## 2. How the original implementation worked
+## How the original implementation worked
 
 The core of the CONSTRUCT export is a single function: `constructQueryResultToTriples`. \
 Its structure is a straightforward nested loop: \
@@ -345,7 +336,7 @@ The QLever engine executes the WHERE clause and produces the following `IdTable`
 
 Each cell of the table holds a `ValueId`. \
 For IRIs and literals stored in the main vocabulary, this is a `VocabIndex`, 
-(which is an integer that serves as a pointer into the on-disk vocabulary).
+(which is an integer that serves as an index into the on-disk vocabulary).
 
 The CONSTRUCT template `{ ?person <has-interest> ?thing }` is represented internally as a list of `GraphTerm` triples. \
 Each position in a triple is one of: \
