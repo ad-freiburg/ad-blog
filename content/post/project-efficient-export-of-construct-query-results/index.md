@@ -1,6 +1,6 @@
 ---
 title: "Project Efficient Export of Construct Query Results"
-date: 2026-03-16T10:11:36+01:00
+date: 2026-04-07
 author: "Marvin Stoetzel"
 authorAvatar: "img/ada.jpg"
 tags: []
