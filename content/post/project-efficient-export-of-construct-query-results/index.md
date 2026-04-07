@@ -653,26 +653,19 @@ Wide bars near the top of the call stack are the hotspots (bars not near the top
 
 **Build Configuration.** 
 We compile the `qlever-server` binary with `RelWithDebInfo` rather than `Release`. 
-Both use the same optimization level (TODO: verify), but `RelWithDebInfo` retains debug symbols, 
-which allows `perf` to resolve function addresses to human-readable names and to correctly attribute time to inlined call sites. 
+Both use the same optimization level but `RelWithDebInfo` retains debug symbols, 
+which allows `perf` to resolve function addresses to human-readable names 
+and to correctly attribute time to inlined call sites. 
 We additionally pass `-fno-omit-frame-pointer`, which restores the frame pointer register. 
 This flag restores the frame pointer at negligible runtime cost, giving `perf` reliable call stack reconstruction.
-
-The cmake command used is:
-`cmake -B build-profile-20260325 \
--DCMAKE_BUILD_TYPE=RelWithDebInfo \
--DCMAKE_C_COMPILER=gcc \
--DCMAKE_CXX_COMPILER=g++ \
--DCMAKE_LINKER=/usr/bin/lld \
--DCMAKE_CXX_FLAGS="-fno-omit-frame-pointer" \
--DCMAKE_C_FLAGS="-fno-omit-frame-pointer"`
 
 **Cache state.** We run each query under two cache conditions.
 
 In the *warm-cache* run, we execute the query once before before profiling to load the relevant index blocks into the OS
-page cache (the kernels in-memory buffer of recently accessed file data) (TODO: what is an index block). This isolates
-the CPU-bound cost of the export pipeline: vocabulary lookups that miss the LRU cache are served from RAM rather than
-disk, so the flamegraph reflects decompression and string construction work rather than I/O wait.
+page cache (the kernels in-memory buffer of recently accessed file data). 
+This isolates the CPU-bound cost of the export pipeline: 
+vocabulary lookups that miss the LRU cache are served from RAM rather than disk, 
+so the flamegraph reflects decompression and string construction work rather than I/O wait.
 
 In the *cold-cache* run, we evict the vocabulary file from the OS page cache immediately before recording using
 `vmtouch -e`. vmtouch is a utility that inspects and manipulates the page cache residency of specific files.
@@ -794,7 +787,7 @@ hit rate for the subject column (all subject terms are different).
 Despite the subject column seeing no cache hits, we warm/cold wall-clock difference remains only 284 ms.
 To understand why, we inspect which index permutation QLever chose for this query 
 QLever's `application/qlever-results+json` format includes a `runtimeInformation` field containing the query execution
-plan. (TODO: define somewhere earlier what a query execution plan is).
+plan. 
 We retrieve it with the following command against the server started as
 `./qlever-server -i dblp -p 7001 --default-query-timeout 3600s`:
 
@@ -849,7 +842,7 @@ miss rates, eviction counts, and memory footprint per query? Possibly also other
 3. **Investigate blocking I/O and implement batched disk reads.** \
 The warm/cold wall-clock difference of only 284 ms suggests the LRU cache is effective for the SPO query, 
 but this may not hold for queries that access a larger number of distinct `ValueIds` 
-or on large indices like Wikidata (206 GB vocabulary vs TODO vocabulary size for dblp). \
+or on larger RDF knowlege graphs like Wikidata. \
 A structured investigation would involve: \
 3.1) Understand the vocabulary file layout and access patterns. Understand how `ValueId`s map to positions in the vocabulary file. \
 3.2) Establish how to measure blocking I/O time. \
@@ -879,7 +872,7 @@ ensuring performance improvements do not introduce correctness regressions.
 
 # References
 [^1]: W3 Org. "RDF Primer" https://www.w3.org/TR/rdf11-primer/ Accessed 2026-04-01.
-[^2]: Wikipedia. "RDF" TODO:wikipedia-link-here Accessed 2026-03-29.
+[^2]: Wikipedia. "RDF" https://en.wikipedia.org/wiki/Resource_Description_Framework Accessed 2026-04-07.
 [^3]: W3 Org. "SPARQL 1.1 Query Language" https://www.w3.org/TR/sparql11-query/#introduction Accessed 2026-03-18.
 [^4]: "QLever Documentation" https://docs.qlever.dev/ Accessed 2026-03-18.
 [^5]: "qlever" https://github.com/ad-freiburg/qlever Accessed 2026-03-18.
