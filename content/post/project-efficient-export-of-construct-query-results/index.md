@@ -10,7 +10,7 @@ image: "img/writing.jpg"
 The SPARQL CONSTRUCT query form allows clients to extract and transform RDF data into a new graph.
 In QLever, the original CONSTRUCT export pipeline was up to 2x slower than an equivalent SELECT export on the same data.
 This post describes the analysis of the original implementation, 
-the design and implementation of an improved implementation, 
+the design and implementation of an improved version, 
 an empirical evaluation of the speedup achieved, 
 and a profiling-based analysis of the remaining overhead that motivates concrete directions for future work.
 
@@ -37,8 +37,8 @@ The RDF data model is based on the idea of making statements about resources (in
 in expressions of the form *subject-predicate-object*, known as *triples*.
 The *subject* denotes the resource, the *predicate* denotes traits or aspects of the resource, 
 and expresses a relationship between the *subject* and the *object*.[^2]
-RDF is a directed graph composed of triple statements.
-An RDF graph statement is represented by:
+RDF presents data as a directed graph.
+An RDF graph statement is, in this directed graph, represented by:
 (1) a node for the subject,
 (2) a directed edge from subject to object, representing a predicate, and
 (3) a node for the object.
@@ -54,10 +54,8 @@ Below is an example of a collection of RDF triples from [^1].
 <Alice> <is interested in> <the Mona Lisa>.
 <Alice> <is interested in> <the video 'La Joconde à Washington'>.
 ```
-*Listing 1*
-
+*Listing 1*\
 A set of RDF triples is also called a *knowledge graph*, or *knowledge base*.
-
 There are three types of RDF data that occur in triples: IRIs, literals and blank nodes [^1].
 
 **IRI**. An IRI (International Resource Identifier) is an identifier for a resource such as a person, document, 
@@ -188,38 +186,33 @@ on a single commodity PC or server."[^4]
 It is a open source project  written in the programming language C++ developed
 by the Chair of Algorithms and  Data Structures at the University of Freiburg [^5]
 
-### Vocabulary
-Conceptually, the **vocabulary** is a list of all distinct IRIs and literals that appear in the dataset.
-Each term is assigned a unique integer ID, with IDs assigned so that sorting by ID gives the natural order for each
-type of term: IRIs lexicographically, integers numerically, dates chronologically, and so on.
+**Index and index permutations**.
+Before the qlever answer queries to client requests, the RDF knowlege base is built into an **index**
+(a set of data structures optimized for fast triple lookup, which are stored on disk) 
+using a separate offline indexing step.
+Each triple `(subject, predicate, object)` is stored as three integer IDs, one per term (more on the IDs below).
 
-All triples in the index, and all intermediate query results, are represented using these integer IDs rather than
-strings, which keeps memory usage low and makes comparisons fast.
-
-Each ID is technically a tagged 64-bit integer: 
-4 bits encode the *type* of the value, and 60 bits encode the value itself. 
-For IRIs and string literals, the value bits are an index into the vocabulary array (the
-ID is a pointer to the term's string).
-For numeric types, dates, and a few others, the value bits encode the data directly, with no vocabulary lookup needed.
-The vocabulary therefore does not cover all IDs, it is the part of the ID space that maps to stored strings.
-
-The actual vocabulary implementation is more complex than this conceptual picture (it is split into an in-memory
-part and an on-disk part, with configurable rules for which terms go where), but the essential idea is a
-bidirectional mapping between IDs and RDF term strings.
-
-A small in-memory **local vocabulary** supplements the on-disk vocabulary during query execution: it holds terms
-produced at query time (e.g. by `BIND` expressions) that have no pre-assigned ID.
-
-### Index and index permutations
-Before QLever can answer queries, the dataset must be built into an **index**
-(a set of on-disk data structures optimized for fast triple lookup).
-Each triple `(subject, predicate, object)` is stored as three integer IDs, one per term.
 To support arbitrary triple access patterns efficiently, QLever stores the triples in six **permutations**:
 all six orderings of the three positions (SPO, SOP, PSO, POS, OSP, OPS).
 Each permutation is a sorted list of all triples in that order.
 A triple pattern that fixes the predicate and subject, for example, 
 is answered by reading the contiguous block of matching rows from the PSO permutation.
-The actual implementation is more complex, but this is beyond the scope of this post.
+
+Each ID is technically a tagged 64-bit integer: 
+4 bits encode the *type* of the value, and 60 bits encode the value itself. 
+For IRIs and string literals, the value bits are an index into the vocabulary (we will introduce the concept of the
+vocabulary in a second).
+
+Conceptually, 
+the **vocabulary** is an array containing all distinct IRIs and literals that appear in the RDF knowledge base.
+Each term is assigned a unique integer ID.
+All triples in the index, and all intermediate query results, are represented using these integer IDs rather than
+strings, which keeps memory usage low and makes comparisons fast.
+
+The actual vocabulary and index implementation is more complex than this conceptual picture, 
+but the essential idea is that the vocabulary a mapping from IDs to RDF term strings, 
+sequential IDs point to sequential string values of RDF terms on-disk, 
+and the qlever engine makes use of *index permutations*, which are lists of RDF triples in particular sorted orders.
 
 ## How QLever processes a query
 To understand where the CONSTRUCT export fits in, 
@@ -317,25 +310,23 @@ We vary the number of result rows using `LIMIT` (10,000 / 100,000 / 1,000,000) i
 performance gap scales with the number of rows.
 
 **Output format.** We benchmark across multiple common export formats to get a representative picture.
-TSV, CSV, and `qleverJson` are supported by both query forms and are used for the SELECT vs. CONSTRUCT comparison.
-We additionally report `Turtle` times for CONSTRUCT queries in isolation, as `Turtle` is the most common serialization
-format for RDF graphs.
+`TSV`, `CSV`, and `qleverJson` are supported by both query forms and are used for the SELECT vs. CONSTRUCT comparison.
+We additionally report `Turtle` times for CONSTRUCT queries in isolation, 
+as `Turtle` is a common serialization format for RDF graphs.
 
-**Methodology.** We use QLever's internal query time, which covers the full request handling but excludes network
-transfer. We run the query once before measuring to ensure the index is loaded into the OS page cache, then run the same
-query five times and report median of the 5  measurements.
-
-**Machine.** All measurements were taken at git `commit af00534d` from the master branch of the qlever repo [^5] on a
-machine with the following specifications:
-- CPU: AMD Ryzen 5 4600G
-- RAM: 30.7 GiB
-- Storage: Lexar NM620 1 TB NVMe SSD
-- OS: Fedora 42, Kernel 6.8.13, x86\_64
-
-The binary was compiled in Release mode using GCC with the LLD linker:
-`cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_LINKER=/usr/bin/lld ..`
+**Methodology.**
+We use QLever's internal query time, which covers the full request handling but excludes network transfer. 
+Before each timed run, we evict the index permutation and vocabulary files from the OS page cache using `vmtouch -e`,
+so that each measurement reflects realistic end-to-end query time including the cost of loading data from disk.
+We run the same query five times and report the median. The script used to produce these measurements is available
+[here](artefacts/2026-04-07_problem-statement-measurements.sh)
+All measurements were taken using a binary compiled in `Release` mode at git commit `af00534d` from the master branch 
+of the QLever repository [^5] on a machine with the following specifications: 
+CPU: AMD Ryzen 5 4600G, RAM: 30.7GiB, Storage: 1 TB NVMe SSD.
 
 ## Results
+
+TODO: insert new results here 
 
 | Output format | LIMIT     | SELECT (ms)    | CONSTRUCT (ms)     | Ratio |
 |---------------|-----------|----------------|------------------- |-------|
@@ -355,7 +346,7 @@ The binary was compiled in Release mode using GCC with the LLD linker:
 The `SELECT (ms)` and `CONSTRUCT (ms)` columns report the median wall-clock time in milliseconds over the five measured
 runs. The `Ratio` column is the CONSTRUCT time divided by the SELECT time.
 
-**Observation**: 
+**Observation**:  (TODO: update observations with new results)
 The CONSTRUCT export is consistently slower than the equivalent SELECT export across all formats and row counts. 
 For TSV and CSV the CONSTRUCT export takes approximately 2x as long at 1 million rows. 
 The ratio grows slightly with the number of rows (from ~1.6x at 10k rows to ~2x at 1M rows), 
@@ -367,10 +358,8 @@ improve it.
 # Original Implementation
 
 ## How the original implementation worked
-
 The core of the CONSTRUCT export is a single function: `constructQueryResultToTriples`. \
 Its structure is a straightforward nested loop: \
-for each row in the result table 
 (the table which is the result from computing the WHERE clause of the CONSTRUCT query) 
 iterate over the triple patterns in the CONSTRUCT template and evaluate each triple. \
 Evaluating a triple means resolving each of its three positions (subject, predicate, object) to a concrete string. \
@@ -435,28 +424,25 @@ Once `constructQueryResultToTriples` has yielded a `StringTriple`, a format-spec
 produces a stream of string objects according to the output serialization format specified for the query. \
 The output format is determined once per request from the HTTP `Accept` header. \
 
-# Analysis of Improvement potential for the original Implementation 
+# Analysis of the original Implementation for improvement potential
 The walkthrough above reveals three inefficiencies in the original implementation.
 
-**1. Constants are re-evaluated on every row.** \
-Every triple pattern in the CONSTRUCT template is evaluated from scratch for every result row, including constant
-positions, i.e. `Iri` and `Literal` terms whose string representation never changes across rows. 
-We note that evaluating a constant is cheap (it just reads a field already in memory).
+**1. Variables appearing in multiple template triples are resolved multiple times per row.**
+The old implementation calls evaluateTriple once per (row, template triple) pair, which in turn calls 
+`idToStringAndType` for each variable position independently.
+If the same variable appears in more than one template triple, for example `?s` in both `?s <p1> ?o` and `?s <p2> ?o`, 
+its `ValueId` is looked up separately for each template triple it appears in, on every row.
 
 **2. The same `ValueId` is often resolved multiple times.** \
 Result tables frequently contain the same `ValueId` in many rows.
 In the original implementation, each occurrence triggers an independent vocabulary lookup.
 The walkthrough made this visible: `VocabId(17)` appeared in both row 0 and row 1, but was looked up twice.\
-A cache that maps recently seen `ValueId`s to their resolved strings would eliminate redundant lookups for repeated values.
 
 **3. Vocabulary lookups are issued one at a time** \
-Resolving a `VocabIndex` requires reading from the on-disk vocabulary, which involves decompression and string
+Resolving a `VocabIndex` requires reading from the on-disk vocabulary, wich involves decompression and string
 construction (depending on how the vocabulary is actually stored on disk, we do not always need decompression here). \
 The original implementation issues these lookups individually: \
 one lookup per variable position per row. \
-Processing rows in batches could allow to detect duplicate `ValueId`s within one batch 
-before issuing any lookups at all. \
-This way we could also exploit more sequential memory access patterns in the vocabulary.
 
 # Improved Implementation (Contribution)
 The CONSTRUCT query export pipeline is implemented as four sequential phases, each with a single responsibility. 
@@ -471,7 +457,7 @@ This corresponds to the *Template Preprocessing* box in the upper-left of the di
 
 `ConstructTemplatePreprocessor::preprocess` transforms the raw `GraphTerm` triples from the CONSTRUCT clause into a
 `PreprocessedConstructTemplate`. A `GraphTerm` can be a `Literal`, a `BlankNode`, an `Iri`, or a `Variable`. Each
-term is converted into one of three typed variants, resolving whatever can be determined once rather than per row:
+term is converted into one of three typed variants.
 
 - `PrecomputedConstant`: for `Iri` and `Literal` terms: the string is resolved immediately and stored as a
 `shared_ptr<const EvaluatedTermData>`.
@@ -590,20 +576,10 @@ overhead.
 Each measurement uses a fresh server instance to avoid interference from QLever's internal query cache.
 We report times in milliseconds; ratios are new implementation time divided by old implementation time (lower is better).
 
-Measurements taken on `construct-pipeline-refactor` branch at `git commit  0480d959`
-(https://github.com/marvin7122/qlever/commit/0480d959a02b04d69b017364423ce1670ca833d4).
-
-The build was configured using the following CMake settings:
-```
-cmake -B build \
--DCMAKE_BUILD_TYPE=Release \
--DCMAKE_C_COMPILER=gcc \
--DCMAKE_CXX_COMPILER=g++ \
--DCMAKE_LINKER=/usr/bin/lld
-```
+The measurements taken using a binary built in `Release` mode 
+using the source code on the `construct-pipeline-refactor` branch at git commit `0480d959` [^7]
 
 ## Evaluation
-
 We use the same measurement setup like in the Problem Statement. 
 **Select** and **CONSTRUCT old** are the median times for the two query forms under the original implementation 
 (commit `af00534d`); **CONSTRUCT new** is the median time under the refactored pipeline (commit `0480d959`). 
@@ -887,3 +863,4 @@ ensuring performance improvements do not introduce correctness regressions.
 [^4]: "QLever Documentation" https://docs.qlever.dev/ Accessed 2026-03-18.
 [^5]: "qlever" https://github.com/ad-freiburg/qlever Accessed 2026-03-18.
 [^6]: W3 Org. "RDF Primer, Example 6" https://www.w3.org/TR/rdf11-primer/#section-vocabulary Accessed 2026-04-01.
+[^7]: github. "construct-pipeline-refactor branch" https://github.com/marvin7122/qlever/commit/0480d959a02b04d69b017364423ce1670ca833d4 Accessed 2026-04-07.
