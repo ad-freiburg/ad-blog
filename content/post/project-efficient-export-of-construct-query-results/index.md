@@ -459,12 +459,15 @@ before issuing any lookups at all. \
 This way we could also exploit more sequential memory access patterns in the vocabulary.
 
 # Improved Implementation (Contribution)
-The CONSTRUCT query export pipeline is implemented as four sequential phases, each with a single responsibility. The
-diagram below gives an overview. The sections that follow describe each phase in detail.
-
+The CONSTRUCT query export pipeline is implemented as four sequential phases, each with a single responsibility. 
+The diagram below shows the data flow between the four phases.\
+The left side shows the CONSTRUCT clause (triple patterns) feeding into template preprocessing; 
+the right side shows the WHERE clause result (`IdTable`, `LocalVocab`) being partitioned into row batches. 
+The two streams meet inside `ConstructTripleGenerator`, 
+where variable resolution, triple instantiation, and formatting takes place.
 ![Data flow diagram](img/data-flow.svg)
-
 ### Phase 1 — Template preprocessing (ConstructTemplatePreprocessor)
+This corresponds to the *Template Preprocessing* box in the upper-left of the diagram.
 
 `ConstructTemplatePreprocessor::preprocess` transforms the raw `GraphTerm` triples from the CONSTRUCT clause into a
 `PreprocessedConstructTemplate`. A `GraphTerm` can be a `Literal`, a `BlankNode`, an `Iri`, or a `Variable`. Each
@@ -504,17 +507,20 @@ For example, all values in a predicate column are predicate Iris, which are clus
 `ValueId`s and resolving them in bulk therefore turns scattered disk reads into sequential ones.
 
 Phase 2 exploits both properties by processing one variable column at a time across a batch of rows, and sorting the
-`ValueId`s within each column before lookup.
+`ValueId`s within each column before lookup. 
+This corresponds to the *Batch Evaluation / ConstructBatchEvaluator* box inside `ConstructTripleGenerator`,
+which receives a `TableWithRange` from `TableWithRangeEvaluator` and consults the `IdCache` shown to its right in the
+diagram.
 
 `evaluateBatch` receives `uniqueVariableColumns_` from phase 1 and a `BatchEvaluationContext` describing a contiguous
 slice of the `IdTable`. Because the same `ValueId` often recurs across many rows (e.g., a predicate column may repeat
-the same IRI thousands of times), `evaluateBatch` also consults an LRU cache that maps `ValueId`s to their already-
+the same IRI thousands of times), `evaluateBatch` also consults the `IdCache` that maps `ValueId`s to their already-
 resolved strings, avoiding redundant vocabulary lookups within and across batches.
 
 For each variable column, `evaluateVariableByColumn` proceeds in two sub-steps.
 
 1. **Sort and cache check**. The `Id` values for that column across all rows in the batch are collected and sorted. For
-   each sorted `ValueId`, the LRU cache is checked first. Cache hits are written directly to the result; misses are
+   each sorted `ValueId`, the `IdCache` is checked first. Cache hits are written directly to the result; misses are
 collected into a separate list.
 2. **Batch resolution of misses**. The sorted list of cache-miss `ValueId`s  is passed to `idsToStringAndType`, which
    resolves them in bulk. The results are inserted into the cache and scattered back to the per-row positions in the
@@ -523,7 +529,7 @@ collected into a separate list.
 The output is a `BatchEvaluationResult`: a map from column index to a vector of `optional<EvaluatedTerm>`, with one
 entry per row in the batch. A `nullopt` entry means the variable was unbound for that row.
 
-The LRU cache is owned by `TableWithRangeEvaluator` and passed into `evaluateBatch`, so it persists across batches
+The `IdCache` is owned by `TableWithRangeEvaluator` and passed into `evaluateBatch`, so it persists across batches
 within the same `TableWithRange`, allowing cache hits even when the same `ValueId` recurs across batch boundaries.
 
 ---
@@ -531,6 +537,8 @@ within the same `TableWithRange`, allowing cache hits even when the same `ValueI
 
 **Motivation**. At this point all vocabulary work is done. Phase 3 is a pure assembly step: combine the precomputed
 template structure from phase 1 with the resolved variable values from phase 2.
+This corresponds to the *Triple instantiation / ConstructTripleInstantiator* box, 
+which sits below `ConstructBatchEvaluator` in the diagram and receives its `BatchEvaluationResult`.
 
 `instantiateBatch` iterates over every `(row, template triple)` pair.
 For each term position, according to the term variant:
@@ -548,7 +556,9 @@ The output is a `vector<EvaluatedTriple>`.
 
 **Motivation**. Phases 1-3 produce `EvaluatedTriple` objects, which contain the resolved term data without any
 output-format-specific serialization applied. Phase 4 now serializes the `EvaluatedTriple` objects according to the
-specified serialization format.
+specified serialization format. 
+This corresponds to the *Formatting / FormattedTripleAdapter / StringTripleAdapter* box at the bottom of the diagram, 
+whose two output arrows lead to the HTTP response stream and the QLever JSON serializer respectively.
 
 Two adapter classes inside `ConstructTripleGenerator.cpp` wrap a `TableWithRangeEvaluator` and pull `EvaluatedTriple`
 objects from it one at a time:
@@ -664,7 +674,7 @@ This flag restores the frame pointer at negligible runtime cost, giving `perf` r
 In the *warm-cache* run, we execute the query once before before profiling to load the relevant index blocks into the OS
 page cache (the kernels in-memory buffer of recently accessed file data). 
 This isolates the CPU-bound cost of the export pipeline: 
-vocabulary lookups that miss the LRU cache are served from RAM rather than disk, 
+vocabulary lookups that miss the `IdCache` are served from RAM rather than disk, 
 so the flamegraph reflects decompression and string construction work rather than I/O wait.
 
 In the *cold-cache* run, we evict the vocabulary file from the OS page cache immediately before recording using
@@ -672,7 +682,7 @@ In the *cold-cache* run, we evict the vocabulary file from the OS page cache imm
 The `-e` flag evicts all pages of the given file (the files in that subdirectory) from the page cache,
 forcing subsequent reads to go to disk. We verify the eviction worked by running `vmtouch` before and after
 (it reports the number of pages currently resident  in the page cache for that file/directory, which should fall to zero after eviction.) 
-Every vocabulary lookup that misses the LRU cache in the CONSTRUCT export pipeline now requires a real disk read.
+Every vocabulary lookup that misses the `IdCache` in the CONSTRUCT export pipeline now requires a real disk read.
 Because `perf record` is an on-CPU profiler, it collects no samples while the process is blocked waiting for disk (the
 process is simply not scheduled during that time.) A sparse flamegraph from the cold-cache run would therefore be
 informative in the following way: it would indicate that the dominant cost is not CPU work but I/O wait.
@@ -714,7 +724,7 @@ First, CONSTRUCT is substantially faster than SELECT at 10 million rows (roughly
 the opposite relationship we observed at 1 million rows in the evaluation of the original implementation section.
 Second, the warm/cold difference is less than 5% for both queries
 Evicting the entire index directory from OS page cache changes total query time by only a few hundred milliseconds.
-This might be evidence that the LRU cache is absorbing a vast majority vocabulary lookups before they reach disk,
+This might be evidence that the `IdCache` is absorbing a vast majority vocabulary lookups before they reach disk,
 even on a cold first run. 
 
 **Flame graph analysis**.
@@ -732,7 +742,7 @@ and the three terms concatenated into yet another string,
 rather than being written directly and incrementally into the output buffer.
 Eliminating these allocations is a promising optimization direction.
 
-![construct warm flamegraph](artefacts/profiles/construct_warm.svg)
+[View interactive flamegraph](artefacts/profiles/construct_warm.svg)
 
 **Why CONSTRUCT outperformed SELECT at 10M rows.**
 To understand the reversal, we first analyze the structure of the result set. 
@@ -773,7 +783,7 @@ result table:
 |versionOrdinal   |1    | 1,824     |
 
 
-The formula for the LRU `ValueId`-Cache size is 
+The formula for the `IdCache` size is 
 `# of distinct variables in the construct template` x `2048`
 entries for the binary that was used to create the measurement. 
 Thus, for the profiled query, its size is `6,144`. 
@@ -824,7 +834,7 @@ the actual disk access pattern, which we leave as future work.
 1. **Real-world CONSTRUCT query evaluation.** \
 The profiling results are specific to the SPO query, 
 which has an unusual result set structure (10M distinct subjects, 3 distinct predicates, 3 distinct objects).
-It is unclear how the LRU cache and sort-before-lookup optimization perform under more realistic CONSTRUCT queries.
+It is unclear how the `IdCache` and sort-before-lookup optimization perform under more realistic CONSTRUCT queries.
 An open question is also what "real-world CONSTRUCT queries" look like.
 
 2. **`ValueId`-Cache parametrization.** \
@@ -840,7 +850,7 @@ miss rates, eviction counts, and memory footprint per query? Possibly also other
 2.5) How do we measure the chosen optimization target? \
 
 3. **Investigate blocking I/O and implement batched disk reads.** \
-The warm/cold wall-clock difference of only 284 ms suggests the LRU cache is effective for the SPO query, 
+The warm/cold wall-clock difference of only 284 ms suggests the `IdCache` is effective for the SPO query, 
 but this may not hold for queries that access a larger number of distinct `ValueIds` 
 or on larger RDF knowlege graphs like Wikidata. \
 A structured investigation would involve: \
