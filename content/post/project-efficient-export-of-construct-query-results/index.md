@@ -17,16 +17,31 @@ and a profiling-based analysis of the remaining overhead that motivates concrete
 <!--more-->
 # Table of Contents
 - [Introduction](#introduction)
-  - [RDF](#RDF)
-  - [SPARQL](#SPARQL)
-  - [CONSTRUCT queries](#Construct)
-  - [QLever](#QLever)
-- [Problem Statement](#problem_statement)
-- [Approach](#approach)
-- [Previous Work](#Previous_Work)
-- [Implementation](#implementation)
-- [Evaluation](#evaluation)
-- [Discussion](#discussion)
+- [The RDF Data model](#the-rdf-data-model)
+    - [RDF serialization formats](#rdf-serialization-formats)
+    - [SPARQL](#sparql)
+    - [CONSTRUCT queries](#construct-queries)
+    - [QLever](#qlever)
+    - [How QLever processes a query](#how-qlever-processes-a-query)
+  - [Motivation: The construct export is slow](#motivation-the-construct-export-is-slow)
+    - [Benchmarking Setup](#benchmarking-setup)
+    - [Results](#results)
+  - [Original Implementation](#original-implementation)
+    - [How the original implementation worked](#how-the-original-implementation-worked)
+    - [Analysis of the original-implementation for improvement potential](#analysis-of-the-original-implementation-for-improvement-potential)
+  - [Improved implementation (contribution)](#improved-implementation-contribution)
+    - [Phase 1](#phase-1--template-preprocessing-constructtemplatepreprocessor)
+    - [Phase 2](#phase-2--variable-resolution-constructbatchevaluator--evaluatebatch)
+    - [Phase 3](#phase-3--template-instantiation-constructtripleinstantiator--instantiatebatch)
+    - [Phase 4](#phase-4--formatting-formattedtripleadapter--stringtripleadapter-in-constructtriplegenerator)
+    - [Orchestration](#orchestration)
+  - [Evaluation](#evaluation)
+    - [Methodology](#methodology)
+    - [Results](#results)
+  - [Profiling the remaining overhead](#profiling-the-remaining-overhead)
+    - [Results and Observations](#results-and-observations)
+  - [Future Work](#future-work)
+  - [References](#references)
 
 # Introduction
 In the following we will introduce the concepts which are necessary for understanding the context of the improvements
@@ -75,7 +90,7 @@ Literals may only appear in the object position of a triple.
 
 **Blank node**.
 A blank node is a placeholder for a resource that has no IRI.
-In contrast to IRIs, a blank node's identity is local to the document it appears in. 
+In contrast to IRIs, a blank node's identity is local to a serialization of a particular RDF graph. 
 The same blank node label in two different RDF files refers to two distinct resources.
 Blank nodes are used when statements need to be made about a resource without assigning it a globally reusable identifier.
 
@@ -309,47 +324,51 @@ CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT X
 We vary the number of result rows using `LIMIT` (10,000 / 100,000 / 1,000,000) in order to see whether a potential
 performance gap scales with the number of rows.
 
-**Output format.** We benchmark across multiple common export formats to get a representative picture.
+**Output format.** 
+We benchmark across multiple common export formats to get a representative picture.
 `TSV`, `CSV`, and `qleverJson` are supported by both query forms and are used for the SELECT vs. CONSTRUCT comparison.
 We additionally report `Turtle` times for CONSTRUCT queries in isolation, 
 as `Turtle` is a common serialization format for RDF graphs.
 
 **Methodology.**
-We use QLever's internal query time, which covers the full request handling but excludes network transfer. 
-Before each timed run, we evict the index permutation and vocabulary files from the OS page cache using `vmtouch -e`,
+We use QLever's internal query time, 
+which covers the full request handling but excludes network transfer. 
+Before each timed run, 
+we evict the index permutation and vocabulary files from the OS page cache using `vmtouch -e`,
 so that each measurement reflects realistic end-to-end query time including the cost of loading data from disk.
-We run the same query five times and report the median. The script used to produce these measurements is available
-[here](artefacts/2026-04-07_problem-statement-measurements.sh)
+We run the same query five times and report the median. 
+The script used to produce these measurements is available [here](artefacts/2026-04-07_problem-statement-measurements.sh.txt).
 All measurements were taken using a binary compiled in `Release` mode at git commit `af00534d` from the master branch 
 of the QLever repository [^5] on a machine with the following specifications: 
 CPU: AMD Ryzen 5 4600G, RAM: 30.7GiB, Storage: 1 TB NVMe SSD.
 
 ## Results
-
-TODO: insert new results here 
-
-| Output format | LIMIT     | SELECT (ms)    | CONSTRUCT (ms)     | Ratio |
-|---------------|-----------|----------------|------------------- |-------|
-| TSV           | 10k       | 29             | 46                 | 1.59x |
-| TSV           | 100k      | 191            | 363                | 1.90x |
-| TSV           | 1M        | 1575           | 3479               | 1.98x |
-| CSV           | 10k       | 29             | 47                 | 1.62x |
-| CSV           | 100k      | 191            | 362                | 1.90x |
-| CSV           | 1M        | 1738           | 3486               | 2.01x |
-| qleverJson    | 10k       | 39             | 52                 | 1.33x |
-| qleverJson    | 100k      | 272            | 422                | 1.55x |
-| qleverJson    | 1M        | 2580           | 4084               | 1.58x |
-| Turtle        | 10k       | not supported  | 47                 | None  |
-| Turtle        | 100k      | not supported  | 354                | None  |
-| Turtle        | 1M        | not supported  | 3401               | None  |
+| Output format | LIMIT | SELECT (ms) | CONSTRUCT (ms) | Ratio |
+|---------------|-------|-------------|----------------|-------|
+| TSV           | 10k   | 119         | 130            | 1.09x |
+| TSV           | 100k  | 501         | 680            | 1.36x |
+| TSV           | 1M    | 2100        | 3852           | 1.83x |
+| TSV           | 10M   | 11127       | 23793          | 2.14x |
+| CSV           | 10k   | 195         | 152            | 0.78x |
+| CSV           | 100k  | 513         | 684            | 1.33x |
+| CSV           | 1M    | 2103        | 3895           | 1.85x |
+| CSV           | 10M   | 11107       | 23383          | 2.11x |
+| qleverJson    | 10k   | 124         | 135            | 1.09x |
+| qleverJson    | 100k  | 599         | 752            | 1.26x |
+| qleverJson    | 1M    | 2957        | 4495           | 1.52x |
+| qleverJson    | 10M   | 19164       | 28511          | 1.49x |
+| Turtle        | 10k   | n/a         | 128            | n/a   |
+| Turtle        | 100k  | n/a         | 678            | n/a   |
+| Turtle        | 1M    | n/a         | 3801           | n/a   |
+| Turtle        | 10M   | n/a         | 22559          | n/a   |
 
 The `SELECT (ms)` and `CONSTRUCT (ms)` columns report the median wall-clock time in milliseconds over the five measured
 runs. The `Ratio` column is the CONSTRUCT time divided by the SELECT time.
 
 **Observation**:  (TODO: update observations with new results)
 The CONSTRUCT export is consistently slower than the equivalent SELECT export across all formats and row counts. 
-For TSV and CSV the CONSTRUCT export takes approximately 2x as long at 1 million rows. 
-The ratio grows slightly with the number of rows (from ~1.6x at 10k rows to ~2x at 1M rows), 
+For TSV and CSV the CONSTRUCT export takes approximately 2x as long at 10 million rows. 
+The ratio grows with the number of rows (from ~1x at 10k rows to ~2x at 10M rows), 
 indicating that the overhead of the CONSTRUCT export pipeline scales roughly linearly with the number or result rows.
 
 In the next section we examine the original implementation of the CONSTRUCT Export pipeline to understand how we can
@@ -380,10 +399,10 @@ The QLever engine executes the WHERE clause and produces the following `IdTable`
 | 1   | `VocabId(99)`     | `VocabId(17)`    |
 
 Each cell of the table holds a `ValueId` 
-(this is the code construct that corresponds to the ID an RDF term is mapped to). \
+(the type used in QLever's implementation to represent the integer ID of an RDF term). \
 For IRIs and literals stored in the main vocabulary, this is a `VocabIndex`, 
 (which is an integer that serves as an index into the on-disk vocabulary).
-We write `VocabId(id)` here to show that the `ValueId` is a `VocabIndex`.
+We write `VocabId(id)` here to emphasize that the `ValueId` is a `VocabIndex`.
 
 The CONSTRUCT template `{ ?person <has-interest> ?thing }` is represented internally as a list of `GraphTerm` triples. \
 Each position in a triple is one of: \
@@ -392,7 +411,9 @@ a `Variable`, an `Iri`, a `Literal`, or a `BlankNode`.
 How a `GraphTerm` is evaluated depends on its type:
 - `Iri` or `Literal`: the string representation is stored directly in the object and is returned immediately,
 without any vocabulary lookup.
-- `Variable`: based on it's column index in the `IdTable`, the `ValueId` for the current row of the result (`IdTable`) 
+- `Variable`: based on it's column index in the `IdTable`
+(the mapping from variable names to column indices is determined by the query planner and passed in externally),
+the `ValueId` for the current result row being processed
 is retrieved from the `IdTable`, and then resolved to a string via a vocabulary lookup.
 - `BlankNode`: the blank node identifier is constructed from the blank node's label and the current result row number, 
 producing a  unique string such as `_:g42_b0`. No vocabulary lookup is needed. 
@@ -424,7 +445,7 @@ Once `constructQueryResultToTriples` has yielded a `StringTriple`, a format-spec
 produces a stream of string objects according to the output serialization format specified for the query. \
 The output format is determined once per request from the HTTP `Accept` header. \
 
-# Analysis of the original Implementation for improvement potential
+## Analysis of the original Implementation for improvement potential
 The walkthrough above reveals three inefficiencies in the original implementation.
 
 **1. Variables appearing in multiple template triples are resolved multiple times per row.**
@@ -439,94 +460,116 @@ In the original implementation, each occurrence triggers an independent vocabula
 The walkthrough made this visible: `VocabId(17)` appeared in both row 0 and row 1, but was looked up twice.\
 
 **3. Vocabulary lookups are issued one at a time** \
-Resolving a `VocabIndex` requires reading from the on-disk vocabulary, wich involves decompression and string
+Resolving a `VocabIndex` requires reading from the on-disk vocabulary, which involves decompression and string
 construction (depending on how the vocabulary is actually stored on disk, we do not always need decompression here). \
 The original implementation issues these lookups individually: \
-one lookup per variable position per row. \
+one lookup per variable position per result table row. \
 
 # Improved Implementation (Contribution)
 The CONSTRUCT query export pipeline is implemented as four sequential phases, each with a single responsibility. 
 The diagram below shows the data flow between the four phases.\
 The left side shows the CONSTRUCT clause (triple patterns) feeding into template preprocessing; 
-the right side shows the WHERE clause result (`IdTable`, `LocalVocab`) being partitioned into row batches. 
+the right side shows the WHERE clause result (`IdTable`, `LocalVocab`) being partitioned into chunks by
+`getRowIndices()`, which produces a lazy range of result chunks to support streaming the HTTP response incrementally.
+Inside `ConstructTripleGenerator`, each chunk is handed to `TableWithRangeEvaluator`, 
+which drives variable resolution and triple instantiation. 
+Note that the internal batching performed by `ConstructBatchEvaluator` (Phase 2) is a separate concept from these 
+streaming chunks.
+
 The two streams meet inside `ConstructTripleGenerator`, 
 where variable resolution, triple instantiation, and formatting takes place.
 ![Data flow diagram](img/data-flow.svg)
 ### Phase 1 — Template preprocessing (ConstructTemplatePreprocessor)
 This corresponds to the *Template Preprocessing* box in the upper-left of the diagram.
 
+In the original implementation, every term in every template triple is evaluated from scratch for each result row.
+Phase 1 eliminates repeated work by inspecting the CONSTRUCT template once before any rows are processed and 
+precomputing everything that can be determined at that point.
+
 `ConstructTemplatePreprocessor::preprocess` transforms the raw `GraphTerm` triples from the CONSTRUCT clause into a
-`PreprocessedConstructTemplate`. A `GraphTerm` can be a `Literal`, a `BlankNode`, an `Iri`, or a `Variable`. Each
-term is converted into one of three typed variants.
+`PreprocessedConstructTemplate`. 
+A `GraphTerm` can be a `Literal`, a `BlankNode`, an `Iri`, or a `Variable`. 
+Each term is converted into one of three typed variants:
 
 - `PrecomputedConstant`: for `Iri` and `Literal` terms: the string is resolved immediately and stored as a
-`shared_ptr<const EvaluatedTermData>`.
-- `PrecomputedVariable`: for `Variable` terms: the variable is resolved to its column index in the `IdTable`.
+`shared_ptr<const EvaluatedTermData>`. 
+During triple instantiation (Phase 3), reusing a constant is now a reference-count increment rather than a repeated 
+string construction.
+- `PrecomputedVariable`: for `Variable` terms: the variable is resolved to its column index in the `IdTable` once. 
+The per-row cost is then a direct array lookup by index rather than an additional map lookup by variable name on every
+row.
 - `PrecomputedBlankNode`: for `BlankNode` terms: the prefix (`_:g` for generated blank nodes, `_:u` for user-defined)
 and suffix (`_` + label) are precomputed. 
 When iterating over the rows of the result table, only the row number needs to be inserted between them to produce
 a valid blank node.
 
 A CONSTRUCT template may contain multiple triple patterns, and the same variable may appear in more than one of them.
-To avoid redundant work, the preprocessing phase builds `uniqueVariableColumns_`: a deduplicated list of `IdTable`
-column indices that appear as variables anywhere in the template triples. We will see in Phases 2 and 3 how the
-improved pipeline makes use of `uniqueVariableColumns_`.
+In the original implementation, the `ValueId` for that variable would be looked up once per occurrence per row 
+(so if `?x` appears in three template triples, it is looked up three times for each result row). 
+To avoid this, the preprocessing phase also builds `uniqueVariableColumns_`: 
+a deduplicated list of `IdTable` column indices that appear as variables anywhere in the template triples. 
+Phase 2 uses this list to resolve each variable column exactly once per batch, 
+regardless of how many template triples reference it.
 
 Phase 1 runs once per query, before any rows of the result table are processed.
 
 ---
 ### Phase 2 — Variable resolution (ConstructBatchEvaluator / evaluateBatch)
-**Motivation.** After Phase 1, what remains is resolving `ValueId`s for variable positions. 
-Remember that resolving those terms requires vocabulary lookups and are expensive since the vocabulary is 
-(for the most part) stored on disk. 
-Two properties can be exploited to do this efficiently.
-
-First, note that the `IdTable` is stored in column-major order: each column is a contiguous array in memory. 
-If we fetch all `Id` values for a variable `A` before moving to variable `B`, 
-we follow this layout and get sequential memory access. 
-The original per-row approach, evaluating all three template positions for row 0, then row 1
-and so on, would jump across columns on every step (except when there is only one variable present in the CONSTRUCT
-template).
-
-Second, the `ValueId` values for a single variable column tend to be drawn from a similar region of the `Vocabulary`.
-For example, all values in a predicate column are predicate Iris, which are clustered together on disk. Sorting those
-`ValueId`s and resolving them in bulk therefore turns scattered disk reads into sequential ones.
-
-Phase 2 exploits both properties by processing one variable column at a time across a batch of rows, and sorting the
-`ValueId`s within each column before lookup. 
-This corresponds to the *Batch Evaluation / ConstructBatchEvaluator* box inside `ConstructTripleGenerator`,
-which receives a `TableWithRange` from `TableWithRangeEvaluator` and consults the `IdCache` shown to its right in the
+This corresponds to the *Batch Evaluation / ConstructBatchEvaluator* box inside `ConstructTripleGenerator`, 
+which receives a `TableWithRange` from `TableWithRangeEvaluator` and consults the `IdCache` shown to its right the
 diagram.
 
-`evaluateBatch` receives `uniqueVariableColumns_` from phase 1 and a `BatchEvaluationContext` describing a contiguous
-slice of the `IdTable`. Because the same `ValueId` often recurs across many rows (e.g., a predicate column may repeat
-the same IRI thousands of times), `evaluateBatch` also consults the `IdCache` that maps `ValueId`s to their already-
-resolved strings, avoiding redundant vocabulary lookups within and across batches.
+**Motivation.** After Phase 1, what remains is resolving `ValueId`s for the variable positions in the graph template. 
+This requires vocabulary lookups, which are expensive since the vocabulary is for the most part stored on disk 
+in compressed form, so each lookup may involve a disk read and decompression.
 
-For each variable column, `evaluateVariableByColumn` proceeds in two sub-steps.
+First, the new implementation maintains an `IdCache`: an LRU cache that maps `ValueId`s to their already-resolved
+strings. 
+The same `ValueId` often recurs across many rows of the `IdTable` 
+(for example, a predicate column in a typical SPARQL result may repeat the same IRI thousands or times). 
+Without a cache, each occurrence would trigger a separate vocabulary lookup. 
+The `IdCache` avoids this by storing recently resolved `ValueId`s in memory. 
+The cache persists across batches within the same `TableWithRange`, 
+so cache hits are possible even when the same `ValueId` recurs across batch boundaries.
 
-1. **Sort and cache check**. The `Id` values for that column across all rows in the batch are collected and sorted. For
-   each sorted `ValueId`, the `IdCache` is checked first. Cache hits are written directly to the result; misses are
-collected into a separate list.
-2. **Batch resolution of misses**. The sorted list of cache-miss `ValueId`s  is passed to `idsToStringAndType`, which
-   resolves them in bulk. The results are inserted into the cache and scattered back to the per-row positions in the
-  output.
+Second, for `ValueId`s that are not in 
+the cache, Phase 2 collects and sorts them before issuing vocabulary lookups. 
+The vocabulary is an array of RDF term strings stored on disk, 
+with `ValueId`s serving as indices into it. 
+Sorting the `ValueId`s before lookup means that consecutive lookups access nearby positions in the vocabulary array, 
+producing more sequential disk access patterns and better OS page cache utilization.
+This is done one variable column at a time: the `IdTable` is stored in column-major order, 
+so processing all rows of one variable column before moving to the next follows the memory layout of the `IdTable` 
+and avoids the cross-column access pattern of the original per-row approach.
+
+**Implementation.** 
+`evaluateBatch` receives `uniqueVariableColumns_` from Phase 1 
+and a `BatchEvaluationContext` describing a contiguous slice of the `IdTable`. 
+For each variable column, `evaluateVariableByColumn` proceeds in two sub-steps:
+
+1. **Sort and cache check**. The `ValueId`s for that column across all rows in the batch are collected and sorted. 
+For each sorted `ValueId`, the `IdCache` is checked first. 
+Cache hits are written directly to the result; misses are collected into a separate list.
+2. **Batch resolution of misses**. 
+The sorted list of cache-miss `ValueId`s  is passed to `idsToStringAndType`, 
+which resolves them in bulk. 
+The results are inserted into the cache and scattered back to the per-row positions in the
+output.
 
 The output is a `BatchEvaluationResult`: a map from column index to a vector of `optional<EvaluatedTerm>`, with one
-entry per row in the batch. A `nullopt` entry means the variable was unbound for that row.
-
-The `IdCache` is owned by `TableWithRangeEvaluator` and passed into `evaluateBatch`, so it persists across batches
-within the same `TableWithRange`, allowing cache hits even when the same `ValueId` recurs across batch boundaries.
+entry per row in the batch.
 
 ---
 ### Phase 3 — Template instantiation (ConstructTripleInstantiator / instantiateBatch)
-
-**Motivation**. At this point all vocabulary work is done. Phase 3 is a pure assembly step: combine the precomputed
-template structure from phase 1 with the resolved variable values from phase 2.
-This corresponds to the *Triple instantiation / ConstructTripleInstantiator* box, 
+This phase corresponds to the *Triple instantiation / ConstructTripleInstantiator* box, 
 which sits below `ConstructBatchEvaluator` in the diagram and receives its `BatchEvaluationResult`.
 
-`instantiateBatch` iterates over every `(row, template triple)` pair.
+**Motivation**. 
+At this point all vocabulary work is done. 
+Phase 3 is a pure assembly step: combine the precomputed
+template structure from phase 1 with the resolved variable values from phase 2.
+
+`instantiateBatch` iterates over every `(row in batch, template triple)` pair.
 For each term position, according to the term variant:
 - `PrecomputedConstant`: the precomputed `EvaluatedTerm` shared pointer is copied into the output. This is a
 reference-count increment, not a string copy.
@@ -535,16 +578,19 @@ reference-count increment, not a string copy.
 -`PrecomputedBlankNode`: the blank node string is constructed from the precomputed prefix, the current absolute row
 index of the current row, and the precomputed suffix.
 
-The output is a `vector<EvaluatedTriple>`.
+The output is a `vector<EvaluatedTriple>` with at most `numRows x number of template triples` entries, 
+fewer if any triples were dropped due to unbound variables.
 
 ---
 ### Phase 4 — Formatting (FormattedTripleAdapter / StringTripleAdapter in ConstructTripleGenerator)
-
-**Motivation**. Phases 1-3 produce `EvaluatedTriple` objects, which contain the resolved term data without any
-output-format-specific serialization applied. Phase 4 now serializes the `EvaluatedTriple` objects according to the
-specified serialization format. 
 This corresponds to the *Formatting / FormattedTripleAdapter / StringTripleAdapter* box at the bottom of the diagram, 
 whose two output arrows lead to the HTTP response stream and the QLever JSON serializer respectively.
+
+**Motivation**. 
+Phases 1-3 produce `EvaluatedTriple` objects, 
+containing the resolved term data, independent of any output format. 
+Phase 4 separates format-specific serialization into a dedicated step, 
+so that the upstream phases are not concerned with output format details.
 
 Two adapter classes inside `ConstructTripleGenerator.cpp` wrap a `TableWithRangeEvaluator` and pull `EvaluatedTriple`
 objects from it one at a time:
@@ -555,176 +601,155 @@ formats.
   what the QLever JSON serialier consumes.
 ---
 ### Orchestration
+`ConstructTripleGenerator` is the entry point for the whole pipeline. 
+It runs phase 1 in its constructor, 
+producing the `PrecomputedTemplate` that is shared across all subsequent preprocessing.
 
-`ConstructTripleGenerator` is the entry point for the whole pipeline. It runs phase 1 in its constructor. 
-For each `TableWithRange` chunk of the result table, 
-it creates a `TableWithRangeEvaluator` (which drives phases 2 and 3) and
-wraps it either in a `FormattedTripleAdapter` or a `StringTripleAdapter` (phase 4), 
-depending on the requested output
-format. 
-The per-chunk ranges are joined into a flat lazy output stream and passed directly to the HTTP response writer.
+For each `TableWithRange` in the lazy input range produced by `getRowindices()`, 
+`ConstructTripleGenerator` creates a `TableWithRangeEvaluator` that drives phases 2 and 3, 
+and wraps it in either a `FormattedTripleAdapter` or a `StringTripleAdapter` (Phase 4), 
+depending on the output format requested via the HTTP `Accept` header. 
+The per-chunk ranges are joined into a single flat lazy stream, 
+which is passed directly to the HTTP response writer, 
+allowing its results to be streamed to the client incrementally without materializing the full output in memory.
 
-# Evaluation of original implementation
-
+# Evaluation
+(TODO: rerun measurements on updated script)
 We evaluate the improved CONSTRUCT export pipeline against the original implementation on the DBLP dataset.
 
 ## Methodology
-We use the same machine and build configuration as in the Problem Statement. 
-For each experiment we run the query once as warmup to ensure the index is loaded into the OS page cache, 
-then run the query five times and report the median wall-clock time for the query as reported by the qlever engine without the network transfer
-overhead. 
-Each measurement uses a fresh server instance to avoid interference from QLever's internal query cache.
-We report times in milliseconds; ratios are new implementation time divided by old implementation time (lower is better).
+We use the same machine in the Problem Statement. 
+Before each timed run, 
+the index permutation and vocabulary files are evicted from the OS page cache using `vmtouch -e`, 
+so that each measurement reflects realistic end-to-end query time including the cost of loading data from disk.
+We run the query five times and report the median wall-clock time for the query as reported by the QLever engine, 
+excluding network transfer overhead.
+Each timed run uses a fresh server instance to avoid interference from QLever's internal query cache.
+Times are reported in milliseconds. 
+The script used to produce the measurements is available [here](artefacts/2026-04-07_evaluation-measurements.sh.txt).
 
-The measurements taken using a binary built in `Release` mode 
-using the source code on the `construct-pipeline-refactor` branch at git commit `0480d959` [^7]
+The improved implementation was measured using a binary built in `Release` mode from the 
+`construct-pipeline-refactor` branch at git commit 0480d959 [^7].
 
-## Evaluation
-We use the same measurement setup like in the Problem Statement. 
+## Evaluation Results
 **Select** and **CONSTRUCT old** are the median times for the two query forms under the original implementation 
 (commit `af00534d`); **CONSTRUCT new** is the median time under the refactored pipeline (commit `0480d959`). 
 **Old ratio** and **New ratio** are CONSTRUCT divided by SELECT for the respective implementation. 
 **Speedup** is old CONSTRUCT divided by new CONSTRUCT.
 
-
 | Format     | Limit | SELECT (ms) | CONSTRUCT old (ms) | CONSTRUCT new (ms) | Old ratio | New ratio | Speedup |
 |------------|-------|-------------|--------------------|--------------------|-----------|-----------|---------|
-| TSV        | 10k   | 30          | 48                 | 26                 | 1.60x     | 0.87x     | 1.85x   |
-| TSV        | 100k  | 196         | 373                | 147                | 1.90x     | 0.75x     | 2.54x   |
-| TSV        | 1M    | 1768        | 3505               | 1271               | 1.98x     | 0.72x     | 2.76x   |
-| TSV        | 10M   | 10747       | 22849              | 6241               | 2.13x     | 0.58x     | 3.66x   |
-| CSV        | 10k   | 30          | 48                 | 26                 | 1.60x     | 0.87x     | 1.85x   |
-| CSV        | 100k  | 192         | 381                | 146                | 1.98x     | 0.76x     | 2.61x   |
-| CSV        | 1M    | 1758        | 3626               | 1283               | 2.06x     | 0.73x     | 2.83x   |
-| CSV        | 10M   | 10737       | 22975              | 6190               | 2.14x     | 0.58x     | 3.71x   |
-| qleverJson | 10k   | 39          | 54                 | 31                 | 1.38x     | 0.79x     | 1.74x   |
-| qleverJson | 100k  | 289         | 434                | 197                | 1.50x     | 0.68x     | 2.20x   |
-| qleverJson | 1M    | 2631        | 4102               | 1759               | 1.56x     | 0.67x     | 2.33x   |
-| qleverJson | 10M   | 18895       | 28215              | 10430              | 1.49x     | 0.55x     | 2.71x   |
-| Turtle     | 10k   | n/a         | 47                 | 25                 | n/a       | n/a       | 1.88x   |
-| Turtle     | 100k  | n/a         | 359                | 139                | n/a       | n/a       | 2.58x   |
-| Turtle     | 1M    | n/a         | 3426               | 1241               | n/a       | n/a       | 2.76x   |
-| Turtle     | 10M   | n/a         | 22194              | 5690               | n/a       | n/a       | 3.90x   |
+| TSV        | 10k   | 115         | 130                | 96                 | 1.13x     | 0.83x     | 1.35x   |
+| TSV        | 100k  | 513         | 685                | 410                | 1.34x     | 0.80x     | 1.67x   |
+| TSV        | 1M    | 2091        | 3826               | 1558               | 1.83x     | 0.75x     | 2.46x   |
+| TSV        | 10M   | 11003       | 23079              | 6487               | 2.10x     | 0.59x     | 3.56x   |
+| CSV        | 10k   | 113         | 133                | 93                 | 1.18x     | 0.82x     | 1.43x   |
+| CSV        | 100k  | 495         | 679                | 414                | 1.37x     | 0.84x     | 1.64x   |
+| CSV        | 1M    | 2065        | 3836               | 1540               | 1.86x     | 0.75x     | 2.49x   |
+| CSV        | 10M   | 11015       | 23185              | 6382               | 2.10x     | 0.58x     | 3.63x   |
+| qleverJson | 10k   | 123         | 139                | 99                 | 1.13x     | 0.80x     | 1.40x   |
+| qleverJson | 100k  | 592         | 740                | 453                | 1.25x     | 0.77x     | 1.63x   |
+| qleverJson | 1M    | 2923        | 4422               | 2001               | 1.51x     | 0.68x     | 2.21x   |
+| qleverJson | 10M   | 18998       | 28324              | 10739              | 1.49x     | 0.57x     | 2.64x   |
+| Turtle     | 10k   | n/a         | 127                | 92                 | n/a       | n/a       | 1.38x   |
+| Turtle     | 100k  | n/a         | 668                | 408                | n/a       | n/a       | 1.64x   |
+| Turtle     | 1M    | n/a         | 3742               | 1470               | n/a       | n/a       | 2.55x   |
+| Turtle     | 10M   | n/a         | 22381              | 5813               | n/a       | n/a       | 3.85x   |
 
 **Observation.** 
 The new implementation is consistently faster than the original across all formats and row counts, 
-with speedups ranging from 1.74x at 10k rows to 3.90x at 10M rows. 
+with speedups ranging from 1.35x at 10k rows to 3.85x at 10M rows. 
 The speedup grows with result set size, indicating that the optimizations scale well. 
+Also, the CONSTRUCT export now takes significantly less time than the SELECT export (New ratio column).
 
 # Discussion and Future Work
 
 ## Profiling the remaining overhead
-The new implementation achieves a speedup over the original implementation for TSV, CSV, and Turtle at 10 million rows.
-To understand where the remaining time goes and to motivate concrete directions for future work, we profile the
-CONSTRUCT export pipeline and compare it against an equivalent SELECT export.
+(TODO: do we just want to profile the warm-cache query or also the cold cache query, 
+also is creating the cold cache done in the same way that we do it above?
+Also, should we even bother looking at select flamegraphs here?
+Maybe reduce the # of flamegraphs that we consider here, but actually link them and talk about them)
 
-**Choice of queries.**
-We profile `CONSTRUCT {?s ?p ?o} WHERE { ?s ?p ?o } LIMIT 10000000` and its SELECT equivalent
-`SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10000000` side by side. 
-Both queries evaluate the same WHERE clause;
-any difference in their profiles is  therefore attributable to the CONSTRUCT export pipeline itself. 
-he SPO query is the most informative subject for profiling because every result row contains three variable positions, 
-each of which must be resolved via a vocabulary lookup. 
-It maximises the load on the vocabulary access path and represents the worst case for the pipeline we want to understand. 
-We use the 10 million limit, in order to be able to gather more data in the profiling. 
-Both queries are exported in TSV format. TSV is supported by both query forms and has minimal per-row serialization overhead. 
-Using the same format for both queries also ensures that any difference between the two profiles is attributable to improvements the CONSTRUCT pipeline itself rather than to format differences.
+The new implementation achieves a substantial speedup over the original. 
+To understand where the reamaining time goes 
+and to motivate concrete directions for future work, 
+we profile the new CONSTRUCT export pipeline under two cache conditions.
 
-**Tool.** We use `perf record`, a statistical sampling profiler that interrupts the process at a fixed frequency and
-records the current call stack at each sample. 
-After enough samples, the aggregate reveals which functions account for the largest share of CPU time. 
+**Query**. 
+We profile `CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT 10000000` exported as TSV. 
+This query is an informative subject for profiling: 
+every result row contains three variable positions, 
+each of which must be resolved via a vocabulary lookup, 
+maximising the load on the vocabulary access path.
+
+**Tool.** 
+We use perf record, 
+a statistical sampling profiler that interrupts the process at a fixed frequency and records the current call stack 
+at each sample. 
 We visualize the output as a flamegraph: 
-each bar represents a function, its width proportional to the fraction of samples in which it appeared on the call stack. 
-Wide bars near the top of the call stack are the hotspots (bars not near the top of the call stacks are from functions that delegate to callees).
+each bar represents a function, 
+its width proportional to the fraction of samples in which it appeared on the call stack. 
+Wide bars near the top of the call stack are hotspots. 
+The exact script used to create the profiles can be viewed [here](artefacts/2026-04-07_evaluation-measurements.sh.txt).
 
-**Build Configuration.** 
-We compile the `qlever-server` binary with `RelWithDebInfo` rather than `Release`. 
-Both use the same optimization level but `RelWithDebInfo` retains debug symbols, 
-which allows `perf` to resolve function addresses to human-readable names 
-and to correctly attribute time to inlined call sites. 
-We additionally pass `-fno-omit-frame-pointer`, which restores the frame pointer register. 
-This flag restores the frame pointer at negligible runtime cost, giving `perf` reliable call stack reconstruction.
+**Build configuration**. 
+We compile with `RelWithDebInfo` rather than `Release`. 
+`RelWithDebInfo` retains debug symbols, 
+allowing `perf` to resolve function addresses to human-readable names 
+and correctly attribute time to inlined call sites. 
+We additionally pass `-fno-omit-frame-pointer` 
+to give perf reliable call stack reconstruction at negligible runtime cost.
 
-**Cache state.** We run each query under two cache conditions.
+**Cache conditions.**
+We run the query under two conditions.
+In the *warm-cache* run, 
+we execute the query once before profiling to load the relevant data into the OS page cache, 
+so the flamegraph reflects the CPU-bound work rather than IO-wait.
+In the *cold-cache* run, 
+we evict the index and vocabulary files from the OS page cache using `vmtouch -e` immediately before recording. 
+Because `perf record` is an on-CPU profiler, 
+it collects no samples while the process is blocked on disk I/O. 
+A cold-cache flamegraph with a low total sample count would therefore indicate that the dominant cost is I/O wait rather
+than CPU work.
 
-In the *warm-cache* run, we execute the query once before before profiling to load the relevant index blocks into the OS
-page cache (the kernels in-memory buffer of recently accessed file data). 
-This isolates the CPU-bound cost of the export pipeline: 
-vocabulary lookups that miss the `IdCache` are served from RAM rather than disk, 
-so the flamegraph reflects decompression and string construction work rather than I/O wait.
-
-In the *cold-cache* run, we evict the vocabulary file from the OS page cache immediately before recording using
-`vmtouch -e`. vmtouch is a utility that inspects and manipulates the page cache residency of specific files.
-The `-e` flag evicts all pages of the given file (the files in that subdirectory) from the page cache,
-forcing subsequent reads to go to disk. We verify the eviction worked by running `vmtouch` before and after
-(it reports the number of pages currently resident  in the page cache for that file/directory, which should fall to zero after eviction.) 
-Every vocabulary lookup that misses the `IdCache` in the CONSTRUCT export pipeline now requires a real disk read.
-Because `perf record` is an on-CPU profiler, it collects no samples while the process is blocked waiting for disk (the
-process is simply not scheduled during that time.) A sparse flamegraph from the cold-cache run would therefore be
-informative in the following way: it would indicate that the dominant cost is not CPU work but I/O wait.
-
-**Recording procedure.** For each run we start a fresh server instance to avoid QLever's internal query result cache 
-returning a pre-computed answer. We attach `perf record` to the running server process, issue the measured query,
-and stop recording once the response is complete. We automate the full recording procedure in a single script that
-starts a fresh server instance for each run, handles cache warming or dropping as appropriate, attaches `perf record`,
-issues the query, and generates the flamegraph.
-(The script is available in the repository at `artefacts/2026-03-25_profiling-construct-export.sh`.)
-The exact perf record script used is:
-`perf record --call-graph fp --freq=997 -p "$SERVER_PID" -o "$perf_out" &`, where `SERVER_PID` is the process id of the
-`qlever-server` binary process that is running and `perf_out` is the file to which the profiling data should be written.
-We give perf one second to attach before issuing the query, then send SIGINT to stop it gracefully
-after the query completes, ensuring all buffered samples are flushed to disk before perf exits:
-
-```bash
-  perf record --call-graph fp --freq=997 -p "$SERVER_PID" -o "$perf_out" &
-  PERF_PID=$!
-  sleep 1 # give perf time to attach to all threads
-  echo "Recording... sending query."
-  curl -sf "http://localhost:$SERVER_PORT/?query=$query&action=sparql_query" >/dev/null
-  kill -SIGINT "$PERF_PID"
-  wait "$PERF_PID" 2>/dev/null || true
-
-```
-
-The sampling frequency is set to 997 Hz rather than a round number to avoid accidentally synchronising with periodic 
-system events that fire at round-number intervals, which would bias the sample distribution.
+**Recording procedure.** 
+For each run we start a fresh server instance to avoid QLever's internal query result cache. 
+We attach `perf record` to the server process, and stop recording once the response is complete. 
+The full script is available [here](artefacts/2026-04-08_profiling-construct-export.sh.txt).
 
 ## Results and Observations
 **wall-clock times**.
-The construct warm query completed in 6,299 ms and the construct cold query in 6,583 ms,
-which is a difference of only 284 ms.
-The select warm query completed in 10,851 ms and the select cold query 11,083 ms,
-a difference of only 232 ms.
-Two things stand out.
-First, CONSTRUCT is substantially faster than SELECT at 10 million rows (roughly 6.3 seconds vs 10.9 seconds),
-the opposite relationship we observed at 1 million rows in the evaluation of the original implementation section.
-Second, the warm/cold difference is less than 5% for both queries
-Evicting the entire index directory from OS page cache changes total query time by only a few hundred milliseconds.
-This might be evidence that the `IdCache` is absorbing a vast majority vocabulary lookups before they reach disk,
-even on a cold first run. 
+The construct warm query completed in 6,790 ms and the construct cold query in 6,630 ms,
+which is a difference of only 160 ms (less than 2.5%).
+Evicting the index permutations and vocabulary files from the OS page cache has almost no 
+measurable effect on total query time.
+This is likely evidence that the `IdCache` is absorbing the vast majority of vocabulary lookups before they reach disk.
 
 **Flame graph analysis**.
-The construct-warm flamegraph shows `FormattedTripleAdapter::get` (the top level entry point of the export pipeline)
-accounting for 81% of total CPU time.
+The warm-cache and cold-cache flamegraphs are nearly identical, 
+consistent with the negligible wall-clock difference. 
+In the warm-cache flamegraph, 
+`FormattedTripleAdapter::get` (the top level entry point of the export pipeline) accounts for 80% of total CPU time.
 Within that, two cost centers stand out.
-First, `VocabularyOnDisk::operator[]` accounts for 13.77% of total CPU time,
-representing the cost of resolving `ValueId`s to strings via disk reads.
-Second, `formatTriple` accounts for 18.09% of total CPU time.
-The functions that dominate `formatTriple`s call stack are all string manipulation operations
-(`RdfEscaping::escapeForTsv`, `absl::strings_internal::CatPieces`, and `__memmove_avx_unaligned`).
-This suggests that the serialization step is allocating and copying intermediate strings unnecessarily:
-each term is likely escaped into a freshly allocated string,
-and the three terms concatenated into yet another string,
-rather than being written directly and incrementally into the output buffer.
-Eliminating these allocations is a promising optimization direction.
+First, `VocabularyOnDisk::operator[]` accounts for 13% of total CPU time, 
+representing the cost of resolving `ValueId`s to strings.
+Second, `formatTriple` accounts for 18% of total CPU time, 
+dominated by string manipulation operations 
+(`RdfEscaping::escapeForTsv`, `absl::strings_internal::CatPieces`, and `__memmove_avx_unaligned`). 
+This suggests that the serialization step is allocating and copying intermediate strings unnecessarily. 
+Eliminating these allocations is a promising direction for future work.
 
-[View interactive flamegraph](artefacts/profiles/construct_warm.svg)
+[warm cache run interactive flamegraph](artefacts/profiles/construct_warm.svg)
+[cold cache run interactive flamegraph](artefacts/profiles/construct_cold.svg)
 
-**Why CONSTRUCT outperformed SELECT at 10M rows.**
-To understand the reversal, we first analyze the structure of the result set. 
-To understand the structure of the result set, we run two queries against the DBLP index.
-The first counts the number of distinct subjects, predicates, and objects within the first 10 million rows of 
-Running a subquery to count distinct values within the first 10 million rows of the SPO-query.
+
+## Future Work.
+The evaluation and profiling results suggest several directions for future investigation.
+
+**A note on the benchmark query.** 
+Our evaluation uses a single SPO query (`CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT X`) 
+whose result set has an unusual structure. 
+The following queries reveal this structure for the 10M-row case:
 
 ```sparql
 SELECT (COUNT(DISTINCT ?s) AS ?ds) (COUNT(DISTINCT ?p) AS ?dp) (COUNT(DISTINCT ?o) AS ?do) WHERE {
@@ -737,10 +762,6 @@ result table:
 |------------|-----|-----|
 |10,000,000  |3    | 3   |
 
-
-This reveals 10 million distinct subjects, 3 distinct predicates, and 3 distinct objects.
-
-The second query shows how the 10 million rows are distributed across the 9 possible (predicate, object) combinations.
 
 ```sparql
 SELECT ?p ?o (COUNT(?s) AS ?count) WHERE {
@@ -758,60 +779,57 @@ result table:
 |versionOrdinal   |0    | 920       |
 |versionOrdinal   |1    | 1,824     |
 
+There are 10 million distinct subjects but only 3 distinct predicates and 3 distinct objects.
+The `IdCache` size for this query is 3 variables x 2048 = 6,144 entries.
+The six distinct predicate and object values fit entirely within the cache and likely remain hits for the entire query. 
+The subject column, with 10 million distinct values, sees effectively no cache hits,
+yet the warm/cold wall-clock difference is only 160 ms. 
 
-The formula for the `IdCache` size is 
-`# of distinct variables in the construct template` x `2048`
-entries for the binary that was used to create the measurement. 
-Thus, for the profiled query, its size is `6,144`. 
-
-The three distinct predicates and three distinct objects together occupy only six of those 6,144 slots 
-and likely remain hits  for the entire query after the first batch. 
-The remaining 6,138 slots are available for subject lookups, 
-but with 10 million distinct subjects this likely provides a 0% 
-hit rate for the subject column (all subject terms are different).
-
-Despite the subject column seeing no cache hits, we warm/cold wall-clock difference remains only 284 ms.
-To understand why, we inspect which index permutation QLever chose for this query 
-QLever's `application/qlever-results+json` format includes a `runtimeInformation` field containing the query execution
-plan. 
-We retrieve it with the following command against the server started as
-`./qlever-server -i dblp -p 7001 --default-query-timeout 3600s`:
+To understand why, 
+we inspect which index permutation QLever chose for this query. 
+QLever's `qleverJson` export format includes a field in the response 
+that describes the query execution tree 
+(the sequence of physical operations the engine performed to compute the result).
+We retrieve it by querying the running server (started to listen on localhost port 7001) with:
 
 ```
 curl -X POST "http://localhost:7001/query" \
--H "Content-Type: application/sparql-query" \
--H "Accept: application/qlever-results+json" \
---data-binary "SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10000000" \
-> /tmp/temp.txt
+    -H "Content-Type: application/sparql-query" \
+    -H "Accept: application/qlever-results+json" \
+    --data-binary "SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10000000"
 ```
 
-The relevant part of the response is:
+For the benchmark query, the relevant part of the response is:
+
 ```
 "query_execution_tree": {
-  "description": "LIMIT 10000000",
-  "children": [
-    {
-      "description": "IndexScan OPS ?s ?p ?o",
-      "column_names": ["?o", "?p", "?s"],
-      "result_rows": 10000000
-    }
-  ]
-}
+    "description": "LIMIT 10000000",
+    "children": [
+      {
+        "description": "IndexScan OPS ?s ?p ?o",
+        "column_names": ["?o", "?p", "?s"],
+        "result_rows": 10000000
+      }
+    ]
+  }
 ```
 
-The description field confirms that the query planner chose the OPS permutation 
-and performed an IndexScan operation on it.
-Within each (object, predicate) block, subject `ValueIds` therefore arrive in ascending order.
-This may contribute to the small warm/cold difference by enabling more sequential access patterns in the
-vocabulary file, but a precise explanation would require a more detailed analysis of the vocabulary file layout and 
-the actual disk access pattern, which we leave as future work.
+The query planner chose the OPS permutation and performed an index scan on it. 
+Within each (object, predicate) block, subject `ValueId`s therefore arrive in ascending order. 
+This produces more sequential access patterns in the vocabulary file, 
+which likely explains why the cold-cache penalty is small despite the subject column seeing no cache hits. 
+A precise explanation would require a detailed analysis of the vocabulary file layout and the actual disk access
+patters, which we leave as future work. 
 
-## Future Work.
 1. **Real-world CONSTRUCT query evaluation.** \
-The profiling results are specific to the SPO query, 
-which has an unusual result set structure (10M distinct subjects, 3 distinct predicates, 3 distinct objects).
-It is unclear how the `IdCache` and sort-before-lookup optimization perform under more realistic CONSTRUCT queries.
-An open question is also what "real-world CONSTRUCT queries" look like.
+The evaluation and profiling results are based on a single query 
+(`CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT X`) on the DBLP dataset, 
+whose result set has a specific structure: 
+many distinct subjects but very few distinct predicates and objects. 
+It is unclear how the `IdCache` and sort-before-lookup optimzation perform  on queries with different result set
+structures. 
+An open question is also what real-world CONSTRUCT queries look like in practice, 
+and whether the benchmark query is representative of them.
 
 2. **`ValueId`-Cache parametrization.** \
 The current cache size formula (`# unique variables x 2048`)
@@ -855,6 +873,12 @@ SPARQL 1.1 and RDF standards. Formulate a set of requirements that capture this 
 of query templates, edge cases, and output formats. \
 5.3) Use this test suite as a safety net for future optimizations, 
 ensuring performance improvements do not introduce correctness regressions.
+
+6. **Apply pipeline improvements to the SELECT export.** \
+The optimizations developed for the CONSTRUCT export address inefficiencies that are not specific to CONSTRUCT queries. 
+The SELECT export pipeline resolves `ValueId`s in the same row-by-row fashion as the original CONSTRUCT implementation. 
+Applying the same batching and caching approach to the SELECT export pipeline is a natural next step, 
+and could yield similar speedups for SELECT queries
 
 # References
 [^1]: W3 Org. "RDF Primer" https://www.w3.org/TR/rdf11-primer/ Accessed 2026-04-01.
