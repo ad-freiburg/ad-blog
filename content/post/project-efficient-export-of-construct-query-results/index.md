@@ -41,6 +41,7 @@ and a profiling-based analysis of the remaining overhead that motivates concrete
   - [Profiling the remaining overhead](#profiling-the-remaining-overhead)
     - [Results and Observations](#results-and-observations)
   - [Future Work](#future-work)
+  - [Declaration on the Use of Generative AI](#declaration-on-the-use-of-generative-ai)
   - [References](#references)
 
 # Introduction
@@ -365,7 +366,7 @@ CPU: AMD Ryzen 5 4600G, RAM: 30.7GiB, Storage: 1 TB NVMe SSD.
 The `SELECT (ms)` and `CONSTRUCT (ms)` columns report the median wall-clock time in milliseconds over the five measured
 runs. The `Ratio` column is the CONSTRUCT time divided by the SELECT time.
 
-**Observation**:  (TODO: update observations with new results)
+**Observation**:
 The CONSTRUCT export is consistently slower than the equivalent SELECT export across all formats and row counts. 
 For TSV and CSV the CONSTRUCT export takes approximately 2x as long at 10 million rows. 
 The ratio grows with the number of rows (from ~1x at 10k rows to ~2x at 10M rows), 
@@ -614,7 +615,6 @@ which is passed directly to the HTTP response writer,
 allowing its results to be streamed to the client incrementally without materializing the full output in memory.
 
 # Evaluation
-(TODO: rerun measurements on updated script)
 We evaluate the improved CONSTRUCT export pipeline against the original implementation on the DBLP dataset.
 
 ## Methodology
@@ -665,11 +665,6 @@ Also, the CONSTRUCT export now takes significantly less time than the SELECT exp
 # Discussion and Future Work
 
 ## Profiling the remaining overhead
-(TODO: do we just want to profile the warm-cache query or also the cold cache query, 
-also is creating the cold cache done in the same way that we do it above?
-Also, should we even bother looking at select flamegraphs here?
-Maybe reduce the # of flamegraphs that we consider here, but actually link them and talk about them)
-
 The new implementation achieves a substantial speedup over the original. 
 To understand where the reamaining time goes 
 and to motivate concrete directions for future work, 
@@ -879,6 +874,18 @@ The optimizations developed for the CONSTRUCT export address inefficiencies that
 The SELECT export pipeline resolves `ValueId`s in the same row-by-row fashion as the original CONSTRUCT implementation. 
 Applying the same batching and caching approach to the SELECT export pipeline is a natural next step, 
 and could yield similar speedups for SELECT queries
+
+# Declaration on the Use of Generative AI
+Generative AI tools (Claude Code, Anthropic) were used in the preparation of this work in the following ways: 
+brainstorming and evaluating implementation ideas; 
+exploring and analyzing the QLever codebase; 
+generating code prototypes and measurement scripts; 
+and assisting in drafting, structuring, and formulating text in this report.
+
+All ideas, designs, implementations, measurements, and written content were reviewed, verified, 
+and revised by the author. 
+
+The author takes full responsibility for the accuracy and integrity of all content in this report.
 
 # References
 [^1]: W3 Org. "RDF Primer" https://www.w3.org/TR/rdf11-primer/ Accessed 2026-04-01.
