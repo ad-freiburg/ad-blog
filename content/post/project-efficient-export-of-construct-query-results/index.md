@@ -28,7 +28,7 @@ and a profiling-based analysis of the remaining overhead that motivates concrete
     - [Results](#results)
   - [Original Implementation](#original-implementation)
     - [How the original implementation worked](#how-the-original-implementation-worked)
-    - [Analysis of the original-implementation for improvement potential](#analysis-of-the-original-implementation-for-improvement-potential)
+    - [Inefficiencies in the Original Implementation](#inefficiencies-in-the-original-implementation)
   - [Improved implementation (contribution)](#improved-implementation-contribution)
     - [Phase 1](#phase-1--template-preprocessing-constructtemplatepreprocessor)
     - [Phase 2](#phase-2--variable-resolution-constructbatchevaluator--evaluatebatch)
@@ -45,7 +45,7 @@ and a profiling-based analysis of the remaining overhead that motivates concrete
   - [References](#references)
 
 # Introduction
-In the following we will introduce the concepts which are necessary for understanding the context of the improvements
+In the following we will introduce the concepts which are necessary to understand the context of the improvements
 to the CONSTRUCT export pipeline.
 
 ## The RDF data model
@@ -104,7 +104,7 @@ For example, to express that the Mona Lisa has a cypress tree in its background 
 
 ## RDF serialization formats
 A number of serialization formats exist for writing down RDF graphs:
-N-triples, Turtle, TriG, N-Quads, JSON-LD, RDFa, and RDF/XML.
+N-triples, Turtle, JSON-LD, RDFa, and RDF/XML.
 Different serializations of the same RDF graph are logically equivalent.
 
 Below we state the triples of the example knowledge base *Listing 1* in N-triples format, 
@@ -161,7 +161,7 @@ Against our example knowledge base (Listing 1), this returns:
 The query engine (the software component that computes the result of a SPARQL query against an RDF knowledge base) 
 finds all combinations of RDF terms that can be subsituted for the variables 
 such that every triple pattern in the WHERE clause holds simultaneously against the data.\
-Alice's interest in in the video produces no row because `<was created by>` triple exists for the video 
+Alice's interest in in the video produces no row because no `<was created by>` triple exists for the video 
 (only combinations of RDF terms where all triple patterns match appear in the result).
 
 ## CONSTRUCT queries 
@@ -170,7 +170,7 @@ The CONSTRUCT clause clause specifies a *graph template*:
 a set of triple patterns that may contain variables and constants. \
 For each result row produced by the WHERE clause, 
 the engine substitutes the variable values into the template and adds the resulting triples to the output graph. 
-The final output is the union of all such triples across all result rows.\
+The final output is the union of all such triples across all result rows.
 
 Consider the following CONSTRUCT query applied to our knowledge base from *Listing 1*:
 ```
@@ -203,7 +203,7 @@ It is a open source project  written in the programming language C++ developed
 by the Chair of Algorithms and  Data Structures at the University of Freiburg [^5]
 
 **Index and index permutations**.
-Before the qlever answer queries to client requests, the RDF knowlege base is built into an **index**
+Before the QLever engine answers queries to client requests, the RDF knowlege base is built into an **index**
 (a set of data structures optimized for fast triple lookup, which are stored on disk) 
 using a separate offline indexing step.
 Each triple `(subject, predicate, object)` is stored as three integer IDs, one per term (more on the IDs below).
@@ -211,8 +211,12 @@ Each triple `(subject, predicate, object)` is stored as three integer IDs, one p
 To support arbitrary triple access patterns efficiently, QLever stores the triples in six **permutations**:
 all six orderings of the three positions (SPO, SOP, PSO, POS, OSP, OPS).
 Each permutation is a sorted list of all triples in that order.
-A triple pattern that fixes the predicate and subject, for example, 
-is answered by reading the contiguous block of matching rows from the PSO permutation.
+So, the triples in the SPO permutation, for example, are sorted by their ID value of the terms in the subject
+position as the first sort key, 
+the ID value in the predicate position as the second sort key, 
+and the ID value in the object position as third sort key.
+This implies that, naturally, in the SPO permutation, there are large blocks where consecutive triples share the same 
+RDF term in the subject position.
 
 Each ID is technically a tagged 64-bit integer: 
 4 bits encode the *type* of the value, and 60 bits encode the value itself. 
@@ -224,11 +228,13 @@ the **vocabulary** is an array containing all distinct IRIs and literals that ap
 Each term is assigned a unique integer ID.
 All triples in the index, and all intermediate query results, are represented using these integer IDs rather than
 strings, which keeps memory usage low and makes comparisons fast.
+The ID each RDF term is assigned is an index into the *vocabulary* which maps to the corresponding string value for that
+RDF term.
 
 The actual vocabulary and index implementation is more complex than this conceptual picture, 
 but the essential idea is that the vocabulary a mapping from IDs to RDF term strings, 
-sequential IDs point to sequential string values of RDF terms on-disk, 
-and the qlever engine makes use of *index permutations*, which are lists of RDF triples in particular sorted orders.
+consecutive IDs point sequential positions of the vocabulary array on-disk, 
+and the QLever engine makes use of *index permutations*, which are lists of RDF triples in particular sorted orders.
 
 ## How QLever processes a query
 To understand where the CONSTRUCT export fits in, 
@@ -294,7 +300,7 @@ that will be executed to evaluate the query on the given knowledge base.
 
 **4. Query evaluation.**
 The `QueryExecutionTree` is executed against the index, producing an `IdTable`.
-The `IdTable` is a table of IDs, with one column per query variable and one row per query solution.
+The `IdTable` is a table of IDs, with one column variable bound by the WHERE clause and one row per query solution.
 
 **5. Result serialization.**
 `ExportQueryExecutionTrees::computeResult()` transforms the `IdTable` into the requested output format.
@@ -339,29 +345,29 @@ we evict the index permutation and vocabulary files from the OS page cache using
 so that each measurement reflects realistic end-to-end query time including the cost of loading data from disk.
 We run the same query five times and report the median. 
 The script used to produce these measurements is available [here](artefacts/2026-04-07_problem-statement-measurements.sh.txt).
-All measurements were taken using a binary compiled in `Release` mode at git commit `af00534d` from the master branch 
+All measurements were taken using a binary compiled in `Release` mode at git commit `a5e4bf7` from the master branch 
 of the QLever repository [^5] on a machine with the following specifications: 
 CPU: AMD Ryzen 5 4600G, RAM: 30.7GiB, Storage: 1 TB NVMe SSD.
 
 ## Results
 | Output format | LIMIT | SELECT (ms) | CONSTRUCT (ms) | Ratio |
 |---------------|-------|-------------|----------------|-------|
-| TSV           | 10k   | 119         | 130            | 1.09x |
-| TSV           | 100k  | 501         | 680            | 1.36x |
-| TSV           | 1M    | 2100        | 3852           | 1.83x |
-| TSV           | 10M   | 11127       | 23793          | 2.14x |
-| CSV           | 10k   | 195         | 152            | 0.78x |
-| CSV           | 100k  | 513         | 684            | 1.33x |
-| CSV           | 1M    | 2103        | 3895           | 1.85x |
-| CSV           | 10M   | 11107       | 23383          | 2.11x |
-| qleverJson    | 10k   | 124         | 135            | 1.09x |
-| qleverJson    | 100k  | 599         | 752            | 1.26x |
-| qleverJson    | 1M    | 2957        | 4495           | 1.52x |
-| qleverJson    | 10M   | 19164       | 28511          | 1.49x |
-| Turtle        | 10k   | n/a         | 128            | n/a   |
-| Turtle        | 100k  | n/a         | 678            | n/a   |
-| Turtle        | 1M    | n/a         | 3801           | n/a   |
-| Turtle        | 10M   | n/a         | 22559          | n/a   |
+| TSV           | 10k   | 116         | 133            | 1.15x |
+| TSV           | 100k  | 510         | 716            | 1.40x |
+| TSV           | 1M    | 2087        | 4087           | 1.96x |
+| TSV           | 10M   | 11041       | 24832          | 2.25x |
+| CSV           | 10k   | 119         | 134            | 1.13x |
+| CSV           | 100k  | 514         | 714            | 1.39x |
+| CSV           | 1M    | 2105        | 4115           | 1.95x |
+| CSV           | 10M   | 11054       | 24867          | 2.25x |
+| qleverJson    | 10k   | 124         | 140            | 1.13x |
+| qleverJson    | 100k  | 603         | 772            | 1.28x |
+| qleverJson    | 1M    | 2923        | 4660           | 1.59x |
+| qleverJson    | 10M   | 18899       | 30143          | 1.59x |
+| Turtle        | 10k   | n/a         | 133            | n/a   |
+| Turtle        | 100k  | n/a         | 706            | n/a   |
+| Turtle        | 1M    | n/a         | 4005           | n/a   |
+| Turtle        | 10M   | n/a         | 24055          | n/a   |
 
 The `SELECT (ms)` and `CONSTRUCT (ms)` columns report the median wall-clock time in milliseconds over the five measured
 runs. The `Ratio` column is the CONSTRUCT time divided by the SELECT time.
@@ -446,7 +452,7 @@ Once `constructQueryResultToTriples` has yielded a `StringTriple`, a format-spec
 produces a stream of string objects according to the output serialization format specified for the query. \
 The output format is determined once per request from the HTTP `Accept` header. \
 
-## Analysis of the original Implementation for improvement potential
+## Inefficiencies in the Original Implementation
 The walkthrough above reveals three inefficiencies in the original implementation.
 
 **1. Variables appearing in multiple template triples are resolved multiple times per row.**
@@ -629,36 +635,36 @@ Times are reported in milliseconds.
 The script used to produce the measurements is available [here](artefacts/2026-04-07_evaluation-measurements.sh.txt).
 
 The improved implementation was measured using a binary built in `Release` mode from the 
-`construct-pipeline-refactor` branch at git commit 0480d959 [^7].
+`construct-pipeline-refactor` branch at commit `0480d959` [^7].
 
 ## Evaluation Results
 **Select** and **CONSTRUCT old** are the median times for the two query forms under the original implementation 
-(commit `af00534d`); **CONSTRUCT new** is the median time under the refactored pipeline (commit `0480d959`). 
+(commit `a5e4bf7`); **CONSTRUCT new** is the median time under the refactored pipeline (commit `0480d959`). 
 **Old ratio** and **New ratio** are CONSTRUCT divided by SELECT for the respective implementation. 
 **Speedup** is old CONSTRUCT divided by new CONSTRUCT.
 
 | Format     | Limit | SELECT (ms) | CONSTRUCT old (ms) | CONSTRUCT new (ms) | Old ratio | New ratio | Speedup |
 |------------|-------|-------------|--------------------|--------------------|-----------|-----------|---------|
-| TSV        | 10k   | 115         | 130                | 96                 | 1.13x     | 0.83x     | 1.35x   |
-| TSV        | 100k  | 513         | 685                | 410                | 1.34x     | 0.80x     | 1.67x   |
-| TSV        | 1M    | 2091        | 3826               | 1558               | 1.83x     | 0.75x     | 2.46x   |
-| TSV        | 10M   | 11003       | 23079              | 6487               | 2.10x     | 0.59x     | 3.56x   |
-| CSV        | 10k   | 113         | 133                | 93                 | 1.18x     | 0.82x     | 1.43x   |
-| CSV        | 100k  | 495         | 679                | 414                | 1.37x     | 0.84x     | 1.64x   |
-| CSV        | 1M    | 2065        | 3836               | 1540               | 1.86x     | 0.75x     | 2.49x   |
-| CSV        | 10M   | 11015       | 23185              | 6382               | 2.10x     | 0.58x     | 3.63x   |
-| qleverJson | 10k   | 123         | 139                | 99                 | 1.13x     | 0.80x     | 1.40x   |
-| qleverJson | 100k  | 592         | 740                | 453                | 1.25x     | 0.77x     | 1.63x   |
-| qleverJson | 1M    | 2923        | 4422               | 2001               | 1.51x     | 0.68x     | 2.21x   |
-| qleverJson | 10M   | 18998       | 28324              | 10739              | 1.49x     | 0.57x     | 2.64x   |
-| Turtle     | 10k   | n/a         | 127                | 92                 | n/a       | n/a       | 1.38x   |
-| Turtle     | 100k  | n/a         | 668                | 408                | n/a       | n/a       | 1.64x   |
-| Turtle     | 1M    | n/a         | 3742               | 1470               | n/a       | n/a       | 2.55x   |
-| Turtle     | 10M   | n/a         | 22381              | 5813               | n/a       | n/a       | 3.85x   |
+| TSV        | 10k   | 115         | 136                | 91                 | 1.18x     | 0.79x     | 1.49x   |
+| TSV        | 100k  | 507         | 706                | 422                | 1.39x     | 0.83x     | 1.67x   |
+| TSV        | 1M    | 2091        | 4083               | 1556               | 1.95x     | 0.74x     | 2.62x   |
+| TSV        | 10M   | 11008       | 24804              | 6545               | 2.25x     | 0.59x     | 3.79x   |
+| CSV        | 10k   | 117         | 135                | 93                 | 1.15x     | 0.79x     | 1.45x   |
+| CSV        | 100k  | 510         | 712                | 418                | 1.40x     | 0.82x     | 1.70x   |
+| CSV        | 1M    | 2125        | 4086               | 1549               | 1.92x     | 0.73x     | 2.64x   |
+| CSV        | 10M   | 11012       | 24881              | 6471               | 2.26x     | 0.59x     | 3.85x   |
+| qleverJson | 10k   | 124         | 146                | 95                 | 1.18x     | 0.77x     | 1.54x   |
+| qleverJson | 100k  | 597         | 776                | 475                | 1.30x     | 0.80x     | 1.63x   |
+| qleverJson | 1M    | 2964        | 4703               | 2013               | 1.59x     | 0.68x     | 2.34x   |
+| qleverJson | 10M   | 18868       | 30066              | 10733              | 1.59x     | 0.57x     | 2.80x   |
+| Turtle     | 10k   | n/a         | 135                | 92                 | n/a       | n/a       | 1.47x   |
+| Turtle     | 100k  | n/a         | 700                | 404                | n/a       | n/a       | 1.73x   |
+| Turtle     | 1M    | n/a         | 3995               | 1472               | n/a       | n/a       | 2.71x   |
+| Turtle     | 10M   | n/a         | 24099              | 5824               | n/a       | n/a       | 4.14x   |
 
 **Observation.** 
 The new implementation is consistently faster than the original across all formats and row counts, 
-with speedups ranging from 1.35x at 10k rows to 3.85x at 10M rows. 
+with speedups ranging from 1.49x at 10k rows to 4.14x at 10M rows. 
 The speedup grows with result set size, indicating that the optimizations scale well. 
 Also, the CONSTRUCT export now takes significantly less time than the SELECT export (New ratio column).
 

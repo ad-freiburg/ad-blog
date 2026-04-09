@@ -1,26 +1,26 @@
-2026-04-07 22:01:24.748 - INFO: [1mQLever server v0.5.45-233-g0480d959, compiled on Wed Mar 25 02:37:35 PM CET 2026 using git hash 0480d9[22m
-2026-04-07 22:01:24.748 - INFO: Initializing server ...
-2026-04-07 22:01:24.749 - INFO: The git hash used to build this index was "8c99fe"
-2026-04-07 22:01:24.749 - INFO: Reading vocabulary from file /home/userNoPriv/code/qlever/qlever-indices/dblp/dblp.vocabulary.words ...
-2026-04-07 22:01:24.764 - INFO: Done, number of words: 409,446,926
-2026-04-07 22:01:24.764 - INFO: Number of words in internal vocabulary (these are also part of the external vocabulary): 409,457
-2026-04-07 22:01:24.785 - INFO: Registered PSO permutation: #relations = 6, #blocks = 7,515, #triples = 234,800,838
-2026-04-07 22:01:24.808 - INFO: Registered PSO permutation: #relations = 96, #blocks = 46,913, #triples = 1,464,719,701
-2026-04-07 22:01:24.812 - INFO: Registered POS permutation: #relations = 6, #blocks = 7,515, #triples = 234,800,838
-2026-04-07 22:01:24.836 - INFO: Registered POS permutation: #relations = 96, #blocks = 46,913, #triples = 1,464,719,701
-2026-04-07 22:01:24.856 - INFO: Registered OPS permutation: #relations = 318,850,904, #blocks = 39,014, #triples = 1,464,719,701
-2026-04-07 22:01:24.875 - INFO: Registered OSP permutation: #relations = 318,850,904, #blocks = 39,014, #triples = 1,464,719,701
-2026-04-07 22:01:24.889 - INFO: Registered SPO permutation: #relations = 234,800,427, #blocks = 31,251, #triples = 1,464,719,701
-2026-04-07 22:01:24.900 - INFO: Registered SOP permutation: #relations = 234,800,427, #blocks = 31,251, #triples = 1,464,719,701
-2026-04-07 22:01:24.900 - INFO: Reading patterns from file /home/userNoPriv/code/qlever/qlever-indices/dblp/dblp.index.patterns ...
-2026-04-07 22:01:24.901 - INFO: Sorting random result tables to estimate the sorting performance of this machine ...
-2026-04-07 22:01:32.074 - INFO: Access token for restricted API calls is ""
-2026-04-07 22:01:32.074 - INFO: The server is ready, listening for requests on port 7001 ...
-2026-04-07 22:01:34.749 - INFO: 
-2026-04-07 22:01:34.749 - INFO: Request received via POST, content type "application/sparql-query"
-2026-04-07 22:01:34.751 - INFO: Processing the following SPARQL query:
+2026-04-09 11:15:20.188 - INFO: [1mQLever server v0.5.45-233-g0480d959, compiled on Wed Mar 25 02:37:35 PM CET 2026 using git hash 0480d9[22m
+2026-04-09 11:15:20.189 - INFO: Initializing server ...
+2026-04-09 11:15:20.189 - INFO: The git hash used to build this index was "8c99fe"
+2026-04-09 11:15:20.189 - INFO: Reading vocabulary from file /home/userNoPriv/code/qlever/qlever-indices/dblp/dblp.vocabulary.words ...
+2026-04-09 11:15:20.204 - INFO: Done, number of words: 409,446,926
+2026-04-09 11:15:20.204 - INFO: Number of words in internal vocabulary (these are also part of the external vocabulary): 409,457
+2026-04-09 11:15:20.224 - INFO: Registered PSO permutation: #relations = 6, #blocks = 7,515, #triples = 234,800,838
+2026-04-09 11:15:20.248 - INFO: Registered PSO permutation: #relations = 96, #blocks = 46,913, #triples = 1,464,719,701
+2026-04-09 11:15:20.251 - INFO: Registered POS permutation: #relations = 6, #blocks = 7,515, #triples = 234,800,838
+2026-04-09 11:15:20.275 - INFO: Registered POS permutation: #relations = 96, #blocks = 46,913, #triples = 1,464,719,701
+2026-04-09 11:15:20.294 - INFO: Registered OPS permutation: #relations = 318,850,904, #blocks = 39,014, #triples = 1,464,719,701
+2026-04-09 11:15:20.314 - INFO: Registered OSP permutation: #relations = 318,850,904, #blocks = 39,014, #triples = 1,464,719,701
+2026-04-09 11:15:20.327 - INFO: Registered SPO permutation: #relations = 234,800,427, #blocks = 31,251, #triples = 1,464,719,701
+2026-04-09 11:15:20.339 - INFO: Registered SOP permutation: #relations = 234,800,427, #blocks = 31,251, #triples = 1,464,719,701
+2026-04-09 11:15:20.339 - INFO: Reading patterns from file /home/userNoPriv/code/qlever/qlever-indices/dblp/dblp.index.patterns ...
+2026-04-09 11:15:20.340 - INFO: Sorting random result tables to estimate the sorting performance of this machine ...
+2026-04-09 11:15:27.629 - INFO: Access token for restricted API calls is ""
+2026-04-09 11:15:27.629 - INFO: The server is ready, listening for requests on port 7001 ...
+2026-04-09 11:15:30.189 - INFO: 
+2026-04-09 11:15:30.189 - INFO: Request received via POST, content type "application/sparql-query"
+2026-04-09 11:15:30.191 - INFO: Processing the following SPARQL query:
 CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT 100000
-2026-04-07 22:01:34.752 - INFO: Requested media types of the result are: "text/csv"
-2026-04-07 22:01:34.752 - INFO: Query planning done in 2 ms
-2026-04-07 22:01:34.758 - INFO: Result has unknown size (not computed yet)
-2026-04-07 22:01:35.150 - INFO: Done processing query and sending result, total time was 400 ms
+2026-04-09 11:15:30.191 - INFO: Requested media types of the result are: "text/csv"
+2026-04-09 11:15:30.192 - INFO: Query planning done in 2 ms
+2026-04-09 11:15:30.198 - INFO: Result has unknown size (not computed yet)
+2026-04-09 11:15:30.607 - INFO: Done processing query and sending result, total time was 418 ms

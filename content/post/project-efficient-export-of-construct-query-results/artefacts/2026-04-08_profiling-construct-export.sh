@@ -14,7 +14,7 @@ INDEX_DIR="/home/userNoPriv/code/qlever/qlever-indices/dblp"
 INDEX_BASENAME="$INDEX_DIR/dblp"
 SERVER_ARGS="-i $INDEX_BASENAME -p $SERVER_PORT --default-query-timeout 3600s"
 OUTPUT_DIR="./profiles"
-LOG_DIR="./logs"
+LOG_DIR="./profiling-logs"
 WARMUP_WAIT=10 # seconds to wait for server to start
 
 mkdir -p "$OUTPUT_DIR"

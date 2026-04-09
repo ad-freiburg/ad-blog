@@ -16,10 +16,10 @@ set -euo pipefail
 #       "Done processing query and sending result, total time was X ms"
 #
 # Usage: $0 [SERVER_BIN]
-# Default binary: build-af00534d-release/qlever-server (master, af00534d)
+# Default binary: build-a5e4bf7-release/qlever-server (master, a5e4bf7)
 
 BASE="/home/userNoPriv/code/qlever/qlever-code"
-DEFAULT_BIN="$BASE/build-af00534d-release/qlever-server"
+DEFAULT_BIN="$BASE/build-a5e4bf7-release/qlever-server"
 SERVER_BIN="${1:-$DEFAULT_BIN}"
 
 SERVER_PORT=7001

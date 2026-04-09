@@ -15,11 +15,11 @@ set -euo pipefail
 #   - Timing is taken from the QLever server log:
 #       "Done processing query and sending result, total time was X ms"
 #
-# Old binary: build-af00534d-release/qlever-server (master, af00534d)
+# Old binary: build-a5e4bf7-release/qlever-server (master, a5e4bf7)
 # New binary: build-0480d959-Release/qlever-server  (construct-pipeline-refactor, 0480d959)
 
 BASE="/home/userNoPriv/code/qlever/qlever-code"
-OLD_SERVER_BIN="$BASE/build-af00534d-release/qlever-server"
+OLD_SERVER_BIN="$BASE/build-a5e4bf7-release/qlever-server"
 NEW_SERVER_BIN="$BASE/build-0480d959-Release/qlever-server"
 
 SERVER_PORT=7001
