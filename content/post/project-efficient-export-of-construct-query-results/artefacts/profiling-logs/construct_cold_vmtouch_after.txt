@@ -1,4 +1,0 @@
-           Files: 58
-     Directories: 1
-  Resident Pages: 0/8442316  0/32G  0%
-         Elapsed: 0.37171 seconds
