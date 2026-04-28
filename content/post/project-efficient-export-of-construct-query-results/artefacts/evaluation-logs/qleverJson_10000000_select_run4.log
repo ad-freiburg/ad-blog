@@ -14,3 +14,13 @@
 2026-04-28 18:02:11.660 - INFO: Registered SOP permutation: #relations = 234,800,427, #blocks = 31,251, #triples = 1,464,719,701
 2026-04-28 18:02:11.660 - INFO: Reading patterns from file /home/userNoPriv/code/qlever/qlever-indices/dblp/dblp.index.patterns ...
 2026-04-28 18:02:11.661 - INFO: Sorting random result tables to estimate the sorting performance of this machine ...
+2026-04-28 18:02:18.847 - INFO: Access token for restricted API calls is ""
+2026-04-28 18:02:18.847 - INFO: The server is ready, listening for requests on port 7001 ...
+2026-04-28 18:02:21.507 - INFO: 
+2026-04-28 18:02:21.507 - INFO: Request received via POST, content type "application/sparql-query"
+2026-04-28 18:02:21.509 - INFO: Processing the following SPARQL query:
+SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10000000
+2026-04-28 18:02:21.509 - INFO: Requested media types of the result are: "application/qlever-results+json"
+2026-04-28 18:02:21.512 - INFO: Query planning done in 4 ms
+2026-04-28 18:02:21.517 - INFO: Result has unknown size (not computed yet)
+2026-04-28 18:02:40.671 - INFO: Done processing query and sending result, total time was 19,164 ms
