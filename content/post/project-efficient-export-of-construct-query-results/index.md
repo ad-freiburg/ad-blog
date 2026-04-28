@@ -621,22 +621,22 @@ The improved implementation was measured using a binary built in `Release` mode 
 
 | Format     | Limit | SELECT (ms) | CONSTRUCT old (ms) | CONSTRUCT new (ms) | Old ratio | New ratio | Speedup |
 |------------|-------|-------------|--------------------|--------------------|-----------|-----------|---------|
-| TSV        | 10k   | 115         | 136                | 91                 | 1.18x     | 0.79x     | 1.49x   |
-| TSV        | 100k  | 507         | 706                | 422                | 1.39x     | 0.83x     | 1.67x   |
-| TSV        | 1M    | 2091        | 4083               | 1556               | 1.95x     | 0.74x     | 2.62x   |
-| TSV        | 10M   | 11008       | 24804              | 6545               | 2.25x     | 0.59x     | 3.79x   |
-| CSV        | 10k   | 117         | 135                | 93                 | 1.15x     | 0.79x     | 1.45x   |
-| CSV        | 100k  | 510         | 712                | 418                | 1.40x     | 0.82x     | 1.70x   |
-| CSV        | 1M    | 2125        | 4086               | 1549               | 1.92x     | 0.73x     | 2.64x   |
-| CSV        | 10M   | 11012       | 24881              | 6471               | 2.26x     | 0.59x     | 3.85x   |
-| qleverJson | 10k   | 124         | 146                | 95                 | 1.18x     | 0.77x     | 1.54x   |
-| qleverJson | 100k  | 597         | 776                | 475                | 1.30x     | 0.80x     | 1.63x   |
-| qleverJson | 1M    | 2964        | 4703               | 2013               | 1.59x     | 0.68x     | 2.34x   |
-| qleverJson | 10M   | 18868       | 30066              | 10733              | 1.59x     | 0.57x     | 2.80x   |
-| Turtle     | 10k   | n/a         | 135                | 92                 | n/a       | n/a       | 1.47x   |
-| Turtle     | 100k  | n/a         | 700                | 404                | n/a       | n/a       | 1.73x   |
-| Turtle     | 1M    | n/a         | 3995               | 1472               | n/a       | n/a       | 2.71x   |
-| Turtle     | 10M   | n/a         | 24099              | 5824               | n/a       | n/a       | 4.14x   |
+| TSV        | 10k   | 116         | 135                | 92                 | 1.16x     | 0.79x     | 1.47x   |
+| TSV        | 100k  | 520         | 718                | 423                | 1.38x     | 0.81x     | 1.70x   |
+| TSV        | 1M    | 2094        | 4085               | 1539               | 1.95x     | 0.73x     | 2.65x   |
+| TSV        | 10M   | 10961       | 24878              | 6287               | 2.27x     | 0.57x     | 3.96x   |
+| CSV        | 10k   | 118         | 137                | 93                 | 1.16x     | 0.79x     | 1.47x   |
+| CSV        | 100k  | 525         | 706                | 431                | 1.34x     | 0.82x     | 1.64x   |
+| CSV        | 1M    | 2061        | 4061               | 1513               | 1.97x     | 0.73x     | 2.68x   |
+| CSV        | 10M   | 10948       | 25015              | 6243               | 2.28x     | 0.57x     | 4.01x   |
+| qleverJson | 10k   | 124         | 143                | 100                | 1.15x     | 0.81x     | 1.43x   |
+| qleverJson | 100k  | 611         | 783                | 466                | 1.28x     | 0.76x     | 1.68x   |
+| qleverJson | 1M    | 2922        | 4697               | 2025               | 1.61x     | 0.69x     | 2.32x   |
+| qleverJson | 10M   | 18883       | 30645              | 10876              | 1.62x     | 0.58x     | 2.82x   |
+| Turtle     | 10k   | n/a         | 135                | 95                 | n/a       | n/a       | 1.42x   |
+| Turtle     | 100k  | n/a         | 688                | 393                | n/a       | n/a       | 1.75x   |
+| Turtle     | 1M    | n/a         | 3955               | 1430               | n/a       | n/a       | 2.77x   |
+| Turtle     | 10M   | n/a         | 23996              | 5619               | n/a       | n/a       | 4.27x   |
 
 **Observation.** 
 The new implementation is consistently faster than the original across all formats and row counts, 
