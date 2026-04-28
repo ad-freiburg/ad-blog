@@ -34,10 +34,9 @@ and a profiling-based analysis of the remaining overhead that motivates concrete
     - [Phase 2](#phase-2--variable-resolution-constructbatchevaluator--evaluatebatch)
     - [Phase 3](#phase-3--template-instantiation-constructtripleinstantiator--instantiatebatch)
     - [Phase 4](#phase-4--formatting-formattedtripleadapter--stringtripleadapter-in-constructtriplegenerator)
-    - [Orchestration](#orchestration)
   - [Evaluation](#evaluation)
     - [Methodology](#methodology)
-    - [Results](#results)
+    - [Evaluation Results](#evaluation-results)
   - [Profiling the remaining overhead](#profiling-the-remaining-overhead)
     - [Results and Observations](#results-and-observations)
   - [Future Work](#future-work)
@@ -119,17 +118,6 @@ which is the simplest of the serialization formats.
 <http://www.wikidata.org/entity/Q12418> <http://purl.org/dc/terms/creator> <http://dbpedia.org/resource/Leonardo_da_Vinci> .
 <http://data.europeana.eu/item/04802/243FA8618938F4117025F17A8B813C5F9AA4D619> <http://purl.org/dc/terms/subject> <http://www.wikidata.org/entity/Q12418> .
 ```
-
-What follows is a short description of the N-triples syntax, using the listing above as an example. \
-The datatype of a literal is appended via `^^`. 
-A datatype specifies how the literal value should be interpreted. 
-For example, whether "1990-07-04" is a date or just a string. 
-Common datatypes are defined by XML Schema (a standard that defines a set of primitive datatypes), 
-such as `xsd:date`, `xsd:integer`, `xsd:string`.
-For plain string literals the datatype can be omitted: 
-`"Mona Lisa"` is shorthand for `"Mona Lisa"^^xsd:string`. 
-String literals can optionally carry a language tag, which identifies the natural language the string is written in. 
-Language tags are written with an `@` suffix, e.g. `"La Joconde"@fr` for French, or `"Mona Lisa"@en` for English.
 
 ## SPARQL 
 SPARQL is an RDF query language, that is, a query language for retrieving and manipulating data stored in RDF format.\
@@ -232,8 +220,8 @@ The ID each RDF term is assigned is an index into the *vocabulary* which maps to
 RDF term.
 
 The actual vocabulary and index implementation is more complex than this conceptual picture, 
-but the essential idea is that the vocabulary a mapping from IDs to RDF term strings, 
-consecutive IDs point sequential positions of the vocabulary array on-disk, 
+but the essential idea is that the vocabulary is a mapping from IDs to RDF term strings, 
+consecutive IDs point to sequential positions of the vocabulary array on-disk, 
 and the QLever engine makes use of *index permutations*, which are lists of RDF triples in particular sorted orders.
 
 ## How QLever processes a query
@@ -386,7 +374,7 @@ improve it.
 ## How the original implementation worked
 The core of the CONSTRUCT export is a single function: `constructQueryResultToTriples`. \
 Its structure is a straightforward nested loop: \
-(the table which is the result from computing the WHERE clause of the CONSTRUCT query) 
+For each row of the result table (the table which is the result from computing the WHERE clause of the CONSTRUCT query) 
 iterate over the triple patterns in the CONSTRUCT template and evaluate each triple. \
 Evaluating a triple means resolving each of its three positions (subject, predicate, object) to a concrete string. \
 If all three resolve successfully, the triple is emitted.
@@ -450,7 +438,7 @@ The function emits a \
 **Serialization.** \
 Once `constructQueryResultToTriples` has yielded a `StringTriple`, a format-specific serializer
 produces a stream of string objects according to the output serialization format specified for the query. \
-The output format is determined once per request from the HTTP `Accept` header. \
+The output format is determined once per request from the HTTP `Accept` header.
 
 ## Inefficiencies in the Original Implementation
 The walkthrough above reveals three inefficiencies in the original implementation.
@@ -478,14 +466,12 @@ The diagram below shows the data flow between the four phases.\
 The left side shows the CONSTRUCT clause (triple patterns) feeding into template preprocessing; 
 the right side shows the WHERE clause result (`IdTable`, `LocalVocab`) being partitioned into chunks by
 `getRowIndices()`, which produces a lazy range of result chunks to support streaming the HTTP response incrementally.
-Inside `ConstructTripleGenerator`, each chunk is handed to `TableWithRangeEvaluator`, 
-which drives variable resolution and triple instantiation. 
 Note that the internal batching performed by `ConstructBatchEvaluator` (Phase 2) is a separate concept from these 
 streaming chunks.
 
 The two streams meet inside `ConstructTripleGenerator`, 
 where variable resolution, triple instantiation, and formatting takes place.
-![Data flow diagram](img/data-flow.svg)
+![Data flow diagram](img/data-flow-2.1.svg)
 ### Phase 1 — Template preprocessing (ConstructTemplatePreprocessor)
 This corresponds to the *Template Preprocessing* box in the upper-left of the diagram.
 
@@ -533,11 +519,12 @@ in compressed form, so each lookup may involve a disk read and decompression.
 First, the new implementation maintains an `IdCache`: an LRU cache that maps `ValueId`s to their already-resolved
 strings. 
 The same `ValueId` often recurs across many rows of the `IdTable` 
-(for example, a predicate column in a typical SPARQL result may repeat the same IRI thousands or times). 
+(for example, a predicate column in a typical SPARQL result may repeat the same IRI thousands of times). 
 Without a cache, each occurrence would trigger a separate vocabulary lookup. 
 The `IdCache` avoids this by storing recently resolved `ValueId`s in memory. 
-The cache persists across batches within the same `TableWithRange`, 
-so cache hits are possible even when the same `ValueId` recurs across batch boundaries.
+The cache persists across batches and across multiple `TableWithRange`, 
+so cache hits are possible even when the same `ValueId` recurs across batch boundaries or across different 
+`TableWithRange` objects.
 
 Second, for `ValueId`s that are not in 
 the cache, Phase 2 collects and sorts them before issuing vocabulary lookups. 
@@ -550,7 +537,7 @@ so processing all rows of one variable column before moving to the next follows 
 and avoids the cross-column access pattern of the original per-row approach.
 
 **Implementation.** 
-`evaluateBatch` receives `uniqueVariableColumns_` from Phase 1 
+`ConstructBatchEvaluator::evaluateBatch` receives `uniqueVariableColumns_` from Phase 1 
 and a `BatchEvaluationContext` describing a contiguous slice of the `IdTable`. 
 For each variable column, `evaluateVariableByColumn` proceeds in two sub-steps:
 
@@ -589,7 +576,7 @@ The output is a `vector<EvaluatedTriple>` with at most `numRows x number of temp
 fewer if any triples were dropped due to unbound variables.
 
 ---
-### Phase 4 — Formatting (FormattedTripleAdapter / StringTripleAdapter in ConstructTripleGenerator)
+### Phase 4 — Formatting (generateFormattedTriples / generateStringTriples in ConstructTripleGenerator)
 This corresponds to the *Formatting / FormattedTripleAdapter / StringTripleAdapter* box at the bottom of the diagram, 
 whose two output arrows lead to the HTTP response stream and the QLever JSON serializer respectively.
 
@@ -599,32 +586,20 @@ containing the resolved term data, independent of any output format.
 Phase 4 separates format-specific serialization into a dedicated step, 
 so that the upstream phases are not concerned with output format details.
 
-Two adapter classes inside `ConstructTripleGenerator.cpp` wrap a `TableWithRangeEvaluator` and pull `EvaluatedTriple`
+Two methods inside `ConstructTripleGenerator.cpp` wrap `evaluateTables` and pull `EvaluatedTriple`
 objects from it one at a time:
-- `FormattedTripleAdapter`: serializes each `EvaluatedTriple` into a `std::string`, applying the escaping and separators
+- `generateFormattedTriples`: serializes each `EvaluatedTriple` into a `std::string`, applying the escaping and separators
   appropriate for the `MediaType` selected from the HTTP Accept header. It handles the Turtle, N-triples, TSV, and CSV
 formats.
-- `StringTripleAdapter`: formats each term into a string and returns a `StringTriple` (three separate strings), which is
-  what the QLever JSON serialier consumes.
+- `generateStringTriples`: formats each term into a string and returns a `StringTriple` (three separate strings), which is
+  what the QLever JSON serializer consumes.
 ---
-### Orchestration
-`ConstructTripleGenerator` is the entry point for the whole pipeline. 
-It runs phase 1 in its constructor, 
-producing the `PrecomputedTemplate` that is shared across all subsequent preprocessing.
-
-For each `TableWithRange` in the lazy input range produced by `getRowindices()`, 
-`ConstructTripleGenerator` creates a `TableWithRangeEvaluator` that drives phases 2 and 3, 
-and wraps it in either a `FormattedTripleAdapter` or a `StringTripleAdapter` (Phase 4), 
-depending on the output format requested via the HTTP `Accept` header. 
-The per-chunk ranges are joined into a single flat lazy stream, 
-which is passed directly to the HTTP response writer, 
-allowing its results to be streamed to the client incrementally without materializing the full output in memory.
 
 # Evaluation
 We evaluate the improved CONSTRUCT export pipeline against the original implementation on the DBLP dataset.
 
 ## Methodology
-We use the same machine in the Problem Statement. 
+We use the same machine as in the Problem Statement. 
 Before each timed run, 
 the index permutation and vocabulary files are evicted from the OS page cache using `vmtouch -e`, 
 so that each measurement reflects realistic end-to-end query time including the cost of loading data from disk.
@@ -632,16 +607,17 @@ We run the query five times and report the median wall-clock time for the query 
 excluding network transfer overhead.
 Each timed run uses a fresh server instance to avoid interference from QLever's internal query cache.
 Times are reported in milliseconds. 
-The script used to produce the measurements is available [here](artefacts/2026-04-07_evaluation-measurements.sh.txt).
+The script used to produce the measurements is available [here](artefacts/2026-04-28_evaluation-measurements.sh.txt).
 
 The improved implementation was measured using a binary built in `Release` mode from the 
-`construct-pipeline-refactor` branch at commit `0480d959` [^7].
+`construct-pipeline-refactor` branch at commit `08be2975` [^7].
 
 ## Evaluation Results
 **Select** and **CONSTRUCT old** are the median times for the two query forms under the original implementation 
-(commit `a5e4bf7`); **CONSTRUCT new** is the median time under the refactored pipeline (commit `0480d959`). 
+(commit `a5e4bf7`); **CONSTRUCT new** is the median time under the refactored pipeline.
+
 **Old ratio** and **New ratio** are CONSTRUCT divided by SELECT for the respective implementation. 
-**Speedup** is old CONSTRUCT divided by new CONSTRUCT.
+**Speedup** is `CONSTRUCT old` divided by `CONSTRUCT new`.
 
 | Format     | Limit | SELECT (ms) | CONSTRUCT old (ms) | CONSTRUCT new (ms) | Old ratio | New ratio | Speedup |
 |------------|-------|-------------|--------------------|--------------------|-----------|-----------|---------|
@@ -666,13 +642,13 @@ The improved implementation was measured using a binary built in `Release` mode 
 The new implementation is consistently faster than the original across all formats and row counts, 
 with speedups ranging from 1.49x at 10k rows to 4.14x at 10M rows. 
 The speedup grows with result set size, indicating that the optimizations scale well. 
-Also, the CONSTRUCT export now takes significantly less time than the SELECT export (New ratio column).
+Also, the CONSTRUCT export now takes significantly less time than the SELECT export (`New ratio` column).
 
 # Discussion and Future Work
 
 ## Profiling the remaining overhead
 The new implementation achieves a substantial speedup over the original. 
-To understand where the reamaining time goes 
+To understand where the remaining time goes 
 and to motivate concrete directions for future work, 
 we profile the new CONSTRUCT export pipeline under two cache conditions.
 
@@ -691,7 +667,7 @@ We visualize the output as a flamegraph:
 each bar represents a function, 
 its width proportional to the fraction of samples in which it appeared on the call stack. 
 Wide bars near the top of the call stack are hotspots. 
-The exact script used to create the profiles can be viewed [here](artefacts/2026-04-07_evaluation-measurements.sh.txt).
+The exact script used to create the profiles can be viewed [here](artefacts/2026-04-28_evaluation-measurements.sh.txt).
 
 **Build configuration**. 
 We compile with `RelWithDebInfo` rather than `Release`. 
@@ -699,7 +675,7 @@ We compile with `RelWithDebInfo` rather than `Release`.
 allowing `perf` to resolve function addresses to human-readable names 
 and correctly attribute time to inlined call sites. 
 We additionally pass `-fno-omit-frame-pointer` 
-to give perf reliable call stack reconstruction at negligible runtime cost.
+to give `perf` reliable call stack reconstruction at negligible runtime cost.
 
 **Cache conditions.**
 We run the query under two conditions.
@@ -720,8 +696,8 @@ The full script is available [here](artefacts/2026-04-08_profiling-construct-exp
 
 ## Results and Observations
 **wall-clock times**.
-The construct warm query completed in 6,790 ms and the construct cold query in 6,630 ms,
-which is a difference of only 160 ms (less than 2.5%).
+The construct warm query completed in 6,314 ms and the construct cold query in 6,581 ms,
+which is a difference of only 267 ms (less than 5%).
 Evicting the index permutations and vocabulary files from the OS page cache has almost no 
 measurable effect on total query time.
 This is likely evidence that the `IdCache` is absorbing the vast majority of vocabulary lookups before they reach disk.
@@ -730,9 +706,9 @@ This is likely evidence that the `IdCache` is absorbing the vast majority of voc
 The warm-cache and cold-cache flamegraphs are nearly identical, 
 consistent with the negligible wall-clock difference. 
 In the warm-cache flamegraph, 
-`FormattedTripleAdapter::get` (the top level entry point of the export pipeline) accounts for 80% of total CPU time.
+`ConstructTripleGenerator::generateFormattedTriples` (the top level entry point of the export pipeline) accounts for 88% of total CPU time.
 Within that, two cost centers stand out.
-First, `VocabularyOnDisk::operator[]` accounts for 13% of total CPU time, 
+First, `VocabularyOnDisk::operator[]` accounts for 14.2% of total CPU time, 
 representing the cost of resolving `ValueId`s to strings.
 Second, `formatTriple` accounts for 18% of total CPU time, 
 dominated by string manipulation operations 
@@ -840,9 +816,8 @@ A structured investigation of cache parametrization would need to address severa
 2.2) Along which dimensions can the cache be optimized (example dimensions could be hit rate, memory footprint, query
 latency, ...)? \
 2.3) Which of the dimensions from 2.2 matters most in practice? \
-2.4) Given the most important dimension, how should the cache be parameterized to optimize for it?
-miss rates, eviction counts, and memory footprint per query? Possibly also others?) \
-2.5) How do we measure the chosen optimization target? \
+2.4) Given the most important dimension, how should the cache be parameterized to optimize for it?\
+2.5) How do we measure the chosen optimization target?
 
 3. **Investigate blocking I/O and implement batched disk reads.** \
 The warm/cold wall-clock difference of only 284 ms suggests the `IdCache` is effective for the SPO query, 
@@ -854,8 +829,8 @@ A structured investigation would involve: \
 3.3) Define what "representative" queries and datasets mean in this context. \
 3.4) Across those representative queries and datasets, quantify the blocking I/O overhead. \
 3.5) If blocking I/O is significant, investigate strategies to mitigate it. \
-For example replacing individual `pread` calls (system calls that read from disk) for batch misses with batched 
-sequential reads, or prefetching vocabulary entries. Understanding how similar systems approach this is a prerequisite. \
+For example replacing individual `pread` calls (system calls that read from disk) for cache misses with batched 
+sequential reads from disk, or prefetching vocabulary entries. Understanding how similar systems approach this is a prerequisite. \
 3.6) Implement the most promising mitigation strategy. \
 3.7) Measure the impact of the implementation across the same representative queries and datasets, comparing blocking
 I/O time, wall-clock time, and cache miss rates before and after.
@@ -900,4 +875,4 @@ The author takes full responsibility for the accuracy and integrity of all conte
 [^4]: "QLever Documentation" https://docs.qlever.dev/ Accessed 2026-03-18.
 [^5]: "qlever" https://github.com/ad-freiburg/qlever Accessed 2026-03-18.
 [^6]: W3 Org. "RDF Primer, Example 6" https://www.w3.org/TR/rdf11-primer/#section-vocabulary Accessed 2026-04-01.
-[^7]: github. "construct-pipeline-refactor branch" https://github.com/marvin7122/qlever/commit/0480d959a02b04d69b017364423ce1670ca833d4 Accessed 2026-04-07.
+[^7]: github. "construct-pipeline-refactor branch" https://github.com/marvin7122/qlever/commit/08be29750268f08af2efcee145a423fc20d8c9a6 Accessed 2026-04-28.

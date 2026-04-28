@@ -1,0 +1,26 @@
+2026-04-28 17:38:12.383 - INFO: [1mQLever server, compiled on Thu Apr  9 09:52:10 AM CEST 2026 using git hash a5e4bf[22m
+2026-04-28 17:38:12.384 - INFO: Initializing server ...
+2026-04-28 17:38:12.384 - INFO: The git hash used to build this index was "8c99fe"
+2026-04-28 17:38:12.384 - INFO: Reading vocabulary from file /home/userNoPriv/code/qlever/qlever-indices/dblp/dblp.vocabulary.words ...
+2026-04-28 17:38:12.398 - INFO: Done, number of words: 409,446,926
+2026-04-28 17:38:12.398 - INFO: Number of words in internal vocabulary (these are also part of the external vocabulary): 409,457
+2026-04-28 17:38:12.419 - INFO: Registered PSO permutation: #relations = 6, #blocks = 7,515, #triples = 234,800,838
+2026-04-28 17:38:12.443 - INFO: Registered PSO permutation: #relations = 96, #blocks = 46,913, #triples = 1,464,719,701
+2026-04-28 17:38:12.447 - INFO: Registered POS permutation: #relations = 6, #blocks = 7,515, #triples = 234,800,838
+2026-04-28 17:38:12.470 - INFO: Registered POS permutation: #relations = 96, #blocks = 46,913, #triples = 1,464,719,701
+2026-04-28 17:38:12.490 - INFO: Registered OPS permutation: #relations = 318,850,904, #blocks = 39,014, #triples = 1,464,719,701
+2026-04-28 17:38:12.510 - INFO: Registered OSP permutation: #relations = 318,850,904, #blocks = 39,014, #triples = 1,464,719,701
+2026-04-28 17:38:12.525 - INFO: Registered SPO permutation: #relations = 234,800,427, #blocks = 31,251, #triples = 1,464,719,701
+2026-04-28 17:38:12.537 - INFO: Registered SOP permutation: #relations = 234,800,427, #blocks = 31,251, #triples = 1,464,719,701
+2026-04-28 17:38:12.537 - INFO: Reading patterns from file /home/userNoPriv/code/qlever/qlever-indices/dblp/dblp.index.patterns ...
+2026-04-28 17:38:12.538 - INFO: Sorting random result tables to estimate the sorting performance of this machine ...
+2026-04-28 17:38:19.776 - INFO: Access token for restricted API calls is ""
+2026-04-28 17:38:19.776 - INFO: The server is ready, listening for requests on port 7001 ...
+2026-04-28 17:38:22.385 - INFO: 
+2026-04-28 17:38:22.385 - INFO: Request received via POST, content type "application/sparql-query"
+2026-04-28 17:38:22.387 - INFO: Processing the following SPARQL query:
+SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10000
+2026-04-28 17:38:22.387 - INFO: Requested media types of the result are: "text/csv"
+2026-04-28 17:38:22.390 - INFO: Query planning done in 4 ms
+2026-04-28 17:38:22.396 - INFO: Result has unknown size (not computed yet)
+2026-04-28 17:38:22.503 - INFO: Done processing query and sending result, total time was 117 ms
