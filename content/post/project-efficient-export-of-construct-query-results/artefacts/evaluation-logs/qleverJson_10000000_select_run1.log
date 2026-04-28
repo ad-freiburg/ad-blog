@@ -23,3 +23,4 @@ SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10000000
 2026-04-28 18:00:53.898 - INFO: Requested media types of the result are: "application/qlever-results+json"
 2026-04-28 18:00:53.901 - INFO: Query planning done in 4 ms
 2026-04-28 18:00:53.907 - INFO: Result has unknown size (not computed yet)
+2026-04-28 18:01:12.661 - INFO: Done processing query and sending result, total time was 18,765 ms

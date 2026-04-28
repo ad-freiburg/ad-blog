@@ -1,0 +1,16 @@
+2026-04-28 18:02:11.505 - INFO: [1mQLever server, compiled on Thu Apr  9 09:52:10 AM CEST 2026 using git hash a5e4bf[22m
+2026-04-28 18:02:11.506 - INFO: Initializing server ...
+2026-04-28 18:02:11.506 - INFO: The git hash used to build this index was "8c99fe"
+2026-04-28 18:02:11.506 - INFO: Reading vocabulary from file /home/userNoPriv/code/qlever/qlever-indices/dblp/dblp.vocabulary.words ...
+2026-04-28 18:02:11.527 - INFO: Done, number of words: 409,446,926
+2026-04-28 18:02:11.527 - INFO: Number of words in internal vocabulary (these are also part of the external vocabulary): 409,457
+2026-04-28 18:02:11.547 - INFO: Registered PSO permutation: #relations = 6, #blocks = 7,515, #triples = 234,800,838
+2026-04-28 18:02:11.571 - INFO: Registered PSO permutation: #relations = 96, #blocks = 46,913, #triples = 1,464,719,701
+2026-04-28 18:02:11.574 - INFO: Registered POS permutation: #relations = 6, #blocks = 7,515, #triples = 234,800,838
+2026-04-28 18:02:11.597 - INFO: Registered POS permutation: #relations = 96, #blocks = 46,913, #triples = 1,464,719,701
+2026-04-28 18:02:11.616 - INFO: Registered OPS permutation: #relations = 318,850,904, #blocks = 39,014, #triples = 1,464,719,701
+2026-04-28 18:02:11.636 - INFO: Registered OSP permutation: #relations = 318,850,904, #blocks = 39,014, #triples = 1,464,719,701
+2026-04-28 18:02:11.649 - INFO: Registered SPO permutation: #relations = 234,800,427, #blocks = 31,251, #triples = 1,464,719,701
+2026-04-28 18:02:11.660 - INFO: Registered SOP permutation: #relations = 234,800,427, #blocks = 31,251, #triples = 1,464,719,701
+2026-04-28 18:02:11.660 - INFO: Reading patterns from file /home/userNoPriv/code/qlever/qlever-indices/dblp/dblp.index.patterns ...
+2026-04-28 18:02:11.661 - INFO: Sorting random result tables to estimate the sorting performance of this machine ...
