@@ -374,8 +374,8 @@ improve it.
 ## How the original implementation worked
 The core of the CONSTRUCT export is a single function: `constructQueryResultToTriples`. \
 Its structure is a straightforward nested loop: \
-For each row of the result table (the table which is the result from computing the WHERE clause of the CONSTRUCT query) 
-iterate over the triple patterns in the CONSTRUCT template and evaluate each triple. \
+For each row of the result table (the table which is the result from computing the WHERE clause of the CONSTRUCT query)
+, iterate over the triple patterns in the CONSTRUCT template and evaluate each triple. \
 Evaluating a triple means resolving each of its three positions (subject, predicate, object) to a concrete string. \
 If all three resolve successfully, the triple is emitted.
 
@@ -507,10 +507,21 @@ regardless of how many template triples reference it.
 Phase 1 runs once per query, before any rows of the result table are processed.
 
 ---
-### Phase 2 — Variable resolution (ConstructBatchEvaluator / evaluateBatch)
-This corresponds to the *Batch Evaluation / ConstructBatchEvaluator* box inside `ConstructTripleGenerator`, 
-which receives a `TableWithRange` from `TableWithRangeEvaluator` and consults the `IdCache` shown to its right the
-diagram.
+### Phase 2 — Batching and variable resolution (ConstructTripleGenerator / ConstructBatchEvaluator)
+
+This corresponds to the interior of the *ConstructTripleGenerator* box in the diagram. 
+Two components work together here: the `evaluateTables` method of `ConstructTripleGenerator` 
+(which is not shown as separate box, but is the orchestrating logic of the outer `ConstructTripleGenerator` box) 
+and the *Batch Evaluation / ConstructBatchEvaluator* box inside it.
+
+**From InputRange<TableWithRange> to batches.**
+The WHERE-clause result enters `ConstructTripleGenerator` as an `InputRange<TableWithRange>`, 
+which is a lazy sequence of `TableWithRange` objects, each pairning an `IdTable` with a view over a contiguous range
+of row indices. `evaluateTables` splits each `TableWithRange`'s row range into fixed-size chunks/batches. 
+Each chunk is then processed independently: 
+`evaluateTables` constructs a `BatchEvaluationContext` 
+(a struct holding a const reference to the `IdTable` plus the `[firstRow, endRow)` boundaries of the batch) 
+and passes it to `ConstructBatchEvaluator::evaluateBatch`.
 
 **Motivation.** After Phase 1, what remains is resolving `ValueId`s for the variable positions in the graph template. 
 This requires vocabulary lookups, which are expensive since the vocabulary is for the most part stored on disk 
@@ -640,7 +651,7 @@ The improved implementation was measured using a binary built in `Release` mode 
 
 **Observation.** 
 The new implementation is consistently faster than the original across all formats and row counts, 
-with speedups ranging from 1.49x at 10k rows to 4.14x at 10M rows. 
+with speedups ranging from about 1.42x at 10k rows to 4.27x at 10M rows. 
 The speedup grows with result set size, indicating that the optimizations scale well. 
 Also, the CONSTRUCT export now takes significantly less time than the SELECT export (`New ratio` column).
 
@@ -820,7 +831,7 @@ latency, ...)? \
 2.5) How do we measure the chosen optimization target?
 
 3. **Investigate blocking I/O and implement batched disk reads.** \
-The warm/cold wall-clock difference of only 284 ms suggests the `IdCache` is effective for the SPO query, 
+The warm/cold wall-clock difference of only 267 ms suggests the `IdCache` is effective for the SPO query, 
 but this may not hold for queries that access a larger number of distinct `ValueIds` 
 or on larger RDF knowlege graphs like Wikidata. \
 A structured investigation would involve: \
