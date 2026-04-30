@@ -13,21 +13,23 @@ In this blog post, we compare two dynamic map matching algorithms for matching a
 
 # Content
 
-1. [Introduction](#introduction)
-2. [Backend](#backend)
-    1. [Introduction to GTFS](#introduction-to-gtfs)
-    2. [Map matching to a dynamic map](#map-matching-to-a-dynamic-map)
-        1. [Markov Chain](#markov-chain)
-        2. [Transition probability](#transition-probability)
-        3. [Fast graph building](#fast-graph-building)
-    3. [Flask as our API](#flask-as-our-api)
-3. [Frontend](#frontend)
-    1. [Flutter as our framework](#flutter-as-our-framework)
-    2. [Content of the app](#content-of-the-app)
-4. [Testing](#testing)
-    1. [Selenium for manipulating a devices GPS location](#using-selenium-to-manipulate-a-devices-gps-location)
-    2. [Generating fake GPS data](#generating-fake-gps-data)
-5. [Installation](#installation)
+- [Content](#content)
+- [Introduction](#introduction)
+- [Backend](#backend)
+  - [Introduction to GTFS](#introduction-to-gtfs)
+  - [Map Matching to a Dynamic Map](#map-matching-to-a-dynamic-map)
+    - [Hidden Markov Models](#hidden-markov-models)
+    - [What is a Candidate? Old vs New Approach](#what-is-a-candidate-old-vs-new-approach)
+    - [Transition probability](#transition-probability)
+    - [Fast graph building](#fast-graph-building)
+  - [Flask as our API](#flask-as-our-api)
+- [Frontend](#frontend)
+  - [Flutter as our framework](#flutter-as-our-framework)
+  - [Content of the app](#content-of-the-app)
+- [Testing](#testing)
+  - [Using selenium to manipulate a devices GPS location](#using-selenium-to-manipulate-a-devices-gps-location)
+  - [Generating fake GPS data](#generating-fake-gps-data)
+- [Installation](#installation)
 
 # Introduction
 
@@ -53,14 +55,37 @@ GTFS also gives us arrival and departure times for every stop on a trip.
 **Service information**\
 Every trip operates based on a service, which describes whether the trip is active on a given weekday. There can also be exceptions for specific dates, e.g. holidays.
 
-## Map matching to a dynamic map
-The shapes that are used by the public transit vehicle network can be represented as a directed graph \\(G_{network}\\).
-In this graph each GPS point of a shape is represented as a node and successive points in a shape are connected with a directed edge.
-We get a list \\(C\\) of GPS points including timestamps from the mobile device.
-Our goal is to match the GPS points of \\(C\\) to the most likely path in \\(G_{network}\\), that also fits to the given timestamps.
+## Map Matching to a Dynamic Map
 
-### Markov Chain
-The map matching can be solved by using a [Markov Chain](https://en.wikipedia.org/wiki/Markov_chain).
+Map Matching (MM) describes the process of fitting (often noisy) recorded points to the trajectory of a vehicle on a static map. [IMG?]
+A typical use of MM is a navigation systen, where the gps points of a car get matched to a street network graph.
+
+In Dynamic Map Matching (DMM), instead of matching to a static map, we match to moving targets on an underlying static graph. In our case, the GTFS shapes can be represented as a directed graph \\(G_\texttt{network}\\).
+In this graph, each GPS point of a shape is represented as a node and successive points in a shape are connected with a directed edge.
+
+Mobile devices emit **Events** \\(ev = (\texttt{lat}, \texttt{lon}, \texttt{ts})\\), where we abbreviate timestamp with **ts**.
+
+The aim of our dynamic map matching algorithms \\(F_\texttt{DMM}\\) is to match a list of Events \\(EV = [ev_0, ..., ev_{n-1}]\\) to both spatial and temporal dimensions, such that the most likely trip \\(t_\texttt{best}\\) is returned: \\(F_\texttt{DMM}(EV) = t_\texttt{best}\\)
+
+### Hidden Markov Models
+
+The map matching can be solved by using a [Hidden Markov Model (HMM)](https://en.wikipedia.org/wiki/Hidden_Markov_model).
+A HMM is used when a process can likely be modeled by a Markov chain (The probability of transitioning from one state to another is solely
+dependant on the current state), but its states are unknown.
+
+In the old approach, we filter the GTFS shapes network graph \\(G_{network}\\) spatially to get **candidates** \\(c_j \in C\\) for each event \\(ev_i\\). With these, we create HMM graph \\(G_\texttt{HMM}\\), which consists of \\(|EV|\\) layers. We find the shortest path through the network, based on emission probabilities \\(P_\texttt{emission}\\) and transition probabilities \\(P_\texttt{transition}\\) (see [infographic])
+
+### What is a Candidate? Old vs New Approach
+
+This is where the old and new approaches differ.
+
+In the old approach, candidates are edges. All edges that are close to the event location are candidates in \\(G_\texttt{HMM}\\). We then find the shortest path through \\(G_\texttt{HMM}\\), which gives a set of shortest path edges \\(E_\texttt{sp}\\). After this step, we take the GTFS shape that is most common along all \\(e \in E_\texttt{sp}\\).  for active trips on it, which gives us possible best trips to choose from.
+This old approach has the downside that we find a good spatial solution first, and only afterwards check whether it is temporally valid.
+
+In the new approach
+
+We have the GTFS shapes network, where \\(G_{network}\\) and 
+
 We can model the Markov Chain by creating a directed graph \\(G_{markov}\\).
 Each node represents a possible edge \\(e \in G_{network}\\) and the edges of \\(G_{markov}\\) contain the probability of a transition from one node to another \\(P_{transition}(e^1 \to e^2)\\).
 We create a starting node, and then add all edges that are close to the first GPS point \\(c_1 \in C\\). 
