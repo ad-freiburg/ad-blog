@@ -15,6 +15,8 @@ We ran QLever, one of the fastest open-source RDF engines, on a cloud VM (Amazon
 What did we find? This project set out to answer that question, and the results
 surprised us too.
 
+**NOTE: This is a preliminary draft, which still contains various inaccuracies, so take with several grains of salt. We are working on cleaning this up.**
+
 <!--more-->
 
 ## Contents
@@ -39,9 +41,9 @@ surprised us too.
 
 ## Why benchmark QLever in the cloud?
 
-[QLever](https://github.com/ad-freiburg/qlever) is an open-source RDF/SPARQL engine
-developed at the Chair for Algorithms and Data Structures at the Technical faculty, University of Freiburg.
-It is designed to handle hundreds of billions of triples on a single machine, and has consistently outperformed other SPARQL engines in published evaluations. Most of those evaluations, however, run on dedicated research hardware. The question this project asks is different: what happens when you run QLever on a commodity cloud VM and compare it against a purpose-built, fully managed cloud graph database, specifically [Amazon Neptune](https://aws.amazon.com/neptune/)?
+[QLever](https://github.com/ad-freiburg/qlever) is an open-source RDF/SPARQL database
+developed at the Chair for Algorithms and Data Structures at the Faculty of Engineering of the University of Freiburg.
+It is designed to handle hundreds of billions of triples on a single machine, and has consistently outperformed other RDF/SPARQL databases in published evaluations. Most of those evaluations were run on dedicated hardware. The question this project asks is: what happens when you run QLever on a commodity cloud VM and compare it against a purpose-built, fully managed cloud graph database, specifically [Amazon Neptune](https://aws.amazon.com/neptune/)?
 
 This matters beyond just academic curiosity. Organizations increasingly build their knowledge
 infrastructure on cloud platforms, and Neptune is AWS's default recommendation for graph workloads. Understanding how these two options compare on realistic, large-scale SPARQL benchmarks is useful for anyone selecting a tech stack.
@@ -82,7 +84,7 @@ The specific benchmark files were:
 
   (around 97 queries in the runs we performed).
 
-A uniform per-query timeout of **300 seconds** (5 minutes) was applied throughout. All query YAML files and every result file from the experiments are archived in the internal AD chair Git repository `qlever-cloud-benchmark`.
+A uniform per-query timeout of **300 seconds** (5 minutes) was applied throughout. All query files and results files from the experiments are available on https://github.com/ad-freiburg/qlever-cloud-benchmark.
 
 ### Engines and hardware
 
