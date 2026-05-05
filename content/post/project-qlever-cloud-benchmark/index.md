@@ -10,20 +10,11 @@ draft: false
 slug: "project-qlever-cloud-benchmark"
 ---
 
-<<<<<<< HEAD
-We ran QLever, one of the fastest open-source RDF engines, on a cloud VM (Amazon EC2) and benchmarked it against Amazon's native flagship managed graph database, Neptune, on real, large-scale datasets.
-=======
 We ran QLever, one of the fastest open-source RDF database systems, on a cloud VM (Amazon EC2) and benchmarked it against Amazon's native flagship managed graph database, Neptune, on real, large-scale datasets.
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 
 What did we find? This project set out to answer that question, and the results
 surprised us too.
 
-<<<<<<< HEAD
-**NOTE: This is a preliminary draft, which still contains various inaccuracies, so take with several grains of salt. We are working on cleaning this up.**
-
-=======
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 <!--more-->
 
 ## Contents
@@ -31,11 +22,7 @@ surprised us too.
 1. [Why benchmark QLever in the cloud?](#why-benchmark-qlever-in-the-cloud)
 2. [The experimental setup](#the-experimental-setup)
    - [Datasets and benchmarks](#datasets-and-benchmarks)
-<<<<<<< HEAD
-   - [Engines and hardware](#engines-and-hardware)
-=======
    - [Systems and hardware](#systems-and-hardware)
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
    - [Warm vs cold: defining fair conditions](#warm-vs-cold-defining-fair-conditions)
 3. [DBLP: from "too good to be true" to a fair fight](#dblp-from-too-good-to-be-true-to-a-fair-fight)
    - [Initial results and a dose of skepticism](#initial-results-and-a-dose-of-skepticism)
@@ -52,14 +39,8 @@ surprised us too.
 
 ## Why benchmark QLever in the cloud?
 
-<<<<<<< HEAD
-[QLever](https://github.com/ad-freiburg/qlever) is an open-source RDF/SPARQL database
-developed at the Chair for Algorithms and Data Structures at the Faculty of Engineering of the University of Freiburg.
-It is designed to handle hundreds of billions of triples on a single machine, and has consistently outperformed other RDF/SPARQL databases in published evaluations. Most of those evaluations were run on dedicated hardware. The question this project asks is: what happens when you run QLever on a commodity cloud VM and compare it against a purpose-built, fully managed cloud graph database, specifically [Amazon Neptune](https://aws.amazon.com/neptune/)?
-=======
-[QLever](https://github.com/ad-freiburg/qlever) is an open-source RDF/SPARQL systems and database system developed at the Chair for Algorithms and Data Structures in the Faculty of Engineering at the University of Freiburg.
+[QLever](https://github.com/ad-freiburg/qlever) is an open-source RDF/SPARQL database system developed at the Chair for Algorithms and Data Structures in the Faculty of Engineering at the University of Freiburg.
 It is designed to handle hundreds of billions of triples on a single machine, and has consistently outperformed other SPARQL database systems in published evaluations. Most of those evaluations, however, run on dedicated research hardware. The question this project asks is different: what happens when you run QLever on a commodity cloud VM and compare it against a purpose-built, fully managed cloud graph database, specifically [Amazon Neptune](https://aws.amazon.com/neptune/)?
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 
 This matters beyond just academic curiosity. Organizations increasingly build their knowledge
 infrastructure on cloud platforms, and Neptune is AWS's default recommendation for graph workloads. Understanding how these two options compare on realistic, large-scale SPARQL benchmarks is useful for anyone selecting a tech stack.
@@ -100,15 +81,6 @@ The specific benchmark files were:
 
   (around 97 queries in the runs we performed).
 
-<<<<<<< HEAD
-A uniform per-query timeout of **300 seconds** (5 minutes) was applied throughout. All query files and results files from the experiments are available on https://github.com/ad-freiburg/qlever-cloud-benchmark.
-
-### Engines and hardware
-
-I ran four engines on DBLP and two on Wikidata-truthy:
-
-| Engine | Deployment | Instance (DBLP) | Instance (Truthy) |
-=======
 All query YAML files and every result file from the experiments are archived in the internal AD chair Git repository `qlever-cloud-benchmark`.
 
 ### Systems and hardware
@@ -116,7 +88,6 @@ All query YAML files and every result file from the experiments are archived in 
 I ran four RDF database systems on DBLP and two on Wikidata-truthy:
 
 | System | Deployment | Instance (DBLP) | Instance (Truthy) |
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 |---|---|---|---|
 | QLever | EC2, Docker | `r6i.2xlarge` (64 GiB) | `r6i.8xlarge` (256 GiB) |
 | Amazon Neptune | Managed cluster | `db.r6i.2xlarge` | `db.r6g.8xlarge` |
@@ -124,15 +95,6 @@ I ran four RDF database systems on DBLP and two on Wikidata-truthy:
 | MillenniumDB | EC2, Docker | `r6i.2xlarge` | — |
 
 Instance classes were matched by available memory to make the comparison as fair as possible. All experiments ran in `eu-central-1a` (Frankfurt). The
-<<<<<<< HEAD
-QLever, Virtuoso, and MillenniumDB engines were managed using the `qlever-control` CLI, which handles index building, server lifecycle, and benchmark execution uniformly across all engines.
-
-For the QLever DBLP index I needed to set `STXXL_MEMORY = 40G` in the Qleverfile of the engine to give the external-memory merge phase enough room. For Wikidata-truthy (`r6i.8xlarge`, 256 GiB, 3 TB `gp3` EBS volume at `/data`) I raised this to `STXXL_MEMORY = 80G`. Neptune data was loaded from an S3 bucket via Neptune bulk loader endpoint with an IAM loader role. The DBLP load completed in roughly **21 hours**; Wikidata-truthy took about **32 hours**.
-
-### Warm vs cold: defining fair conditions
-
-For every engine and dataset I ran a **warm** run (server running, OS page cache populated) and a **cold** run (caches cleared, server restarted from scratch before the first query). For the EC2-based engines, cold runs were preceded by:
-=======
 QLever, Virtuoso, and MillenniumDB systems were managed using the `qlever-control` CLI, which handles index building, server lifecycle, and benchmark execution uniformly across all systems.
 
 For the QLever DBLP index I increased `STXXL_MEMORY` to 40G in the Qleverfile to avoid “insufficient memory for merging blocks” errors on my specific EC2 setup. For Wikidata-truthy (`r6i.8xlarge`, 256 GiB, 3 TB `gp3` EBS volume at `/data`) I used `STXXL_MEMORY = 80G`. These values were conservative choices for this project, not minimal requirements of QLever. In the AD chair’s production setups, full Wikidata (more than twice the size of Wikidata-truthy) is routinely indexed with `STXXL_MEMORY = 10G`; my larger settings simply traded extra memory for a simpler, robust configuration during the experiments. Neptune data was loaded from an S3 bucket via Neptune bulk loader endpoint with an IAM loader role. The DBLP load completed in roughly **21 hours**; Wikidata-truthy took about **32 hours**.
@@ -140,19 +102,11 @@ For the QLever DBLP index I increased `STXXL_MEMORY` to 40G in the Qleverfile to
 ### Warm vs cold: defining fair conditions
 
 For every system and dataset I ran a **warm** run (server running, OS page cache populated) and a **cold** run (caches cleared, server restarted from scratch before the first query). For the EC2-based systems, cold runs were preceded by:
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 ```bash
 sudo bash -c "sync; sleep 5; echo 3 > /proc/sys/vm/drop_caches"
 ```
 OS page cache is cleared entirely, ensuring the engine cannot benefit from previously cached index data. For Neptune there is no equivalent mechanism, we approximated a cold start by **rebooting the writer instance** before each cold run.
 
-<<<<<<< HEAD
-*Results from the initial run:*
-
-![Results from the initial run](img/dblp.png)
-
-=======
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 ---
 
 ## DBLP: from "too good to be true" to a fair fight
@@ -177,11 +131,7 @@ WHERE {
   }
 }
 ```
-<<<<<<< HEAD
-This nested COUNT structure exists because of how QLever's original benchmarking query was designed. QLever can optimize through it. But for Neptune (and other engines), it is a genuine nested aggregation; the inner query produces one scalar row, and the outer COUNT then aggregates that one row. The final answer is always 1, but Neptune doesn't know that and has to execute both aggregation stages, making it a costlier query.
-=======
 This nested `COUNT` structure exists because of how QLever's original benchmarking query was designed. QLever can optimize through it. But for Neptune (and other RDF database systems), it is a genuine nested aggregation: the inner query computes a single scalar count, and the outer query then counts again over that scalar. The result still has just one row, but the system has to execute two aggregation stages instead of one, which makes these queries unnecessarily more complex and costly to evaluate.
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 
 **Problem 2: Configuration.** I was running an older Neptune engine version with a default parameter group that imposed shorter timeouts than intended, and I had not set the `--download-or-count download` flag in the benchmarking CLI, which was causing the client to wrap some queries with yet another COUNT layer on top of what was already in the YAML.
 
@@ -189,11 +139,7 @@ This nested `COUNT` structure exists because of how QLever's original benchmarki
 
 For the final DBLP rerun I made the following changes simultaneously:
 
-<<<<<<< HEAD
-1. **Switched to `dblp.medium.queries.yaml`** for all engines. This file uses clean single-COUNT queries:
-=======
 1. **Switched to `dblp.medium.queries.yaml`** for all systems. This file uses clean single-COUNT queries:
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 ```sql
 -- YAML format (dblp.medium.queries.yaml)
 SELECT (COUNT(*) AS ?count)
@@ -215,53 +161,24 @@ WHERE {
 
    (`eu-central-1a`) with a properly configured security group Neptune SG allows port 8182 from the EC2 security group, not a fixed IP, so the rule survives EC2 restarts.
 
-<<<<<<< HEAD
-Neptune results improved considerably after these changes, not because the DBLP data or the benchmark definition changed, but because Neptune was no longer being penalized by redundant aggregation layers and misconfigured timeouts. This is an important lesson in methodology, worth emphasizing: **When comparing engines, the benchmark setup must be fair to *all* engines under test, not just the one you developed.**
-
-### Virtuoso and MillenniumDB as a sanity check
-
-Even after fixing the setup, QLever remained substantially faster than Neptune on nearly every query. After some discussions, Robin's suggestion was to add two more engines:
-=======
 Neptune results improved considerably after these changes, not because the DBLP data or the benchmark definition changed, but because Neptune was no longer being penalized by redundant aggregation layers and misconfigured timeouts. This is an important lesson in methodology, worth emphasizing: **When comparing systems, the benchmark setup must be fair to *all* engines under test, not just the one you developed.**
 
 ### Virtuoso and MillenniumDB as a sanity check
 
 Even after fixing the setup, QLever remained substantially faster than Neptune on nearly every query. After some discussions, Robin's suggestion was to add two more systems:
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 **Virtuoso** and **MillenniumDB** to check whether Neptune is an outlier:
 
 > *"The goal would be to find out if other engines fall more in line with QLever or Neptune."*
 
 I used Tanmay's multi-engine framework for this. Virtuoso was straightforward via the `qvirtuoso` wrapper. MillenniumDB required a small workaround as the Docker image build script referenced a `master` branch that no longer existed. So I cloned the repository, checked out the correct branch, and built the image manually before importing DBLP. 
 
-<<<<<<< HEAD
-*Overview of all benchmark results across all four datasets:*
-
-![Overview of all benchmark results across all four datasets](img/dblp-rerun.png)
-=======
 *Overview of all benchmark results across all four systems:*
 
 ![Overview of all benchmark results across all four systems](img/dblp-run.png)
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 
 **Virtuoso and MillenniumDB aligned much more closely with QLever than with Neptune.**
 Neptune consistently ran slower by a wide margin on most query categories, even after all the configuration improvements. This ruled out the hypothesis that QLever had some hidden advantage in our setup; **Neptune performance is the outlier here.**
 
-<<<<<<< HEAD
-### The COUNT(\*) experiment (DBLP-SUBSET)
-
-One pattern in the data stood out: the queries where Neptune was slowest were almost uniformly COUNT-heavy. Global `COUNT(*)`, `COUNT(DISTINCT ...)`, and complex `GROUP BY` queries took **50–110 seconds** on Neptune; QLever handled the same queries in **under a second**. Queries that exported rows with a small `LIMIT` were comparatively faster on Neptune. This led to further discussions about whether `COUNT(*)` might be introducing disproportionate overhead on Neptune.
-
-To investigate further, I selected **8 representative queries** from the DBLP
-benchmark covering joins, OPTIONAL chains, GROUP BY, COUNT DISTINCT, regex filters, and a full triple count scan and created two variants for each:
-
-1. **COUNT variant**: the original Sparqloscope query with
-
-   `SELECT (COUNT(*) AS ?count)`.
-2. **OFFSET variant**: same logical pattern, rewritten as a plain SELECT with
-   `OFFSET 100000 LIMIT 10` and no aggregation.
-
-=======
 ### The COUNT (\*) experiment (DBLP-SUBSET)
 
 One pattern in the data stood out: the queries where Neptune was slowest were almost uniformly COUNT-heavy. Global `COUNT(*)`, `COUNT(DISTINCT ...)`, and complex `GROUP BY` queries took **50–110 seconds** on Neptune; QLever handled the same queries in **under a second**. Queries that exported rows with a small `LIMIT` were comparatively faster on Neptune. This led to further discussions about whether `COUNT(*)` might be introducing disproportionate overhead on Neptune.
@@ -275,45 +192,26 @@ To investigate further, I selected **8 representative queries** from the DBLP be
 
 These OFFSET variants are **not** logically equivalent to the COUNT versions. Instead of computing the full result and aggregating it into a single number, they only return a small slice of the result set: 10 rows after skipping the first 100,000. This is closer to a “user scrolling or paginating through results” use case. It also means that, for Neptune, the OFFSET variants can do significantly less work than the COUNT variants, because the database can often stop once it has produced those 100,010 rows instead of scanning the entire result.
 
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 *Results for DBLP-SUBSET:*
 
 ![Results for DBLP-SUBSET](img/dblp-subset.png)
 
-<<<<<<< HEAD
-| Query | QLever (COUNT) | Neptune (COUNT) | Neptune (OFFSET 100k) | Neptune (N-1)
-=======
 | Query | QLever (COUNT) | Neptune (COUNT) | Neptune (OFFSET 100k) | Neptune (N-1) |
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 |---|---:|---:|---:|---:|
 | join-2-large-large | 0.48 s | 86.10 s | 0.30 s | 79.21 s |
 | optional-join-3-chain-1 | 1.09 s | 98.95 s | 0.14 s | 83.43 s |
 | group-by-count-high-multiplicity | 0.02 s | 108.36 s | 0.19 s | 0.05 s |
 | group-by-implicit-string-min | 0.40 s | 56.10 s | 0.23 s | 0.06 s |
-<<<<<<< HEAD
-| distinct-count-wrong-sort-order | 1.16 s | 102.64 s | 0.40 s | 0.06 s|
-=======
 | distinct-count-wrong-sort-order | 1.16 s | 102.64 s | 0.40 s | 0.06 s |
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 | regex-prefix-2 | 0.01 s | 55.30 s | 55.98 s | 54.01 s |
 | regex-prefix-3 | 0.01 s | 55.00 s | 55.69 s | 54.17 s |
 | number-of-triples | 0.01 s | 81.04 s | 0.13 s | HTTP 500 |
 
-<<<<<<< HEAD
-For **five of the eight queries**, removing COUNT and using an OFFSET reduced
-Neptune time from tens of seconds down to a fraction of a second. The two **regex** queries (`regex-prefix-2`, `regex-prefix-3`) were unaffected, Neptune took ~55 seconds regardless of COUNT or OFFSET, because the bottleneck there is the full scan of `rdfs:label` values and regex evaluation, not the aggregation step. QLever performance was essentially unchanged across all formulations.
-
-We also tested an *"OFFSET(N−1)"* variant (*"Neptune-offset1"* in benchmark results) setting OFFSET to exactly one less than the true result size, forcing the engine to compute the full answer while returning only the last row. This confirmed the same pattern, though for the heaviest query (`number-of-triples`, 536 million triples) Neptune returned an HTTP 500 error.
-
-After discussing my findings, we agreed that the 8-query subset provides enough evidence to understand where the COUNT overhead lives. Rewriting the entire ~100-query DBLP suite in OFFSET form and rerunning would add significant cost and engineering effort without changing the fundamental story. We kept the
-**COUNT-based full Sparqloscope results as the main comparison** and treat this subset as supporting analysis.
-=======
 For **five of the eight queries**, removing COUNT and using an OFFSET reduced Neptune time from tens of seconds down to a fraction of a second. The two **regex** queries (`regex-prefix-2`, `regex-prefix-3`) were unaffected; Neptune took ~55 seconds regardless of COUNT or OFFSET, because the bottleneck there is the full scan of `rdfs:label` values and regex evaluation, not the aggregation step. QLever performance was essentially unchanged across all formulations.
 
 We also tested an *"OFFSET(N−1)"* variant (*"Neptune-offset1"* in the benchmark results). Here we first determined the result size `N` from the COUNT runs on QLever and Neptune, then set `OFFSET = N−1` and `LIMIT 1`. The idea was to force the system to come as close as possible to computing the full result (similar to COUNT), but to only materialize a single row at the end. This confirmed the same qualitative picture: for the aggregates the runtimes collapsed compared to the pure COUNT version, but for the heaviest query (`number-of-triples`, 536 million triples) Neptune still failed with an HTTP 500 error.
 
 For this reason, we do not treat the OFFSET or OFFSET(N−1) variants as replacements for the COUNT-based DBLP benchmark, but as **diagnostic tools**: they help us understand how Neptune behaves in more user‑like “scrolling through results” scenarios (OFFSET 100k) and in “almost full computation” scenarios (OFFSET(N−1)), compared to the pure COUNT workload. The main comparison for DBLP remains the COUNT‑based Sparqloscope suite; the 8‑query subset experiments provide additional insight into where exactly the COUNT overhead lives.
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 
 ---
 
@@ -323,11 +221,7 @@ For this reason, we do not treat the OFFSET or OFFSET(N−1) variants as replace
 
 For Wikidata-truthy I provisioned an `r6i.8xlarge` EC2 instance (32 vCPUs, 256 GiB RAM) with a dedicated **3 TB `gp3` EBS volume**. The truthy RDF dump downloaded to approximately **66 GB** compressed. Building the QLever index ran inside `tmux` over several hours with `STXXL_MEMORY = 80G`.
 
-<<<<<<< HEAD
-For Neptune I used a `db.r6g.8xlarge` instance and engine version **1.4.7.0.R1** applying lessons learned from the DBLP rerun from the outset: clean query YAML, correct timeouts, matching instance class, stable VPC/AZ/SG setup. Loading **8.1 billion triples** from S3 took roughly **32 hours** and completed without errors (`totalRecords: 8,139,010,854`, `parsingErrors: 0`, `insertErrors: 0`).
-=======
 For Neptune I used a `db.r6g.8xlarge` instance and engine version **1.4.7.0.R1** applying lessons learned from the DBLP experiments from the outset: clean query YAML, correct timeouts, matching instance class, stable VPC/AZ/SG setup. Loading **8.1 billion triples** from S3 took roughly **32 hours** and completed without errors (`totalRecords: 8,139,010,854`, `parsingErrors: 0`, `insertErrors: 0`).
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 
 ### Benchmarks at scale
 
@@ -403,7 +297,7 @@ We had set a rough budget of €200, but the Wikidata-truthy run significantly e
 
 ## What we found and what it means
 
-Across both datasets, all four engines, and every variant of the methodology
+Across both datasets, all four systems, and every variant of the methodology
 experiments, the results tell a consistent story.
 
 **1. QLever is substantially faster than Amazon Neptune on realistic SPARQL workloads.**
@@ -415,11 +309,7 @@ The 8-query subset experiments showed this clearly: for GROUP BY, COUNT DISTINCT
 **3. Benchmark format matters more than one might expect.**
 Starting with the TSV (with nested COUNT wrappers) made Neptune look even worse
 than it is. Switching to clean YAML format combined with correct engine
-<<<<<<< HEAD
-configuration meaningfully improved Neptune results. The lesson: **benchmark all engines on the same and fair footing, or your conclusions are not trustworthy.**
-=======
 configuration meaningfully improved Neptune results. The lesson: **benchmark all systems on the same and fair footing, or your conclusions are not trustworthy.**
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
 
 **4. Virtuoso and MillenniumDB align with QLever, not Neptune.**
 This rules out QLever having a hidden advantage. Neptune is the outlier.
@@ -454,8 +344,5 @@ Thank you to **Robin Textor-Falconi** and **[Prof. Dr. Hannah Bast](https://ad.i
         text-align: justify;
         padding: 0 5em;
     }
-<<<<<<< HEAD
 </style>
-=======
-</style>
->>>>>>> fcff1fb (Fixed QLever cloud benchmark blogpost)
+
