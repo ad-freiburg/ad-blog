@@ -120,7 +120,8 @@ For the Wikidata‑truthy benchmark, both QLever and Neptune used a 300 second p
 
 The very first DBLP benchmark used the older Sparqloscope TSV file and an earlier `qlever-control` version. At first, the results looked promising for QLever, but on closer inspection we found several methodological problems.
 
-**Problem 1: Query Format.** The TSV benchmark file wraps each logical query in an extra outer `COUNT` layer:
+**Problem 1: Benchmark harness configuration.** For the initial DBLP run I used older Sparqloscope TSV file with `qlever benchmark-queries` in its default “count” mode (without `--download-or-count download`). The TSV benchmark already wraps each logical query in a `COUNT` structure:
+
 ```sql
 -- AD Freiburg TSV format (dblp.benchmark.tsv)
 SELECT (COUNT(*) AS ?qlever_count_)
@@ -132,13 +133,11 @@ WHERE {
   }
 }
 ```
-This nested `COUNT` structure exists because of how QLever's original benchmarking query was designed. QLever can optimize through it. But for Neptune (and other RDF database systems), it is a genuine nested aggregation: the inner query computes a single scalar count, and the outer query then counts again over that scalar. The result still has just one row, but the system has to execute two aggregation stages instead of one, which makes these queries unnecessarily more complex and costly to evaluate.
+In “count” mode, the benchmarking tool adds its own outer SELECT (COUNT(*) ...) WHERE { { ... } } around whatever query it receives. QLever can optimize through this double COUNT wrapper. But for Neptune (and other RDF database systems), it introduces an extra aggregation level and makes the queries unnecessarily more complex and costly to evaluate.
 
-**Problem 2: Configuration.** We were running an older Neptune engine version with a default parameter group that imposed shorter timeouts than intended, and we had not set the `--download-or-count download` flag in the benchmarking CLI, which was causing the client to wrap some queries with yet another COUNT layer on top of what was already in the YAML.
+**Problem 2: Query Timeouts.** The result YAML for Neptune did not contain proper timeout metadata: individual failed queries were clearly timing out, but the aggregate metrics in the evaluation app treated them as generic failures, producing misleadingly low medians and means. 
 
-**Problem 3: Query Timeouts.** The result YAML for Neptune did not contain proper timeout metadata: individual failed queries were clearly timing out, but the aggregate metrics in the evaluation app treated them as generic failures, producing misleadingly low medians and means. 
-
-**Problem 4: server‑side crash.** Finally, for this initial DBLP run we observed a server‑side crash on the group-by-string-groupconcat query (curl exit code 52), followed by a sequence of around 25 queries failing almost instantly with curl exit code 7 while the endpoint was restarting. These fast error‑7 failures do not represent meaningful query performance.
+**Problem 3: server‑side crash.** Finally, for this initial DBLP run we observed a server‑side crash on the group-by-string-groupconcat query (curl exit code 52), followed by a sequence of around 25 queries failing almost instantly with curl exit code 7 while the endpoint was restarting. These fast error‑7 failures do not represent meaningful query performance.
 
 Because of these inconsistencies (wrong query format for Neptune, missing timeout metadata, and a crash with a long streak of invalid requests), we treat the initial DBLP run purely as a debugging step. We discarded its results and do not use any of its numbers for the evaluation below.
 
