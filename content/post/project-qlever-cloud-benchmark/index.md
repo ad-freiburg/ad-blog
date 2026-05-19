@@ -25,10 +25,11 @@ surprised us too.
    - [Systems and hardware](#systems-and-hardware)
    - [Warm vs cold: defining fair conditions](#warm-vs-cold-defining-fair-conditions)
 3. [DBLP: from "too good to be true" to a fair fight](#dblp-from-too-good-to-be-true-to-a-fair-fight)
-   - [Initial results and a dose of skepticism](#initial-results-and-a-dose-of-skepticism)
+   - [Initial DBLP run: why we discarded it](#initial-dblp-run-why-we-discarded-it)
    - [Fixing the setup: query format, engine version, timeouts](#fixing-the-setup-query-format-engine-version-timeouts)
+   - [QLever results on DBLP and a dose of skepticism](#qlever-results-on-dblp-and-a-dose-of-skepticism)
    - [Virtuoso and MillenniumDB as a sanity check](#virtuoso-and-millenniumdb-as-a-sanity-check)
-   - [The COUNT(\*) experiment](#the-count-experiment)
+   - [The COUNT(\*) experiment](#the-count--experiment-dblp-subset)
 4. [Wikidata-truthy: scaling to 8 billion triples](#wikidata-truthy-scaling-to-8-billion-triples)
    - [Building and loading](#building-and-loading)
    - [Benchmarks at scale](#benchmarks-at-scale)
@@ -48,7 +49,7 @@ infrastructure on cloud platforms, and Neptune is AWS's default recommendation f
 This was my Master's project at the AD chair, supervised by Prof. Hannah Bast and Robin Textor-Falconi. The goal was to *"Deploy QLever in the cloud and evaluate its performance in comparison to related
 systems, in particular Amazon Neptune."* I deployed both systems on AWS (Frankfurt, `eu-central-1`), ran standardized SPARQL benchmarks on two large RDF datasets, and collected everything into a reproducible evaluation pipeline.
 
-What follows is the story of what I found including a few surprises, scepticism and shock along the way.
+What follows is the story of what I found, including a few surprises, skepticism and shock along the way.
 
 ---
 
@@ -81,8 +82,6 @@ The specific benchmark files were:
 
   (around 97 queries in the runs we performed).
 
-All query YAML files and every result file from the experiments are archived in the internal AD chair Git repository `qlever-cloud-benchmark`.
-
 ### Systems and hardware
 
 I ran four RDF database systems on DBLP and two on Wikidata-truthy:
@@ -97,7 +96,9 @@ I ran four RDF database systems on DBLP and two on Wikidata-truthy:
 Instance classes were matched by available memory to make the comparison as fair as possible. All experiments ran in `eu-central-1a` (Frankfurt). The
 QLever, Virtuoso, and MillenniumDB systems were managed using the `qlever-control` CLI, which handles index building, server lifecycle, and benchmark execution uniformly across all systems.
 
-For the QLever DBLP index I increased `STXXL_MEMORY` to 40G in the Qleverfile to avoid “insufficient memory for merging blocks” errors on my specific EC2 setup. For Wikidata-truthy (`r6i.8xlarge`, 256 GiB, 3 TB `gp3` EBS volume at `/data`) I used `STXXL_MEMORY = 80G`. These values were conservative choices for this project, not minimal requirements of QLever. In the AD chair’s production setups, full Wikidata (more than twice the size of Wikidata-truthy) is routinely indexed with `STXXL_MEMORY = 10G`; my larger settings simply traded extra memory for a simpler, robust configuration during the index construction and has no direct effect on query execution, at query time QLever simply uses the full machine RAM like the other systems. Neptune data was loaded from an S3 bucket via Neptune bulk loader endpoint with an IAM loader role. The DBLP load completed in roughly **21 hours**; Wikidata-truthy took about **32 hours**.
+For the QLever DBLP index, `STXXL_MEMORY` was set to 40G in the Qleverfile to avoid “insufficient memory for merging blocks” errors on my specific EC2 setup. For Wikidata‑truthy (`r6i.8xlarge`, 256 GiB, 3 TB `gp3` EBS volume at `/data`) I used `STXXL_MEMORY = 80G`. These values were conservative choices for this project; they trade extra memory for a robust index construction and have no direct effect on query execution. Neptune data was loaded from an S3 bucket via the Neptune bulk loader endpoint with an IAM loader role. The DBLP load completed in roughly **21 hours**; Wikidata‑truthy took about **32 hours**.
+
+For the larger Wikidata‑truthy benchmark, we chose `db.r6g.8xlarge` for Neptune because it is the recommended 256 GiB memory‑optimized instance family for Neptune in `eu-central-1`; it matches QLever’s `r6i.8xlarge` EC2 instance in RAM and vCPU resources.
 
 ### Warm vs cold: defining fair conditions
 
@@ -105,7 +106,7 @@ For every system and dataset I ran a **warm** run (server running, OS page cache
 ```bash
 sudo bash -c "sync; sleep 5; echo 3 > /proc/sys/vm/drop_caches"
 ```
-OS page cache is cleared entirely, ensuring the engine cannot benefit from previously cached index data. For Neptune there is no equivalent mechanism, we approximated a cold start by **rebooting the writer instance** before each cold run.
+This clears the OS page cache entirely, ensuring the engine cannot benefit from previously cached index data. For Neptune, we approximated a cold start by **rebooting the writer instance** before each cold run.
 
 ### Timeouts and query budgets
 
@@ -118,12 +119,11 @@ For the Wikidata‑truthy benchmark, both QLever and Neptune used a 300 second p
 
 ### Initial DBLP run: why we discarded it
 
-The very first DBLP benchmark used the older Sparqloscope TSV file and an earlier `qlever-control` version. At first, the results looked promising for QLever, but on closer inspection we found several methodological problems.
+The very first DBLP benchmark used the Sparqloscope DBLP benchmark YAML file. At first, the results looked promising for QLever, but on closer inspection we found several methodological problems.
 
-**Problem 1: Benchmark harness configuration.** For the initial DBLP run I used older Sparqloscope TSV file with `qlever benchmark-queries` in its default “count” mode (without `--download-or-count download`). The TSV benchmark already wraps each logical query in a `COUNT` structure:
+**Problem 1: Benchmark harness configuration.** For the initial DBLP run I used the Sparqloscope DBLP benchmark (`dblp.medium.queries.yaml`) as input to `qlever benchmark-queries` in its default “count” mode (without `--download-or-count download`). The Sparqloscope queries already wrap each logical pattern in a `COUNT` structure:
 
 ```sql
--- AD Freiburg TSV format (dblp.benchmark.tsv)
 SELECT (COUNT(*) AS ?qlever_count_)
 WHERE {
   SELECT (COUNT(*) AS ?count)
@@ -133,43 +133,26 @@ WHERE {
   }
 }
 ```
-In “count” mode, the benchmarking tool adds its own outer SELECT (COUNT(*) ...) WHERE { { ... } } around whatever query it receives. QLever can optimize through this double COUNT wrapper. But for Neptune (and other RDF database systems), it introduces an extra aggregation level and makes the queries unnecessarily more complex and costly to evaluate.
+In “count” mode, the benchmarking tool adds its own outer SELECT `(COUNT(*) ...)WHERE { { ... } }` around the query. This double COUNT wrapper makes the queries more complex. In our initial run we observed that Neptune’s performance suffered much more from this extra aggregation layer than QLever. In hindsight this was essentially a misconfiguration of the benchmark harness, and it foreshadowed the later COUNT vs OFFSET experiments where we systematically varied the use of COUNT(*) in the queries.
 
 **Problem 2: Query Timeouts.** The result YAML for Neptune did not contain proper timeout metadata: individual failed queries were clearly timing out, but the aggregate metrics in the evaluation app treated them as generic failures, producing misleadingly low medians and means. 
 
-**Problem 3: server‑side crash.** Finally, for this initial DBLP run we observed a server‑side crash on the group-by-string-groupconcat query (curl exit code 52), followed by a sequence of around 25 queries failing almost instantly with curl exit code 7 while the endpoint was restarting. These fast error‑7 failures do not represent meaningful query performance.
-
-Because of these inconsistencies (wrong query format for Neptune, missing timeout metadata, and a crash with a long streak of invalid requests), we treat the initial DBLP run purely as a debugging step. We discarded its results and do not use any of its numbers for the evaluation below.
+Because of these inconsistencies (extra COUNT wrapper, missing timeout metadata and a crash with a long streak of invalid requests), we treat the initial DBLP run purely as a debugging step. However, the observation that Neptune was disproportionately affected by the extra COUNT layer became the starting point for the later [COUNT(*) experiment](#the-count--experiment-dblp-subset), where we systematically investigated this effect.
 
 ### Fixing the setup: query format, engine version, timeouts
 
 For the final DBLP rerun we made the following changes simultaneously:
 
-1. **Switched to `dblp.medium.queries.yaml`** for all systems. This file uses clean single-COUNT queries:
-```sql
--- YAML format (dblp.medium.queries.yaml)
-SELECT (COUNT(*) AS ?count)
-WHERE {
-  ?s dblp:hasSignature ?o1 .
-  OPTIONAL { ?s dblp:createdBy ?o2 . }
-}
-```
+1. **Executed the Sparqloscope DBLP benchmark in “download” mode.** For all systems we used `dblp.medium.queries.yaml` as the benchmark input and ran `qlever benchmark-queries` with `--download-or-count download`, so that the queries run without any additional `COUNT` wrapping by the benchmarking tool.
 
-2. **Used `--download-or-count download`** in `qlever benchmark-queries`, so queries are forwarded to Neptune exactly as written in the YAML without any further wrapping.
+2. **Upgraded Neptune** to engine version **1.4.6.3.R1**.
 
-3. **Upgraded Neptune** to engine version **1.4.6.3.R1**.
+3. **Placed the Neptune cluster and EC2 instance in the same availability zone**
+(`eu-central-1a`), with a properly configured security group: the Neptune security group allows port 8182 from the EC2 security group, not from a fixed IP, so the rule survives EC2 restarts.
 
-4. **Created a custom cluster parameter group** with `neptune_query_timeout = 300000`
+Neptune results improved considerably after these changes, not because the DBLP data or the benchmark definition changed, but because Neptune was no longer being penalized by an extra `COUNT` wrapper from the benchmark harness and misconfigured timeouts. This is an important lesson in methodology, worth emphasizing: **When comparing systems, the benchmark setup must be fair to *all* engines under test.**
 
-   (300 s), applied it to the cluster, and rebooted the writer instance to activate it. Added `?timeout=300000` to the SPARQL URL as well to be consistent on both client and server.
-
-5. **Placed the Neptune cluster and EC2 instance in the same availability zone**
-
-   (`eu-central-1a`) with a properly configured security group Neptune SG allows port 8182 from the EC2 security group, not a fixed IP, so the rule survives EC2 restarts.
-
-Neptune results improved considerably after these changes, not because the DBLP data or the benchmark definition changed, but because Neptune was no longer being penalized by redundant aggregation layers and misconfigured timeouts. This is an important lesson in methodology, worth emphasizing: **When comparing systems, the benchmark setup must be fair to *all* engines under test, not just the one you developed.**
-
-### Qlever results on DBLP and a dose of skepticism
+### QLever results on DBLP and a dose of skepticism
 
 After completing the full DBLP Sparqloscope run on both QLever and Neptune, the results were striking. Most queries that QLever executed in **under a second** were taking Neptune **50–100+ seconds**. Many queries timed out entirely.
 
@@ -182,7 +165,7 @@ Even after fixing the setup, QLever remained substantially faster than Neptune o
 
 > *"The goal would be to find out if other engines fall more in line with QLever or Neptune."*
 
-Using Tanmay's multi-engine framework for this. Virtuoso was straightforward via the `qvirtuoso` wrapper. MillenniumDB required a small workaround as the Docker image build script referenced a `master` branch that no longer existed. So I cloned the repository, checked out the correct branch, and built the image manually before importing DBLP. 
+I used Tanmay's multi-engine framework for this. Virtuoso was straightforward via the `qvirtuoso` wrapper. MillenniumDB required a small workaround as the Docker image build script referenced a `master` branch that no longer existed. So I cloned the repository, checked out the correct branch, and built the image manually before importing DBLP. 
 
 *Overview of all benchmark results across all four systems:*
 
@@ -231,9 +214,9 @@ For this reason, we do not treat the OFFSET or OFFSET(N−1) variants as replace
 
 ### Building and loading
 
-For Wikidata-truthy I provisioned an `r6i.8xlarge` EC2 instance (32 vCPUs, 256 GiB RAM) with a dedicated **3 TB `gp3` EBS volume**. The truthy RDF dump downloaded to approximately **66 GB** compressed. Building the QLever index ran inside `tmux` over several hours with `STXXL_MEMORY = 80G`.
+For Wikidata-truthy I provisioned an `r6i.8xlarge` EC2 instance (32 vCPUs, 256 GiB RAM) with a dedicated **3 TB `gp3` EBS volume**. The truthy RDF dump downloaded to approximately **66 GB** compressed. Building the QLever index ran inside `tmux` over several hours.
 
-For Neptune I used a `db.r6g.8xlarge` instance and engine version **1.4.7.0.R1** applying lessons learned from the DBLP experiments from the outset: clean query YAML, correct timeouts, matching instance class, stable VPC/AZ/SG setup. Loading **8.1 billion triples** from S3 took roughly **32 hours** and completed without errors (`totalRecords: 8,139,010,854`, `parsingErrors: 0`, `insertErrors: 0`).
+For Neptune I used a `db.r6g.8xlarge` instance and engine version **1.4.7.0.R1**, applying lessons learned from the DBLP experiments from the outset: clean query YAML, correct timeouts, matching instance class, stable VPC/AZ/SG setup. Loading **8.1 billion triples** from S3 took roughly **32 hours** and completed without errors (`totalRecords: 8,139,010,854`, `parsingErrors: 0`, `insertErrors: 0`).
 
 ### Benchmarks at scale
 
@@ -318,15 +301,10 @@ On DBLP (525M triples), QLever completed the full ~100-query Sparqloscope suite 
 **2. COUNT(\*) is a significant and specific weakness for Neptune.**
 The 8-query subset experiments showed this clearly: for GROUP BY, COUNT DISTINCT, and global count queries, removing COUNT from the query reduced Neptune runtimes by 2–3 orders of magnitude. For joins and simple scans, Neptune was still slower without COUNT. For regex, Neptune was considerably slower; QLever was essentially unaffected by these formulation changes.
 
-**3. Benchmark format matters more than one might expect.**
-Starting with the TSV (with nested COUNT wrappers) made Neptune look even worse
-than it is. Switching to clean YAML format combined with correct engine
-configuration meaningfully improved Neptune results. The lesson: **benchmark all systems on the same and fair footing, or your conclusions are not trustworthy.**
-
-**4. Virtuoso and MillenniumDB align with QLever, not Neptune.**
+**3. Virtuoso and MillenniumDB align with QLever, not Neptune.**
 This rules out QLever having a hidden advantage. Neptune is the outlier.
 
-**5. The cost gap is striking.**
+**4. The cost gap is striking.**
 Running QLever on EC2 is dramatically cheaper than running Neptune at comparable scale.
 For the Wikidata-truthy experiment, Neptune cost more than three times what the EC2 deployment cost, while producing worse and less reliable results.
 
@@ -336,7 +314,7 @@ For the Wikidata-truthy experiment, Neptune cost more than three times what the 
 
 But for **analytical SPARQL workloads over large RDF graphs**, especially ones that are COUNT-heavy or involve regex over large text predicates, the evidence here makes a clear case for **QLever on EC2**: substantially faster, more complete, and dramatically cheaper at scale.
 
-All query YAML files and every result file from the experiments are archived in the internal AD chair Git repository `qlever-cloud-benchmark`. Interactive results are available at [qlever.dev/evaluation-sri/www](https://qlever.dev/evaluation-sri/www/).
+Interactive results are available at [qlever.dev/evaluation-sri/www](https://qlever.dev/evaluation-sri/www/).
 
 My sincere thank you to **Tanmay Garg** for going out of his way to help.
 
