@@ -24,7 +24,7 @@ What did I find? This project set out to answer that question, and the results s
    - [Systems and hardware](#systems-and-hardware)
    - [Warm vs cold: defining fair conditions](#warm-vs-cold-defining-fair-conditions)
 3. [DBLP: from "too good to be true" to a fair fight](#dblp-from-too-good-to-be-true-to-a-fair-fight)
-   - [Initial DBLP run: why I discarded it](#initial-dblp-run-why-i-discarded-it)
+   - [Initial DBLP run and what I learned from it](#initial-dblp-run-and-what-i-learned-from-it)
    - [Fixing the setup: query format, engine version, timeouts](#fixing-the-setup-query-format-engine-version-timeouts)
    - [QLever results on DBLP and a dose of skepticism](#qlever-results-on-dblp-and-a-dose-of-skepticism)
    - [Virtuoso and MillenniumDB as a sanity check](#virtuoso-and-millenniumdb-as-a-sanity-check)
@@ -116,7 +116,7 @@ For the Wikidata‑truthy benchmark, both QLever and Neptune used a 300 second p
 
 ## DBLP: from "too good to be true" to a fair fight
 
-### Initial DBLP run: why I discarded it
+### Initial DBLP run and what I learned from it
 
 The very first DBLP benchmark used the Sparqloscope DBLP benchmark YAML file. At first, the results looked promising for QLever, but on closer inspection I found several methodological problems.
 
