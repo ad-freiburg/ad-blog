@@ -12,8 +12,7 @@ slug: "project-qlever-cloud-benchmark"
 
 I ran QLever, one of the fastest open-source RDF database systems, on a cloud VM (Amazon EC2) and benchmarked it against Amazon's native flagship managed graph database, Neptune, on real, large-scale datasets.
 
-What did I find? This project set out to answer that question, and the results
-surprised us too.
+What did I find? This project set out to answer that question, and the results surprised me too.
 
 <!--more-->
 
@@ -25,7 +24,7 @@ surprised us too.
    - [Systems and hardware](#systems-and-hardware)
    - [Warm vs cold: defining fair conditions](#warm-vs-cold-defining-fair-conditions)
 3. [DBLP: from "too good to be true" to a fair fight](#dblp-from-too-good-to-be-true-to-a-fair-fight)
-   - [Initial DBLP run: why I discarded it](#initial-dblp-run-why-I-discarded-it)
+   - [Initial DBLP run: why I discarded it](#initial-dblp-run-why-i-discarded-it)
    - [Fixing the setup: query format, engine version, timeouts](#fixing-the-setup-query-format-engine-version-timeouts)
    - [QLever results on DBLP and a dose of skepticism](#qlever-results-on-dblp-and-a-dose-of-skepticism)
    - [Virtuoso and MillenniumDB as a sanity check](#virtuoso-and-millenniumdb-as-a-sanity-check)
@@ -34,7 +33,7 @@ surprised us too.
    - [Building and loading](#building-and-loading)
    - [Benchmarks at scale](#benchmarks-at-scale)
 5. [The cost of running in the cloud](#the-cost-of-running-in-the-cloud)
-6. [What I found and what it means](#what-I-found-and-what-it-means)
+6. [What I found and what it means](#what-i-found-and-what-it-means)
 
 ---
 
@@ -133,7 +132,7 @@ WHERE {
   }
 }
 ```
-In “count” mode, the benchmarking tool adds its own outer SELECT `(COUNT(*) ...)WHERE { { ... } }` around the query. This double COUNT wrapper makes the queries more complex. In our initial run I observed that Neptune’s performance suffered much more from this extra aggregation layer than QLever. In hindsight this was essentially a misconfiguration of the benchmark harness, and it foreshadowed the later COUNT vs OFFSET experiments where I systematically varied the use of COUNT(*) in the queries.
+In “count” mode, the benchmarking tool adds its own outer `SELECT (COUNT(*)) WHERE { { ... } }` around the query. This double COUNT wrapper makes the queries more complex. In the initial run I observed that Neptune’s performance suffered much more from this extra aggregation layer than QLever. In hindsight this was essentially a misconfiguration of the benchmark harness, and it foreshadowed the later COUNT vs OFFSET experiments where I systematically varied the use of COUNT(*) in the queries.
 
 **Problem 2: Query Timeouts.** The result YAML for Neptune did not contain proper timeout metadata: individual failed queries were clearly timing out, but the aggregate metrics in the evaluation app treated them as generic failures, producing misleadingly low medians and means. 
 
@@ -156,7 +155,7 @@ Neptune results improved considerably after these changes, not because the DBLP 
 
 After completing the full DBLP Sparqloscope run on both QLever and Neptune, the results were striking. Most queries that QLever executed in **under a second** were taking Neptune **50–100+ seconds**. Many queries timed out entirely.
 
-Our analysis of the results: they looked great for QLever. So great, in fact, that I doubted whether the comparison was really fair. This was a legitimate concern. Before claiming QLever is orders of magnitude faster than the state-of-the-art cloud product that runs natively, you want to be confident the setup is actually fair to both sides.
+Analysis of the results: they looked great for QLever. So great, in fact, that I doubted whether the comparison was really fair. This was a legitimate concern. Before claiming QLever is orders of magnitude faster than the state-of-the-art cloud product that runs natively, you want to be confident the setup is actually fair to both sides.
 
 ### Virtuoso and MillenniumDB as a sanity check
 
@@ -172,7 +171,7 @@ I used Tanmay's multi-engine framework for this. Virtuoso was straightforward vi
 ![Overview of all benchmark results across all four systems](img/dblp-run.png)
 
 **Virtuoso and MillenniumDB aligned much more closely with QLever than with Neptune.**
-Neptune consistently ran slower by a wide margin on most query categories, even after all the configuration improvements. This ruled out the hypothesis that QLever had some hidden advantage in our setup; **Neptune performance is the outlier here.**
+Neptune consistently ran slower by a wide margin on most query categories, even after all the configuration improvements. This ruled out the hypothesis that QLever had some hidden advantage in this setup; **Neptune performance is the outlier here.**
 
 ### The COUNT (\*) experiment (DBLP-SUBSET)
 
@@ -206,7 +205,7 @@ For **five of the eight queries**, removing COUNT and using an OFFSET reduced Ne
 
 I also tested an *OFFSET(N−1)* variant (*Neptune-offset1* in the benchmark results). Here I first determined the result size `N` from the COUNT runs on QLever and Neptune, then set `OFFSET = N−1` and `LIMIT 1`. The idea was to force the system to come as close as possible to computing the full result (similar to COUNT), but to only materialize a single row at the end. This confirmed the same qualitative picture: for the aggregates the runtimes collapsed compared to the pure COUNT version, but for the heaviest query (`number-of-triples`, 536 million triples) Neptune still failed with an HTTP 500 error.
 
-For this reason, I do not treat the OFFSET or OFFSET(N−1) variants as replacements for the COUNT-based DBLP benchmark, but as **diagnostic tools**: they help us understand how Neptune behaves in more user‑like “scrolling through results” scenarios (OFFSET 100k) and in “almost full computation” scenarios (OFFSET(N−1)), compared to the pure COUNT workload. The main comparison for DBLP remains the COUNT‑based Sparqloscope suite; the 8‑query subset experiments provide additional insight into where exactly the COUNT overhead lives.
+For this reason, I do not treat the OFFSET or OFFSET(N−1) variants as replacements for the COUNT-based DBLP benchmark, but as **diagnostic tools**: they help understand how Neptune behaves in more user‑like “scrolling through results” scenarios (OFFSET 100k) and in “almost full computation” scenarios (OFFSET(N−1)), compared to the pure COUNT workload. The main comparison for DBLP remains the COUNT‑based Sparqloscope suite; the 8‑query subset experiments provide additional insight into where exactly the COUNT overhead lives.
 
 ---
 
