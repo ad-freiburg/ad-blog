@@ -7,87 +7,121 @@ tags: ["SPARQL", "GRASP"]
 categories: []
 image: "img/writing.jpg"
 ---
-We're exploring whether the way data is modeled - Relational or RDF - impacts question answering quality in the semantic parsing setting. By converting a standard relational benchmark into RDF, we pit Text2SQL against Text2SPARQL on the same set of questions. The goal isn't just comparing accuracy, but whether the RDF data model offers advantages in how answers are presented and perceived especially for complex queries.
+We're exploring whether the way data is modeled - Relational or RDF - impacts question answering quality in the semantic parsing setting.
 <!--more-->
-
-### Long story short
-We took the same 500 questions and ran them against the same underlying data - once in a relational database, once as an RDF knowledge graph. A state-of-the-art Text2SQL system ([CHESS](https://github.com/ShayanTalaei/CHESS)) went up against a Text2SPARQL system ([GRASP](https://github.com/ad-freiburg/grasp)).
-
-CHESS wins on accuracy. GRASP wins on user preference - in **64%** of cases. And GRASP costs **8× less** to run.
+We converted relational databases from the BIRD-SQL Mini-dev benchmark into RDF knowledge graphs and ran natural language questions through two agents, CHESS (Text2SQL) and GRASP (Text2SPARQL), on the same underlying data. This post covers how we set up the comparison, how it was evaluated fairly across both paradigms, and what the results show.
 
 The evaluation scripts and final results are available in my [GitHub repository](https://github.com/surbhi-nair/rel-vs-rdf-qa).
 
 ## Content
 
-- [Introduction](#introduction)
 - [Motivation](#motivation)
 - [Goal](#goal)
 - [Implementation](#implementation)
-    - [The base benchmark](#the-base-benchmark)
+    - [The base benchmark: BIRD-SQL](#BIRD)
     - [Converting to RDF](#converting-to-rdf)
     - [The Contenders](#the-contenders)
-        - [Text2SQL: CHESS](#text2sql)
-        - [Text2SPARQL: GRASP](#text2sparql)
+        - [Text2SPARQL: GRASP](#text2sparql-grasp)
+        - [Text2SQL: CHESS](#text2sql-chess)
 - [Evaluation Setup](#evaluation-setup)
-    - [F1 Score](#strict-f1-score)
+    - [What does the BIRD benchmark use?](#what-does-the-bird-benchmark-use)
     - [Relaxed F1 Score](#relaxed-f1-score)
-    - [LLM Judges](#llm-as-judge-evaluation)
-        - [Accuracy Judgement](#accuracy-judge)
-        - [Preference Judgement](#preference-judge)
+    - [LLM-as-Judge Evaluation](#llm-as-judge-evaluation)
+        - [With Ground Truth Output](#with-ground-truth-output-accuracy-judge)
+        - [Without Ground Truth Output](#without-ground-truth-output)
 - [Results](#results)
-    - [F1 Score Results](#f1-score-results)
-    - [LLM Judge Results](#llm-judge-results)
-- [Dive into the Results](#discussion)
-    - [Where SPARQL fails](#where-sparql-fails)
-    - [Where SPARQL shines](#where-sparql-shines)
-    - [Does evidence help?](#does-evidence-help?)
-    - [What about the cost?](#what-about-the-cost)
+    - [Accuracy Results](#accuracy-results)
+        - [F1 Score Results](#f1-score)
+        - [LLM Judge Results](#llm-judge)
+    - [Blind Comparison Results](#without-ground-truth)
+    - [Cost Comparison](#cost-comparison)
+- [Ablation](#ablation)
+    - [Evidence vs No Evidence](#evidence-vs-no-evidence)
+    - [Generic vs Semantic RDF](#generic-vs-semantic-rdf)
+    - [Accuracy Judge Without the Queries](#accuracy-judge-with-gold-query-vs-without)
 - [Conclusion](#conclusion)
 
-## Introduction
-Structured data question answering has long been dominated by relational databases and SQL. Tools, benchmarks, and leaderboards have been built around the SQL paradigm, and the field's progress is measured almost entirely in terms of how well a system can translate a natural language question into a correct SQL query. Meanwhile, RDF knowledge graphs and SPARQL have quietly matured as an alternative data model, one with a different philosophy and different strengths.
-
-*But how do the two actually compare when put on equal footing?* 
-
 ## Motivation
-Natural language interfaces to structured data follow the same basic idea: take a question in natural language, generate a formal query to get data from the underlying data source, get an answer. The two paradigms - SQL over relational databases, and SPARQL over RDF knowledge graphs - have been doing it completely separately from each other. 
+Natural language interfaces to structured data follow the same basic idea: take a question in natural language, generate a formal query to get data from the underlying data source, get an answer. 
 
-These two worlds have never been made to compete on the same ground. Existing SQL benchmarks use relational databases. Existing SPARQL benchmarks use knowledge graphs built from entirely different data. To the best of our knowledge, no one has taken the same databases, converted them to both representations, posed the same questions to both, and asked: *does the data model make a difference?* 
+The two paradigms - SQL over relational databases, and SPARQL over RDF knowledge graphs - have been doing it completely separately from each other. To the best of our knowledge, there's no direct comparison on the same data with the same questions. We want to see how the two actually compare when put on equal footing?
 
-There's also a measurement problem. Most relational benchmark evaluations rely on exact match, execution accuracy, or F1 scores - metrics that were designed with SQL outputs in mind. Applying them directly to SPARQL results introduces a systematic bias we will get into later.
-
-<!-- {{< notice note >}}
-To the best of our knowledge, no prior study has attempted a direct, symmetric comparison of Text2SQL and Text2SPARQL on the same underlying data with the same questions on this scale. If you know of one, [please reach out](mailto:surbhi.nair@email.uni-freiburg.de) - we'd love to know!
-{{< /notice >}} -->
+There's also a measurement problem. Most relational benchmark evaluations rely on exact match, execution accuracy, or F1 scores - metrics that don't translate cleanly to our experimental setup.
 
 ## Goal
-The goal is to level the playing field. Concretely, this means three things:
+To compare the two paradigms fairly, we need to:
 
-**Synchronized underlying data.** We take a standard, well-established relational QA benchmark and convert its databases into RDF knowledge graphs - same data, same questions, two representations.
-
-**Comparative evaluation.** We run a Text2SQL agent on the relational databases and a Text2SPARQL agent on the converted knowledge graphs, and evaluate both using the same questions and the same metrics.
-
-**Holistic metrics.** Traditional SQL evaluation metrics don't translate cleanly to SPARQL outputs. So we also design a fairer evaluation setup to better capture answer quality across both systems.
-
-{{< notice warning >}}
-A key caveat upfront: we are running a Text2SPARQL system on a *converted relational benchmark*. The knowledge graphs we use are RDF twins of relational databases, not native knowledge graphs. We want to see how well GRASP can cope with, and measure up against, SQL benchmark databases in terms of performance.
-{{< /notice >}}
+- Take a standard, well-established Text2SQL benchmark and convert its databases into RDF knowledge graphs.
+- Run a Text2SQL agent and a Text2SPARQL agent on the same questions against their respective representations.
+- Evaluate both systems using metrics that are fair to both paradigms.
 
 ## Implementation
-Let's talk about what we actually did.
 
-The setup has three moving parts: picking the right benchmark to build on, converting its databases into RDF, and selecting two agents to pit against each other. Each of these turned out to be more involved than it sounds.
-### The base benchmark
+The first decision was which relational QA benchmark to pick. The criteria were simple: it had to be realistic, well-maintained, publicly available ground truth queries, and already have a strong leaderboard to pick our Text2SQL contender from. The most popular benchmarks currently are SPIDER and BIRD.
 
-The first decision was which relational QA benchmark to convert. The criteria were simple: it had to be realistic, well-maintained, and already have a strong leaderboard to pick our Text2SQL contender from. The main candidates were:
+- [Spider](https://yale-lily.github.io/spider) - the classic cross-domain benchmark but its databases are deliberately clean and small, designed to test schema understanding rather than real-world data handling. Too clean and too old for our purposes.
+- [Spider 2.0](https://spider2-sql.github.io/) - the successor, designed for enterprise-scale complexity with much larger schemas, real company data, and substantially harder queries. But its sheer complexity and scale make it expensive and impractical to convert and run in a controlled comparison.
+- [BIRD-SQL](https://bird-bench.github.io/) (**BI**g Bench for La**R**ge-scale **D**atabase Grounded Text-to-SQL Evaluation) is the one we picked. BIRD is grounded in real-world, noisy databases across 37+ domains. Its questions are designed to reflect practical user needs, and it has a strong leaderboard with open-source baselines. It's also more manageable in size for our purposes - especially since it provides the mini-dev subset.
 
-- [Spider](https://yale-lily.github.io/spider) - the classic cross-domain benchmark that put semantic parsing on the map. Its databases are deliberately clean and small, designed to test schema understanding rather than real-world data handling. Too clean and too old for our purposes.
-- [Spider 2.0](https://spider2-sql.github.io/) - the successor, designed for enterprise-scale complexity with much larger schemas, real company data, and substantially harder queries. Excellent for pushing the frontier, but its sheer complexity and scale make it expensive to to convert and run in a controlled comparison.
-- [BIRD-SQL](https://bird-bench.github.io/) (**BI**g Bench for La**R**ge-scale **D**atabase Grounded Text-to-SQL Evaluation) is the one we picked. BIRD is grounded in real-world, noisy databases spanning more than 37 professional domains. It focuses on database-grounded reasoning, requiring agents to not only understand the schema but also the actual values within the tables. 
+### BIRD
+The full BIRD benchmark has 12,751 question-SQL pairs across 95 databases split as:
+| Split | # Databases | # Questions |
+|---|---|---|
+| Train | 69 | 9428 |
+| Dev | 11 | 1534 |
+| Test | 15 | 1789 |
 
-{{< notice note >}}
-The full BIRD benchmark has 12,751 question-SQL pairs across 95 databases. For practical reasons - cost, conversion effort, and the feasibility of running two agent systems end-to-end - we used the [BIRD-SQL Mini-dev](https://github.com/bird-bench/mini_dev) subset provided by the BIRD team: 500 curated question-SQL pairs across 11 databases.
-{{< /notice >}}
+The splits are database-disjoint i.e. each split has entirely different databases. Our Text2SQL and Text2SPARQL agents don't involve any training, so the train/dev distinction doesn't really apply here. But the distinction between dev and test is still relevant, since the test set is held out for leaderboard evaluation and does not provide the ground truth SQL queries to the public. 
+
+So, the split that we need to work with is the dev set. But for the scope of the project, we picked the [Mini-dev](https://github.com/bird-bench/mini_dev) subset of the dev split as it is feasible to convert and run both agents on.
+
+#### BIRD-SQL Mini-dev
+Mini-dev is a lite version of the full dev set, designed by the BIRD team itself as a representative sample for quick evaluation cycles. It contains the same 11 set of databases from the dev split and a carefully selected set of 500 question-SQL instances. Below are some key statistics of the mini-dev dataset:
+
+**Difficulty Distribution**
+| Difficulty | # Questions | % of Total |
+|---|---|---|
+| Simple | 148 | 30% |
+| Moderate | 250 | 50% |
+| Challenging | 102 | 20% |
+
+**Database Distribution and Schema**
+| Database                | Tables | Columns | FKs | Rows      | # Questions |
+|-------------------------|--------|---------|-----|-----------|-------------|
+| california_schools      | 3      | 89      | 2   | 29,941    | 30          |
+| card_games              | 6      | 115     | 4   | 803,445   | 52          |
+| codebase_community      | 8      | 71      | 13  | 740,646   | 49          |
+| debit_card_specializing | 5      | 21      | 1   | 423,050   | 30          |
+| european_football_2     | 7      | 199     | 31  | 222,796   | 51          |
+| financial               | 8      | 55      | 8   | 1,079,680 | 32          |
+| formula_1               | 13     | 94      | 19  | 493,257   | 66          |
+| student_club            | 8      | 48      | 8   | 42,511    | 48          |
+| superhero               | 10     | 31      | 11  | 10,614    | 52          |
+| thrombosis_prediction   | 3      | 64      | 2   | 15,252    | 50          |
+| toxicology              | 4      | 11      | 5   | 36,922    | 40          |
+
+- Schema complexity varies widely - `toxicology` has just 4 tables and 11 columns with 5 FKs, while `card_games` has 6 tables and 115 columns with 4 FKs.
+- Row counts range from 10k in `superhero` to over 1 million in `financial`, reflecting a mix of small and large datasets.
+
+<details>
+<summary> Database Breakdown by Difficulty </summary>
+
+| Database | Simple | Moderate | Challenging | Total |
+|---|---|---|---|---|
+| california_schools | 8 | 17 | 5 | 30 |
+| card_games | 13 | 33 | 6 | 52 |
+| codebase_community | 21 | 23 | 5 | 49 |
+| debit_card_specializing | 14 | 12 | 4 | 30 |
+| european_football_2 | 14 | 25 | 12 | 51 |
+| financial | 3 | 22 | 7 | 32 |
+| formula_1 | 28 | 26 | 12 | 66 |
+| student_club | 21 | 22 | 5 | 48 |
+| superhero | 14 | 26 | 12 | 52 |
+| thrombosis_prediction | 7 | 27 | 16 | 50 |
+| toxicology | 5 | 17 | 18 | 40 |
+| TOTAL | 148 | 250 | 102 | 500 |
+</details>
+<br>
 
 Each entry in the benchmark looks like this:
 ```json
@@ -100,23 +134,22 @@ Each entry in the benchmark looks like this:
     "difficulty": "simple"
   }
 ```
-A few things worth noting about this format. 
 - Each question has a unique `question_id`, a `db_id` linking it to a specific database, and a ground truth `SQL` query.
-- There's also an `evidence` field - external knowledge that can be optionally used to help an agent map domain-specific language to database values.
-- And questions are labeled with a `difficulty` rating (simple, moderate, challenging), giving us a way to break down performance by complexity.
+- There's also an `evidence` field - external knowledge that can be optionally used to help an agent map domain-specific language to the right database values.
+- And questions are labeled with a `difficulty` rating (simple, moderate, challenging) based on the complexity of the gold SQL query.
 
-### Converting to RDF
-The next step was to produce an RDF twin of each of the 11 SQLite databases. Typically, for this kind of conversion, we need a mapping language to specify how the relational schema and data should be transformed into RDF triples. And then we need a conversion engine to execute those mappings against the actual databaseand generate the RDF knowledge graph.
+### Converting SQL databases to RDF KGs
 
-{{< notice note >}}
-The conversion pipeline has two ingredients: an [RML](https://rml.io/specs/rml/) (RDF Mapping Language) file per database, and [morph-kgc](https://morph-kgc.readthedocs.io/en/stable/) as the 
-execution engine. morph-kgc takes the RML files as input and outputs RDF triples. The result for each database is a `.nt` file (N-Triples serialization), which was then loaded into a dedicated QLever endpoint for SPARQL querying.
-{{< /notice >}}
+We converted each SQLite database into an RDF knowledge graph using:
+- [RML](https://rml.io/specs/rml/) (RDF Mapping Language) file  - to define how to map relational data to RDF triples, and
+- [morph-kgc](https://morph-kgc.readthedocs.io/en/stable/) - the execution engine that reads that RML file and the SQLite database and generates the RDF triples.
+
+The result for each database is a `.nt` file (N-Triples serialization), which was then loaded into a dedicated QLever endpoint for SPARQL querying. Across the 11 databases with 75 tables in total, the resulting knowledge graphs ranged in sizefrom 110 MB to 1.64 GB in N-Triples format.
+
 ![morph-kgc](img/morph-kgc.png)
 
-Across the 11 databases with 75 tables in total, the resulting knowledge graphs ranged from 110 MB to 1.64 GB in N-Triples format, reflecting the variation in database size and density across domains.
-
-#### RDF Mapping Language
+<details>
+<summary> Background on RML </summary>
 The most basic structure of an RML mapping file is a **Triples Map**. Each Triples Map connects a data source to a pattern for generating RDF triples, and contains three parts:
 - a **logical source** (where to get the data from, how to access/iterate)
 - a **subject map** (templates for generating IRIs for the subject)
@@ -146,205 +179,206 @@ The most basic structure of an RML mapping file is a **Triples Map**. Each Tripl
 
 [Here](https://github.com/surbhi-nair/rel-vs-rdf-qa/blob/main/experiments/bird_minidev/european_football_2/european_football_2.rml.ttl)'s one of the RML files we wrote for one of the databases for reference.
 
-#### What the mappings had to handle
-An automatic mapping tool can generate a "direct mapping" from a relational schema. But that would faithfully inherit every structural quirk, naming inconsistency, and data quality issue from the source. So we extended the base mappings with a set of pragmatic, domain-aware fixes. Here's what came up.
+</details>
+<br>
+We produced two versions of each knowledge graph - an auto-generated generic one and a semantic one.
 
-- **Implicit foreign keys.** Some databases had relationships between tables that weren't declared as formal foreign key constraints in the SQLite schema. Without explicit constraints, an automatic mapping has no way to know these links exist - it produces disconnected island nodes in the graph. We traced these relationships manually from the data and the BIRD database descriptions, and encoded them explicitly via compound IRI templates:
-```t
-rr:subjectMap [
-  rr:template "http://debitcard.org/consumption/{CustomerID}-{Date}" ;
-  rr:class dcs:MonthlyConsumption
-] ;
+#### Converting to Generic RDF
+A simple script reads the SQLite schema via `PRAGMA table_info` and `PRAGMA foreign_key_list` and mechanically generates one Triples Map per table. For each table it:
+- Creates a subject IRI using the pattern `http://{db_id}.org/{table}/pk={pkvalue}`
+- Adds an `rdfs:label` of the form `"tablename {pk_value}"`
+- Maps every column as a literal predicate: `<http://{db_id}.org/{table}#{column_name}>`
+- For every declared foreign key, adds a second predicate `ref-{column_name}` that generates a link IRI to the target table's row
+
+**Data Sanitization for Conversion:**
+
+The generic mapping script had to include a few fixes to handle data quality issues in the original databases that would have caused problems in generating valid RDF:
+- Predicate local names must not start with a digit: Column names like `2013-14 CALPADS Fall 1 Certification Status` when sanitized to a URI local name still start with a digit, which is invalid in Turtle/N-Triples. Any sanitized local name starting with a digit gets prefixed with `col_` in our script.
+- Sanitize special characters in predicate names: Column names had spaces (e.g. `Percent (%) Eligible Free (K-12)`) which were breaking the morph-kgc RDF conversion pipeline repeatedly. So to handle all special characters, we replace all non-alphanumeric characters in column names with underscores and consecutive underscores are collapsed.
+- String sanitization: Text values containing double quotes were sanitized and newlines replaced with space to avoid breaking the pipeline. A value like `"Traditional"` (with quotes in the data) would serialize as `""Traditional""`. QLever's parser sees the first `"` as the start of the literal, then the next `"` as closing it so the rest becomes unparseable. 
+- Post conversion sanity-check: We did a simple verification to check that the number of subjects per class in the RDF matched the row counts in the SQL tables.
+
+#### Converting to Semantic RDF
+The generic mapping faithfully converts the relational structure into RDF, but we also wanted to experiment with a semantically enriched version that allows us to add domain knowledge and produce a cleaner RDF model. This is the version we used for the main comparison while the generic versions were used for an ablation study to see how much of a difference the semantic enrichment made.
+
+The semantic RDF mappings also follow the relational structure of the original SQL databases as closely as possible but with a set of adjustments:
+- Human-readable predicates -  The generic mapping generates predicates that mirror the raw column name: `<http://superhero.org/superhero#eye_colour_id>`. The semantic mapping gives them more meaningful names: `hero:hasEyeColour`,`fin:forClient`, `throm:forPatient`, `tox:partOfMolecule`. 
+- The float IRI problem - morph-kgc uses Python's `sqlite3` adapter internally to execute the `rml:query` against the SQLite database. Nullable integer columns get returned as `float` objects by this `sqlite3` adapter so when morph-kgc builds IRIs for these, it ends up with IRIs like `<http://superhero.org/superhero/1.0` instead of `<http://superhero.org/superhero/1>`. We have to explicitly cast these to strings in the SQL query to avoid this issue. This fix was also applied to the generic mapping as it is a data quality issue that affects both versions.
 ```
-
-This ensures that related entities in different tables resolve to the same node in the graph, preserving the join semantics of the original relational model.
-
-- **Semantic enrichment via RDFS comments.** Moving to RDF lets us attach human-readable metadata to schema elements. We encoded BIRD's domain explanations as `rdfs:comment` annotations on properties. 
+RML template {superhero id}
+→ morph-kgc executes SQL via Python sqlite3
+→ sqlite3 returns 1.0 (float)
+→ morph-kgc interpolates into IRI → http://superhero.org/superhero/1.0
+```
+- Typed literals - Semantic mappings use rr:datatype xsd:integer, xsd:date, xsd:decimal on relevant columns.
+- Semantic enrichment via RDFS comments - Moving to RDF lets us attach human-readable metadata to schema elements. We encoded BIRD's domain explanations as `rdfs:comment` annotations on properties. 
 ```t
 ef:attacking_work_rate rdfs:comment "high: implies that the player is going to be in all of your attack moves; medium: implies that the player will select the attack actions he will join in; low: remain in his position while the team attacks" .
 ```
-- **Messy string and date values.** Several text columns contained characters that are syntactically problematic in RDF serializations - particularly double quotes, raw newline characters embedded in string values and dates as strings without an enforced format throughout. These had to be sanitized before they could be safely written into triples, for example:
-```sql
-REPLACE(text, '"', '''') AS text
-REPLACE(REPLACE(text, '"', ''''), '\n', '\\n') AS text
-REPLACE(date, ' ', 'T') AS date
-```
+- Boolean and coded values - Some columns stored boolean or categorical data as raw integers. A direct mapping would expose these as bare numeric literals, making them opaque to any agent trying to match human-readable values. We decoded them explicitly in the mappings: `CASE Magnet WHEN 1 THEN 'Yes' WHEN 0 THEN 'No' ELSE 'Unknown' END AS magnet_status`
 
-{{< notice warning >}}
-Without this sanitization, the N-Triples output contains malformed literals that can corrupt parts of the knowledge graph - with no proper error logs from morph-kgc.
-{{< /notice >}}
 
-- **Boolean and coded values.** Some columns stored boolean or categorical data as raw integers. A direct mapping would expose these as bare numeric literals, making them opaque to any agent trying to match human-readable values. We decoded them explicitly in the mappings:
-```sql
-CASE Magnet WHEN 1 THEN 'Yes' WHEN 0 THEN 'No' ELSE 'Unknown' END AS magnet_status
-```
-- **Problematic column names.** Some databases had column names containing spaces, special characters, or cryptic abbreviations. These were normalized at the mapping level into clean, readable RDF property URIs.
+Here's a basic example for reference - how the same row would appear across the two mappings. The generic mapping on the left and the semantic mapping on the right:
+![generic-vs-semantic](img/mappings.png)
 
-{{< notice note >}}
-The outcome: 11 RDF knowledge graphs that are semantically equivalent to their relational counterparts - same data, same relationships, same domain coverage - but expressed in a clean, well-structured RDF model. Together with the original 11 SQLite databases, these form the symmetric foundation of our comparison.
-{{< /notice >}}
 
 ### The Contenders
-Now that we have the same data in both formats, we need two agents to compete on the same 500 questions. The selection criteria were straightforward: both systems had to be state-of-the-art, open-source, and operable on our setup without fundamental modifications.
+#### Text2SPARQL: GRASP
+[GRASP](https://github.com/ad-freiburg/grasp)(Generic Reasoning And SPARQL Generation across Knowledge Graphs) is the Text2SPARQL system used as the SPARQL contender in this comparison. It takes a natural language question and a SPARQL endpoint and finds the answer through iterative exploration. It maintains two pre-built search indices over the knowledge graph - a prefix-keyword index for entity lookup and a vector similarity index for property search - and uses an LLM to explore the graph via functions, observe the result, reason about what to try next and repeat until it has a working query.
+
+
 #### Text2SQL: CHESS
-[CHESS](https://github.com/ShayanTalaei/CHESS)(Contextual Harnessing for Efficient SQL Synthesis) is a multi-agent Text2SQL framework by Talaei et al. at Stanford and the University of Alberta. It ranks among the top open-source methods on the BIRD leaderboard with an upper bound of 71.10% accuracy on the BIRD test set while requiring approximately 83% fewer LLM calls. Open-source, well-documented, already benchmarked on the BIRD database and it comes from a academic research group similar to the one that developed GRASP: the natural choice.
+Our criteria for the Text2SQL agent were:
+- Open-source and well-documented
+- Has a strong benchmarked performance on the BIRD leaderboard
+- Architecturally as similar as possible to GRASP
+- Runnable without fundamental modifications to the agent codebase (e.g. no need to change the underlying prompting or reasoning structure or perform training or fine-tuning)
+
+[CHESS](https://github.com/ShayanTalaei/CHESS)(Contextual Harnessing for Efficient SQL Synthesis) is the strongest reasonable SQL baseline on the BIRD leaderboard that closely meets our criteria. It ranks among the top open-source methods on the leaderboard with an upper bound of 71.10% accuracy on the BIRD test set while requiring approximately 83% fewer LLM calls.
+
 ![chess-architecture](img/chess-sql.png)[^1]
 
-CHESS[^1] is built around four specialized agents arranged in a sequential pipeline:
-- The Information Retriever (IR) extracts relevant database values and schema context. It uses locality-sensitive hashing to efficiently retrieve values from large databases, combined with vector similarity search over database catalogs to pull in relevant column descriptions and table metadata.
-- The Schema Selector (SS) addresses the problem of large schemas overwhelming the LLM context. It prunes the full database schema down to the subset of tables and columns most relevant to the question, reducing token usage by up to 5× while preserving accuracy.
-- The Candidate Generator (CG) takes the pruned schema and retrieved context and generates SQL query candidates, executing and iteratively refining them based on results.
-- The optional Unit Tester (UT) validates the final candidate by generating natural language unit tests and scoring the query against them, selecting the highest-scoring output as the final answer.
-{{< notice note >}}
-The pipeline is front-loaded: CHESS does significant work upfront - retrieving values, pruning the schema, assembling context - before the actual query generation step. This design reflects the SQL paradigm well: the schema is fully known in advance, columns have fixed types, and the retrieval problem is essentially about finding which parts of a known structure are relevant.
-{{< /notice >}}
+It runs as a sequential pipeline of four agents:
+- Information Retriever (IR): fetches relevant schema context and data values using locality-sensitive hashing and vector similarity search over database catalogs.
+- Schema Selector (SS): prunes the full schema down to the tables and columns relevant to the question, reducing token usage by up to 5× while preserving accuracy.
+- Candidate Generator (CG): generates SQL using the pruned schema and retrieved context, executes it, and revises on errors or empty results.
+- Unit Tester (UT): validates the final candidate by generating natural language unit tests and scoring the query against them, selecting the highest-scoring output as the final answer.
 
-#### Text2SPARQL: GRASP
-[GRASP](https://github.com/ad-freiburg/grasp)(Generic Reasoning And SPARQL Generation across Knowledge Graphs) is the Text2SPARQL system that we selected for our RDF-side contender. It uses an LLM to explore a knowledge graph dynamically - strategically executing SPARQL queries and searching for relevant IRIs and literals until it arrives at a query that correctly answers the given question. 
+**Similarities with GRASP**
 
-GRASP's approach is fundamentally exploratory. Given a question and a generic prompt, it enters a loop: query the graph, reason about the results, decide what to try next. To support this, GRASP maintains two search indices over each knowledge graph - a prefix-keyword index for entity lookup and a vector similarity index for property search - allowing it to resolve natural language mentions to their correct IRIs.
+Both systems decompose the problem the same way - find the right schema elements and values, then generate and iteratively refine a query using execution feedback:
+| Component | CHESS | GRASP |
+|---|---|---|
+| Data value/Entity search | LSH index + vector similarity (IR agent) | Prefix-keyword index |
+| Schema/property search | Vector DB over catalog (IR agent) | Similarity index via FAISS |
+| Query generation | LLM with retrieved context (CG agent) | LLM with retrieved IRIs/triples (exploration loop) |
+| Execution feedback | CG revises on syntax error or empty result | `execute` returns results/errors, LLM reasons on them |
+| Self-correction | Unit Tester (post-generation) | Built into the exploration loop |
 
 **How the two systems differ**
 
-Setting aside the SQL vs. SPARQL distinction, we can see how CHESS and GRASP differ in their overall approach to the question answering task.
+The difference is *when* the retrieval happens. CHESS front-loads it: IR and SS run before CG touches the schema. GRASP interleaves retrieval and generation. CHESS arrives at query generation with a fully assembled, static picture of the relevant database. GRASP starts with a blank slate and figures it out as it goes. 
 
-| | CHESS | GRASP |
-|---|---|---|
-| Context assembly | Upfront, pre-packaged | Discovered dynamically |
-| Schema knowledge | Retrieved before generation | Explored during generation |
-| Error recovery | Unit Tester post-generation | Built into exploration loop |
-| Feel | Filtered synthesis pipeline | Interactive reasoner |
+Despite this difference in execution flow, CHESS was still the closest structural match to GRASP given our criteria and the available options on the BIRD leaderboard. It is open-source, well-documented, already benchmarked on BIRD with a strong accuracy/cost tradeoff, and architecturally similar enough to GRASP to allow for a fair comparison without needing to modify the underlying agent codebases.
 
-{{< notice note >}}
-CHESS arrives at query generation with a fully assembled, static picture of the relevant database. GRASP starts with a blank slate and figures it out as it goes.
-{{< /notice >}}
+So, finally for our setup, we have something like this. The two systems are given the same question and the same evidence (where applicable), and we compare their outputs using the same evaluation metrics. What those metrics are, and how we designed them to be fair to both systems, is the next section.
 
-So, finally for our setup, we have something like this. We just run the same 500 questions against the same underlying data - once in a relational database, once as an RDF knowledge graph. The two systems are given the same question and the same evidence (where applicable), and we compare their outputs using the same evaluation metrics. What those metrics are, and how we designed them to be fair to both systems, is the next section.
 ![pipeline](img/pipeline.png)
 
 ## Evaluation Setup
-Comparing the output of a Text2SQL system against a Text2SPARQL system is not as straightforward as it might seem. The standard BIRD evaluation metric was designed with SQL outputs in mind, and applying it directly to SPARQL results introduces a systematic bias against GRASP. We therefore used three evaluation approaches: 
-- the original BIRD F1 score as a baseline, 
-- a custom [relaxed F1](#relaxed-f1-score) that corrects for SPARQL-specific output quirks, and 
-- LLM-based judgment for both correctness and user preference.
+### What does the BIRD benchmark use?
 
-### Strict F1 Score
+**Execution Accuracy**: The simplest metric BIRD defines is execution accuracy - does the predicted query return the exact same result set as the gold query when executed against the database? This is a binary metric - either 100% if the sets match exactly, or 0% if they don't.
 
-The original BIRD minidev evaluation uses a [Soft F1 score](https://github.com/bird-bench/mini_dev?tab=readme-ov-file#soft-f1-score) in addition to the simple execution accuracy. Instead of asking "did the query return exactly the right result set?", it measures how close the predicted result is to the ground truth at the value level - computing precision and recall over matched cell values across rows, then combining them into an F1 score. This is already an improvement over binary execution accuracy, since a query that gets most values right but misses one column still receives partial credit.
+**Soft F1 Score**: BIRD Mini-dev also defines a more lenient metric. The [Soft F1 score](https://github.com/bird-bench/mini_dev?tab=readme-ov-file#soft-f1-score) is a more lenient alternative to execution accuracy. Instead of asking whether the result sets are identical, it measures how close the predicted result is to the ground truth at the value level - computing precision and recall over matched cell values, then combining into an F1 score.
 
-The metric works by aligning predicted rows to ground truth rows positionally - row 1 of the prediction is compared to row 1 of the ground truth, row 2 to row 2, and so on. Within each row pair, it counts how many values match, and aggregates this into precision, recall, and F1 across all rows.
+But, this metric still has limitations when applied to outputs we were getting from GRASP:
+- Extra columns penalized: GRASP frequently returns additional columns alongside the answer - labels, related properties, or contextual information that the KG naturally surfaces. The BIRD metric treats any value in the prediction that has no counterpart in the ground truth as a false positive, penalizing GRASP for being more informative.
+    ```
+    Gold SQL output:            SPARQL output:
+    CustomerID                  customer / customerLabel / totalConsumption
+    ----------                  ----------------------------------------
+    47273                       http://debitcard.org/customer/47273
+                                "Customer 47273 (LAM)"
+                                0.74
+    ```
+    So, we propose to not penalise extra columns in the predicted output.
+- Row order sensitivity: Soft F1 score aligns rows positionally - row 1 of the prediction against row 1 of the ground truth regardless of whether the question requires ordered results. Outputs that return the same values but in a different order get penalized. Consider this example:
+    ```
+    Gold SQL output:       Predicted output:
+    Time                   time
+    --------               --------
+    14:29:00               11:55:00   ← same values,
+    11:55:00               14:29:00   ← different order
+    ```
+    So, we propose to have a greedy best-match when no `ORDER BY` is present in the gold SQL else fall back to enforce positional alignment. 
+- Float Handling: Soft F1 compares raw values as-is. Relaxed F1 rounds floats to 2 decimal places before comparison
 
-The key idea: for each row pair (predicted row *n* vs. ground truth row *n*), count how many values match. Aggregate this into precision, recall, and F1 across all rows.
+So, we implemented two versions of the F1 score for our evaluation:
+- Soft F1 score - the original metric as defined by BIRD
+- Relaxed F1 score - a modified version with the above adjustments
 
-{{< notice example >}}
-Here's a concrete example taken from the BIRD Mini-dev [documentation](https://github.com/bird-bench/mini_dev?tab=readme-ov-file#soft-f1-score). The predicted table has the same values as the ground truth, just in a different column order:
+<details>
+<summary>Example showing the difference in scoring</summary>
 
-**Ground truth:**
+**Gold output:**
+| CustomerID | Amount |
+|---|---|
+| 101 | 500 |
+| 102 | 300 |
 
-| Row | | |
+**Predicted output (extra column, extra row):**
+| CustomerID | Amount | Label |
 |---|---|---|
-| 1 | 'Apple' | 325 |
-| 2 | 'Orange' |  |
-| 3 | 'Banana' | 119 |
+| 101 | 500 | "Customer A" |
+| 102 | 300 | "Customer B" |
+| 103 | 200 | "Customer C" |
 
-**Prediction:**
-| Row | | |
+**Execution accuracy**:
+
+```python
+set(predicted) = {(102, 300, "Customer B"), (101, 500, "Customer A"), (103, 200, "Customer C")}
+set(gold)      = {(101, 500), (102, 300)}
+```
+Score = 0
+
+**Soft F1 score**:
+
+| Matched | Predicted_only | Gold_only |
 |---|---|---|
-| 1 | 325 | 'Apple' |
-| 2 | 191 | 'Orange' |
-| 3 |  | 'Banana' |
-
-Value-level match per row:
-
-| | Matched | Pred only | Gold only |
-|---|---|---|---|
-| Row 1 | 2 | 0 | 0 |
-| Row 2 | 1 | 1 | 0 |
-| Row 3 | 1 | 0 | 1 |
-| | tp = 4 | fp = 1 | fn = 1 |
-
-`Precision = tp / (tp + fp) = 4 / 5 = 0.8`
-
-`Recall = tp / (tp + fn) = 4 / 5 = 0.8`
-
-`F1 = 2 * Precision * Recall / (Precision + Recall) = 0.8`
-
-This is already more lenient than exact match - a query that gets most 
-values right but misses one column still gets partial credit.
-{{< /notice >}}
-
-
-### Relaxed F1 Score
-
-While the BIRD F1 is reasonable for SQL-vs-SQL comparison, applying it to SPARQL outputs revealed three systematic failure modes that penalize GRASP for reasons unrelated to answer correctness.
-
-**1. Row order sensitivity.** The BIRD metric aligns rows positionally - row 1 of the prediction against row 1 of the ground truth. SPARQL endpoints don't guarantee ordering unless explicitly specified, so two identical answer sets in different orders can score well below 1.0.
-
-{{< notice example >}}
-Question: "Please list the disparate time of the transactions taken 
-           place in the gas stations from chain no. 11."
+| 2/2 = 1 | 1/2 = 0.5 | 0 |
+| 2/2 = 1 | 1/2 = 0.5 | 0 |
 ```
-Gold SQL output:       SPARQL output:
-  Time                   time
-  --------               --------
-  14:29:00               11:55:00   ← same values,
-  11:55:00               14:29:00   ← different order
+tp = 1 + 1    = 2
+fp = 0.5 + 0.5 + 1 = 2
+fn = 0
+
+precision = 2 / (2 + 2) = 0.5
+recall    = 2 / (2 + 0) = 1
+F1        = 2 * 0.5 * 1 / (0.5 + 1) = 0.667
+
+* as per the BIRD implementation, the values are normalised by dividing by the #columns in the gold output
+* extra rows in predicted output: 1
 ```
-Both outputs are fully correct. The original positional F1 score disagrees.
-{{< /notice >}}
+**Relaxed F1 score**:
 
-**2. Extra columns penalized.** GRASP frequently returns additional columns alongside the answer - labels, related properties, or contextual information that the KG naturally surfaces. The BIRD metric treats any value in the prediction that has no counterpart in the ground truth as a false positive, penalizing GRASP for being more informative. Consider this example:
-
-{{< notice example >}}
-Question: In 2012, who had the least consumption in LAM?
+| Matched | Predicted_only | Gold_only | | 
+|---|---|---|---| 
+| 2/2 = 1 | X | 0 | best row match for row 1 of gold output |
+| 2/2 = 1 | X | 0 | best row match for row 2 of gold output |
 ```
-Gold SQL output:              SPARQL output:
-  CustomerID                   customer / customerLabel / totalConsumption
-  ----------                   ----------------------------------------
-  47273                        http://debitcard.org/customer/47273
-                               "Customer 47273 (LAM)"
-                               0.74
+tp = 1 + 1 = 2
+fp = 1 (extra row in predicted output)
+fn = 0
+
+precision = 2 / (2 + 1) = 0.667
+recall    = 2 / (2 + 0) = 1
+F1        = 2 * 0.667 * 1 / (0.667 + 1) = 0.8
 ```
-The metric sees three values where it expected one, and scores the row poorly even though the correct answer is present.
-{{< /notice >}}
+So, the relaxed F1 score ends up giving a higher score than the BIRD's Soft F1 score and only penalises for the extra row.
 
-**3. IRI values instead of bare literals.** The above example also illustrates a third issue. In some cases, GRASP correctly identifies the right entity but returns its full IRI (`http://debitcard.org/customer/47273`) rather than the bare integer `47273`. The answer is semantically correct, but the string comparison fails even though the returned output is correct.
-
-The **relaxed F1 score** addresses all three issues:
-
-| Issue | Standard F1 | Relaxed F1 |
-|---|---|---|
-| Row ordering | Positional alignment(index-wise comparison) | Greedy best-match (order preserved only when gold SQL has `ORDER BY`) |
-| Extra columns | Penalized as false positives | Ignored - precision/recall computed over matching columns only, not extra columns |
-| IRI values | String mismatch | Not double-penalized |
-
-{{< notice note >}}
-The gap between the two F1 scores turns out to be a direct measure of how much the standard metric systematically undercounts GRASP's actual answer quality. We'll see exactly how large that gap is in the [results](#f1-score-results).
-{{< /notice >}}
+</details>
+<br>
 
 ### LLM-as-Judge Evaluation
 
-Script-based metrics have a fundamental limitation: they compare output values mechanically, without understanding whether an answer is semantically correct in context. To complement the F1 evaluation, we used **GPT-5-mini** as a judge - assessing outputs with human-like reasoning about correctness and quality.
+Script-based metrics compare output values mechanically and can miss edge cases, but more importantly they also don't have the ability to reason and understand whether an answer is correct in the context of the question asked. To complement the F1 evaluation, we used **GPT-5-mini** as a judge with two separate evaluation setups:
 
-We designed two distinct judge types, each answering a different question about the comparison.
+- with ground truth output - to evaluate correctness with respect to the gold answer
+- without ground truth output - to evaluate the agreement between the CHESS and GRASP outputs and to see which answer a real user would prefer based on criteria like plausibility, utility, and confidence
 
-#### Accuracy Judge
+#### With ground truth output: Accuracy Judge
 
 *Is each system's answer correct with respect to the ground truth?*
 
-The judge evaluates CHESS and GRASP independently, classifying each as `CORRECT`, `WRONG_ANSWER`, or `EXECUTION_ERROR`. SPARQL outputs get one additional category: `SCHEMA_MISMATCH` - distinguishing cases where GRASP used structurally wrong predicates from cases where the logic was simply incorrect.
+The judge evaluates CHESS and GRASP outputs, comparing them to the ground truth, classifying each as `CORRECT`, `WRONG_ANSWER`, or `EXECUTION_ERROR`. SPARQL outputs get one additional category: `SCHEMA_MISMATCH` - distinguishing cases where GRASP used structurally wrong predicates from cases where the logic was simply incorrect.
 
-We ran the judge in two configurations:
-
-- **With queries + ground truth output.** The judge sees the gold SQL, gold output, and both predicted queries with their outputs. This lets it reason about whether a system got the right answer *for the right reasons*.
-- **With ground truth output only.** A purely output-level comparison - is the answer correct, regardless of how it was derived?
-
-{{< notice note >}}
 The judge is instructed to focus on semantic equivalence, not syntactic similarity - treating rows as unordered sets unless ordering is required, and allowing extra columns in SPARQL output as long as the correct answer is present. Result sets exceeding 30 rows are truncated to the first and last 5, with the total count always provided.
-{{< /notice >}}
 
-{{< notice example >}}
-Here is a real example from our judge evaluation results that illustrates why it catches things the F1 score cannot:
+
+<details>
+<summary>Judge Evaluation Sample Output</summary>
+Here is an example from our judge evaluation results:
 
 >Question: "Which was Lewis Hamilton's first race? What were his points recorded for his first race event?"
 
@@ -368,13 +402,11 @@ Here is a real example from our judge evaluation results that illustrates why it
 }
 ```
 Both systems returned the right race `name`. CHESS queried the wrong table for `points` and got a different number. The F1 score would have given CHESS partial credit for the matching race name. The judge doesn't. The judge correctly identifies the distinction - and notably, it also explains *why* CHESS was wrong, which is valuable for error analysis.
-{{< /notice >}}
+</details>
+<br>
 
-#### Preference Judge
-
-*Which response would a real user prefer?*
-
-The preference judge approaches the comparison from a completely different angle. Ground truth is removed entirely. The judge sees only the question, the SQL output (labelled Agent A), and the SPARQL output (labelled Agent B), and is asked to decide which response a real user would find more helpful, plausible, and readable. It evaluates four dimensions:
+#### Without ground truth output
+Here, the ground truth is removed entirely. The judge sees only the question, the SQL output (labelled Agent A), and the SPARQL output (labelled Agent B) and evaluates four dimensions:
 
 | Dimension | Question asked |
 |---|---|
@@ -385,494 +417,260 @@ The preference judge approaches the comparison from a completely different angle
 
 The consensus status is picked between either `FULL_AGREEMENT`, `PARTIAL_AGREEMENT`, or `TOTAL_DISAGREEMENT` while plausibility and utility are given as brief reasoning statements. The judge then picks a winner - `AGENT_A`, `AGENT_B`, or `TIE` - with a confidence score from 1 to 10.
 
-This metric is the most interesting of the three setups, because it sidesteps the question of ground truth correctness entirely and asks something more practical: *if a user received these two responses, which one would they prefer?* 
+This metric tries to answer:
+- how much do the two systems actually agree with each other when we remove the ground truth as a reference point?
+- if a user received these two responses, which one would they prefer?
 
-{{< notice example >}}
-Here is an example where the preference judge chose GRASP despite both systems returning the same numerical answer:
-
->Question: "What is the ratio of customers who pay in EUR against customers who pay in CZK?"
-
-```json
-"evaluation": {
-    "consensus_status": "FULL_AGREEMENT",
-    "plausibility_check": "Both agents report the same ratio (~0.0657). 
-                           Agent B's counts (2002 EUR, 30459 CZK) confirm 
-                           the result is logically consistent.",
-    "utility_comparison": "Agent B returns clear column names (countEUR, 
-                           countCZK, ratio) and exposes the underlying 
-                           counts. Agent A returns the ratio only, with 
-                           a verbose expression as the column name.",
-    "perceived_winner": "AGENT_B",
-    "winning_reason": "Same correct ratio, but Agent B's output is more 
-                       transparent and actionable for a human user.",
-    "confidence_score": 9
-}
-```
-Same numerical answer by both but GRASP wins because it also returns the underlying counts that make the ratio independently verifiable. CHESS returns a bare `0.375` under a column name that is literally the raw SQL expression.
-{{< /notice >}}
-
-<!-- This example captures something the F1 score and accuracy judge both miss: even when two systems return equivalent answers, one can be meaningfully better from a user experience perspective.  -->
-
-GRASP's tendency to return supporting context alongside the direct answer - the individual counts that make the ratio verifiable - is treated as a feature here, not noise. We explore this pattern in depth in the results section, where we examine the distribution of preference judge decisions and the reasons behind them.
+This could surface cases where both could be defensibly correct or where the definition of a correct answer is ambiguous. We will look into a few of those cases in the later sections.
 
 
 ## Results
-Okay, numbers first. Then we'll dig into what they actually mean.
-
-### F1 Score Results
-| | Strict F1 | Relaxed F1 |
+### Accuracy Results
+#### F1 Score
+| | Soft F1 | Relaxed F1 |
 |---|---|---|
-| SQL | 65.33% | 71.90% |
-| SPARQL | 21.25% | 47.69% |
+| SQL | 65.23% | 70.08% |
+| SPARQL | 22.38% | 46.64% |
 
-Two things stand out immediately.
+The soft F1 gap looks large - 42.85 percentage points. The relaxed F1 narrows this to 23.44 points. Even so, CHESS leads the accuracy evaluation according to the F1 score. 
 
-First, the relaxed F1 gap. CHESS only gains 6.57% going from strict to relaxed scoring. GRASP gains 26.44%, confirming that the standard BIRD F1 metric systematically underscores GRASP due to the heavy penalization of row ordering, extra columns etc. 
-
-Even so, CHESS leads the accuracy evaluation as per the F1 score. 
-
-### LLM Judge Results
-
-#### Accuracy Judge: Which one is correct?
-Let's first look at the LLM Judge's verdicts on correctness compared to the ground truth. 
+#### LLM Judge
 ||||
 |---|---|---|
 | | SPARQL CORRECT | SPARQL INCORRECT |
-| SQL CORRECT | 45.4% | 20.8% |
-| SQL INCORRECT | 5.2% | 28.6% |
+| SQL CORRECT | 49.6% | 16.8% |
+| SQL INCORRECT | 6% | 27.6% |
 
-- GRASP is correct on 50.6% of questions, while CHESS is correct on 66.2%. This gap is lesser than what the F1 score gap suggested - the judge's reasoning allows for more nuanced credit than the strict value comparison. 
+- CHESS is correct on 66.4% of questions, GRASP on 55.6%.
+- Both get it right on 49.6% of questions - nearly half the benchmark.
+- CHESS exclusively beats GRASP on 16.8% of questions, GRASP exclusively beats CHESS on just 6%.
+- 27.6% of questions are wrong for both systems which is a reminder that the benchmark is genuinely hard and that there are many questions that neither approach can currently handle.
+- The accuracy gap here (10.8 percentage points) is much smaller than the Soft F1 gap (42.85 points) would suggest which validates that the BIRD's Soft F1 metric is not fully capturing the correctness in the GRASP outputs.
 
-- Almost half of the questions are correctly answered by both systems, which is a positive sign for GRASP given that it is operating in a more challenging data model and with a more exploratory approach on a converted relational benchmark.
-
-- GRASP outperforms CHESS on only 5.2% of questions, while CHESS outperforms GRASP on 20.8% of questions.
-
-- 28.6% of questions are incorrectly answered by both systems, which is a reminder that the benchmark is genuinely hard and that there are many questions that neither approach can currently handle.
-
-**Does the gap change with difficulty?**
-
-Breaking this down by difficulty, let's see how many questions out of the 500 were correctly answered by only one system at each level:
-
-| Difficulty | Only SQL correct | Only SPARQL correct | SQL Advantage |
+**By Difficulty**
+| Difficulty | CHESS | GRASP | Gap |
 |---|---|---|---|
-| Simple | 32 | 5 | SQL wins 6.4× more often |
-| Moderate | 55 | 14 | SQL wins 3.9× more often |
-| Challenging | 17 | 7 | SQL wins 2.4× more often |
+| Simple | 76.35% | 64.18% | 12.17 |
+| Moderate | 64.4% | 52.4% | 12 |
+| Challenging | 56.86% | 50.98% | 5.88 |
 
-<!-- {{< notice note >}} -->
-This is one of the more interesting findings in the accuracy results. SQL's advantage over SPARQL is real but not uniform - it *narrows* as difficulty increases, from 6.4× at simple to 2.4× at challenging. GRASP's exploratory approach may be more robust to complexity than CHESS's pipeline.
-<!-- {{< /notice >}} -->
+- Out of all the simple questions, CHESS got 76.35% correct while GRASP got 64.18% correct, giving a gap of 12.17 percentage points.
+- The gap nearly halves on challenging questions where both systems seem to struggle more equally. Since the difficulty levels are not evenly distributed across databases we also look at the breakdown by database to see if there are specific schemas where GRASP is doing better or worse than CHESS.
 
-<!-- The full breakdown:
-
-
-| Difficulty | Both correct | SQL only | SPARQL only | Both incorrect |
-|---|---|---|---|---|
-| Simple | 80 | 32 | 5 | 31 |
-| Moderate | 106 | 55 | 14 | 75 |
-| Challenging | 41 | 17 | 7 | 37 |
-
-One more pattern: the proportion of questions where *both* systems fail grows with difficulty. At the challenging level, both systems are wrong on 36% of questions - suggesting a shared ceiling that isn't specific to either data model. -->
-
-{{< notice note >}}
-Running the accuracy judge without providing queries - output only - produced nearly identical results. The judge's verdicts are driven primarily by output value comparison, not query logic inspection.
-{{< /notice >}}
-
-We will dive into some of the specific questions to understand where each system shines and where they struggle in the upcoming sections. But before that, let's look at the preference judge results, which tell a very different story about which system the users would prefer to interact with.
-
-#### Preference Judge: Which one would a user prefer?
-
-The preference judge tells a strikingly different story(although a much expected one for me). 
-
-Without access to ground truth, and asked purely which response a user would prefer, the judge favoured GRASP in **64.1%** of cases against SQL's **31.4%**, with 4.6% declared ties. 
-
-| Winner | Percentage | #Questions | Full Agreement | Partial Agreement | Total Disagreement |
-|---|---|---|---|---|---|
-| SPARQL (GRASP) | 64.1% |320 | 190 | 70 | 60 |
-| SQL (CHESS) | 31.4% |157 | 49 | 33 | 75 |
-| TIE | 4.6% |23 | 20 | 1 | 2 |
-
-
-That 64% is striking on its own. But looking closer at the 60 cases of total disagreement where GRASP was still preferred:
-||||
-|---|---|---|
-| | SPARQL CORRECT | SPARQL INCORRECT |
-| SQL CORRECT | 0 | 20 |
-| SQL INCORRECT | 13 | 27 |
-
-It's interesting to see that out of these 60 questions, only 13 cases had correct SPARQL outputs yet the judge still preferred GRASP's response on all of them. There were 20 questions where the SQL output was correct while the SPARQL output was incorrect, yet the judge still preferred GRASP's response.  
-
-In fact, in 130 of the cases out of the total 320, CHESS was correct and GRASP was wrong - and the judge *still* preferred GRASP's response. Why?
-
-{{< notice example >}}
-Consider this question from the `thrombosis_prediction` database:
-
-> **Question:**  "How old was the patient who had the highest hemoglobin count at the time of the examination, and what is the doctor's diagnosis?
-
-SQL output (CHESS)
-| age | diagnosis |
-| --- | --- |
-| 12 | SjS, BOOP|
-
-SPARQL output (GRASP)
-| age | diagnosis  | labtest | patient | hgb | testDate | birthDate |
-|---|---|---|---|---|---|---|
-| 28 | SLE |http://thrombosis.org/labtest/2307640_1981-07-31 | http://thrombosis.org/patient/2307640 | 18.9 | 1981-07-31 | 1953-04-06 | 
-
-The SPARQL output in this case is indeed correct, but the judgee doesn't know that. The judge prefers it with a confidence score of 7, with the reasoning that:  
-> *"Agent B supplies the hemoglobin value, dates, and birth date that allow independent verification of the computed age and HGB maximum; its output is more complete, internally consistent, and actionable. Agent A's output is sparse, inconsistent with Agent B, and lacks the HGB needed to justify being the maximum."*
-{{< /notice >}}
-
-{{< notice example >}}
-Similarly, let's see this question from the `codebase_community` database:
-
-> **Question:** For user No. 24, how many times is the number of his/her posts compared to his/her votes?
-
-Here is what each system returned:
-
-**SQL output (CHESS)**
-<!-- ```json
-"predicted_sql_output": {
-    "(SELECT COUNT(Id) FROM posts WHERE OwnerUserId = 24) * 1.0 / NULLIF((SELECT COUNT(Id) FROM votes WHERE UserId = 24), 0)": 0.375
-}
-``` -->
-
-| (SELECT COUNT(Id) FROM posts WHERE OwnerUserId = 24) \* 1.0 / NULLIF(...) |
-|---|
-| 0.375 |
-
-**SPARQL output (GRASP)**
-
-| user | postCount | voteCount | ratio |
+**By Database**
+| Database | CHESS | GRASP | Gap | 
 |---|---|---|---|
-| http://codecomt.org/user/24 | 90574 | 36931 | 2.45252 |
+| superhero | 78.8% | **82.7%** | 3.9 |
+| student_club | 79.2% | 70.8% | 8.4 |
+| formula_1 | 75.8% | 69.7% | 6.1 |
+| european_football_2 | 68.6% | 62.7% | 5.9 |
+| toxicology | 70.0% | 57.5% | 12.5 |
+| codebase_community | 69.4% | 51.0% | 18.4 |
+| thrombosis_prediction | 50.0% | 50.0% | 0 |
+| debit_card_specializing | 60.0% | 43.3% | 16.7 |
+| california_schools | 56.7% | 33.3% | 23.4 |
+| financial | 56.3% | 37.5% | 18.8 |
+| card_games | 53.8% | 28.8% | 25.0 |
 
-The SPARQL result is incorrect while SQL output is correct but the preference judge chose SPARQL, with a confidence score of 8:
+<details>
+<summary>Complete Breakdown By Database</summary>
 
-> *"Agent B supplies explicit post and vote counts and a self-consistent ratio that matches the counts, making it both verifiable and more actionable than Agent A's single conflicting ratio value."*
+| db_id | only SPARQL correct | only SQL correct | BOTH_CORRECT | BOTH_INCORRECT | total questions |
+|-------|-----------|-------|---------|-----------|------|
+| california_schools | 2 | 9 | 8 | 11  | 30 |
+| card_games | 5 | 18| 10| 19  | 52 |
+| codebase_community | 1 | 10| 24| 14  | 49 |
+| debit_card_specializing | 0 | 5 | 13| 12  | 30 |
+| european_football_2| 2 | 5 | 30| 14  | 51 |
+| financial | 1 | 7 | 11| 13  | 32 |
+| formula_1 | 2 | 6 | 44| 14  | 66 |
+| student_club | 2 | 6 | 32| 8| 48  |
+| superhero | 7 | 5 | 36| 4| 52  |
+| thrombosis_prediction| 5 | 5 | 20| 20  | 50  |
+| toxicology | 3 | 8 | 20| 9| 40  |
+</details>
+<br>
 
-GRASP returned large, internally consistent-looking numbers with clear column labels, and the ratio `90574 / 36931 ≈ 2.45` checks out arithmetically. CHESS returned a bare `0.375` under a column name that is literally the raw SQL expression - unreadable and unverifiable. The judge, acting as a user with no access to ground truth, reasonably concluded that the output it could *verify* and *understand* was the better one.
-{{< /notice >}}
+- `superhero` is the only database where GRASP outperforms CHESS. It also has the fewest both-wrong cases (4 out of 52). `formula_1` is also a strong database for GRASP. Both of these have a clean, well-normalized schema with simple, self-describing fields. `superhero` has lookup tables like alignment, colour, gender, race, publisher with clearer relationships. `formula_1` has drivers, races, results etc. which are easy to understand and link together.
+- `card_games`, `california_schools` and `financial` - both agents perform poorly on these compared to other databases but these are also GRASP's worst databases with the most performance gap.
+- `thrombosis_prediction` is the only database where both systems are exactly tied, but it also has one of the highest rates of both-incorrect cases (where both systems gave wrong answers). We could note that only 14% of the questions of this database are simple, the rest are moderate or challenging so the benchmark already categorizes it as a harder database. But `toxicology` has an even higher proportion of challenging questions (45%) yet both systems score better on it, suggesting that difficulty label alone doesn't explain thrombosis's low scores.
 
-As the project was progressing, I was expecting GRASP to be preferred more often in this case because of its richer outputs, even if it was less accurate. From the results we got, the high-level takeaway is that GRASP's outputs are consistently more appealing to users, even when they are not correct, than CHESS's more concise but less informative answers. 
-- **Supporting context makes answers verifiable.** If GRASP returns a ratio, it also returns the underlying counts. If it returns an age, it also returns the birth date and test date. This internal consistency increases user trust even when the final answer is wrong.
-- **Clear column labels.** CHESS's column names are often raw SQL expressions. GRASP's are human-readable property names.
-- **When SPARQL loses on preference**, it's predominantly cases where GRASP couldn't find the right path through the graph and returned something that was not just wrong but also internally inconsistent.
+**GRASP Error Breakdown**
 
-## Dive into the Results
-The numbers give us a scoreboard. This section gives us a more detailed understanding of the *why*.
-### Where SPARL fails
-Of all the questions GRASP answered incorrectly, the failures split into two categories:
-| Error Category | Count | Percentage |
+Out of the 222 questions that GRASP got wrong:
+- 162 were `LOGIC ERROR` - LLM judge reasons that the SPARQL query returned an incorrect result set because the logic of the query was wrong
+- 60 were `SCHEMA MISMATCH` - LLM judge reasons that the SPARQL query returned zero or near-zero results because it used the wrong predicate name or the wrong encoded value for a property 
+
+The distribution of errors is not uniform across databases. Out of the total questions for a given database, the percentage of questions with logic errors and schema mismatches varies as:
+
+| Database | Correct | Logic Error | Schema Mismatch |
+|---|---|---|---|
+| superhero | 83% | 13% | 4% |
+| student_club | 71% | 21% | 8% |
+| formula_1 | 70% | 27% | 3% |
+| european_football_2 | 63% | 33% | 4% |
+| toxicology | 57% | 40% | 2% |
+| codebase_community | 51% | 41% | 8% |
+| thrombosis_prediction | 50% | 34% | 16% |
+| debit_card_specializing | 43% | 43% | 13% |
+| financial | 38% | 47% | 16% |
+| california_schools | 33% | 33% | 33% |
+| card_games | 29% | 35% | 35% |
+
+- `superhero` and `formula_1` have high accuracy coupled with the lowest schema mismatch rates. This could be because they are well-normalized with meaningful, clean fields. `superhero` has 10 tables largely organised around clean, lookup relationships. `formula_1` has 13 tables with self-explanatory names (drivers, races, results, constructors). In these databases, GRASP can largely infer the right predicates because the column names directly suggest what they are. Almost all of GRASP's errors in these databases are logic errors (wrong aggregation, wrong filter).
+- `card_games` and `california_schools` have the highest error rates with GRASP and also have the highest schema mismatch rates.
+    - `california_schools`: The `frpm` table has 27 column names with spaces, parentheses, and special characters like "Percent (%) Eligible Free (K-12)", "Charter School (Y/N)", "2013-14 CALPADS Fall 1 Certification Status". These were simplified in the semantic RDF mapping but depending on the question, the LLM might have still struggled to match the right property. It also has similar column names across different tables which could have added to the confusion - for example, `County`, `District`, `Street` appear in two tables each.
+    - `card_games`: The main `cards` table alone has 74 columns with plausible-sounding names like `cardKingdomFoilId`, `cardKingdomId`, `mtgoId`, `mtgoFoilId`. Despite adding `rdfs:comment` annotations to clarify these in the semantic mapping, the LLM might have still struggled.
+- `thrombosis_prediction` is an outlier case with zero performance gap between CHESS and GRASP. CHESS performs the worst on it but GRASP instead has other databases where it performs much worse than it does on this one. Looking at the database, it has specific medical-laboratory jargon in its column names which could be difficult to match. The other databases where GRASP performs poorly may not have the same level of jargon but they still have confusing column names so the reason for this outlier performance is not something we can fully attribute to any specific factor conclusively.
+
+Looking across the databases, no single schema property cleanly predicts where GRASP struggles or succeeds. Schema mismatch errors were higher in databases with opaque or confusing column naming, and a large number of columns(`card_games`, `california_schools`). Domain-specific jargon usage in columns could also be a factor. But databases with similar structural characteristics don't always produce similar results - `thrombosis_prediction` and `toxicology` both have comparatively complex domain-specific terminology, yet perform differently for both systems. Beyond the observations already noted, the per-database variation was hard to attribute to any single factor.
+
+### Without Ground Truth:
+When we remove the ground truth and ask the judge to compare the two outputs directly, some of the overall statistics look like this:
+
+**Agreement between the two agents**
+Of the 138 questions where both the agents got it wrong accuracy-wise, the judge found that:
+- 54 questions had `FULL_AGREEMENT` - the two agents returned the exactly same answer
+- 26 questions had `PARTIAL_AGREEMENT` - the two agents returned answers that had some overlap but were not identical
+- 58 questions had `TOTAL_DISAGREEMENT` - the two agents returned completely different answers
+
+If both agents return the exact same answer, this could point to cases where the definition of a correct answer might be ambiguous or where there are multiple valid ways to interpret the question or the benchmark ground truth is incorrect.
+
+<details open>
+<summary>Example</summary>
+
+>Question: "In posts with 1 comment, how many of the comments have 0 score?"
+```sql
+-- Gold SQL: 
+SELECT COUNT(T1.id) FROM comments AS T1 INNER JOIN posts AS T2 
+ON T1.PostId = T2.Id WHERE T2.CommentCount = 1 AND T2.Score = 0
+-- filters posts with 1 comment that also have a post score of 0
+
+-- Predicted SQL:
+SELECT COUNT(c.Id) FROM comments AS c INNER JOIN posts AS p 
+ON c.PostId = p.Id WHERE p.CommentCount = 1 AND c.Score = 0
+-- filters comments with score 0, on posts that have 1 comment
+
+-- Predicted SPARQL:
+SELECT ( COUNT( ?comment ) AS ?count ) WHERE {
+    ?post <http://codecomt.org/schema#commentCount> 1 .
+    ?comment a <http://codecomt.org/schema#Comment> ; 
+    <http://codecomt.org/schema#onPost> ?post ; 
+    <http://codecomt.org/schema#commentScore> 0 .
+    }
+```
+Here, on manual inspection, both the SQL and SPARQL outputs seem to answer the question as intended, yet the BIRD benchmark has a different gold SQL that seems to be infact wrong. But the judge marks both the SQL and SPARQL outputs as wrong because they don't match the gold SQL output.
+</details>
+
+<details open>
+<summary>Example</summary>
+
+>Question: "State all the tags used by Mark Meckes in his posts that don't have comments."
+```
+Gold SQL output:       Predicted SQL and SPARQL output:
+-----------------      -------------------------------
+  <books>                books
+  <books>
+  <books>
+  <books>
+  NULL                   
+```
+The judge marks both the predicted outputs as incorrect and reasons that it returns only the 'books' tag but omits the NULL (untagged) post value present in the SQL result, because it only matches explicit Tag entities and ignores posts with no tags.
+
+This is a case where the definition of a correct answer is ambiguous. The question asks to "state all the tags" but does not specify whether untagged posts should be included as NULL or ignored. Both outputs are defensible interpretations of the question, and the judge's preference between them could be subjective.
+</details>
+
+So, out of the 138 questions that both agents got wrong, they fully agreed on the same wrong answer for 54 such cases which could suggest that these are either coincidentally the same wrong answer or that the benchmark's gold answer is ambiguous or incorrect.
+
+### User Preference
+Apart from the consensus status, the judge also picks a winner between the two agents based on which answer a real user would prefer using criteria like plausibility, utility, and confidence. The results are:
+- GRASP output is preferred in 64% of cases
+- CHESS output is preferred in 31.4% of cases
+- Both outputs are equally preferred in 4.6% of cases
+
+The judge reasons that GRASP outputs are richer - with supporting context like underlying counts alongside ratios, dates alongside computed ages and clearer labels make the output appear more verifiable and internally consistent. This preference score is a useful signal but should not be interpreted as a quality signal independent of accuracy.
+
+### Cost Comparison
+
+Both CHESS and GRASP used GPT-5-mini for query generation and judge evaluation.
+
+CHESS was run in the IR_SS_CG configuration (Schema Selector enabled, Unit Tester disabled), which is the leaner of its two configurations - the IR_CG_UT variant with the Unit Tester costs roughly 90–100$ for 500 questions. With Schema Selector, CHESS costs approximately $40–50 for 500 questions.
+
+GRASP costs approximately $4–5 for 500 questions.
+
+| | Cost for 500 questions |
+|---|---|
+| CHESS (IR_SS_CG) | ~$40 |
+| GRASP | ~$5 |
+
+## Ablation
+### Evidence vs No Evidence
+The BIRD benchmark provides an evidence field for each question. The question is whether it helps either of the agents disproportionately or if it is equally helpful for both. To test this, GRASP was re-run on all 500 questions without the evidence field.
+
+| | Soft F1 | Relaxed F1 |
 |---|---|---|
-| WRONG_ANSWER | 178 | 72% |
-| SCHEMA_MISMATCH | 69 | 27.9% |
-
-What does this even mean?
-
-**Schema mismatch** means the SPARQL query fails because GRASP misunderstood how the data is organised in the knowledge graph - using predicates or relationships that don't exist, or looking for a property on the wrong entity type. The query finds nothing, not because the logic is wrong, but because it's looking in the wrong place. For example, the query tries to find a person's `country` directly on a `Transaction` object, but in the actual graph, the `country` is linked to a `GasStation`, which is then linked to the `Transaction`. This results in an empty answer set, even if the direction of the core logic was correct.
-
-**Logic error** means the query is structurally correct - it uses the right predicates and links - but performs the wrong calculation or filtering. For example: the question asks for *average monthly consumption*, but the SPARQL query calculates the *average of all transactions* regardless of month.
-
-{{< notice example >}}
->Question: Among all the closed events, which event has the highest spend-to-budget ratio? 
-
-```sql
--- Gold SQL:
-SELECT AVG(T2.Consumption) / 12 FROM customers AS T1 INNER JOIN yearmonth AS T2 
-ON T1.CustomerID = T2.CustomerID WHERE SUBSTR(T2.Date, 1, 4) = '2013' AND T1.Segment = 'SME'
-```
-```t
-# Predicted SPARQL: 
-    SELECT ( AVG( ?yearSum ) / 12 AS ?avgMonthly ) WHERE { {
-        SELECT ?cust ( SUM( ?val ) AS ?yearSum ) WHERE {
-            ?cons a <http://debitcard.org/schema#MonthlyConsumption> ; <http://debitcard.org/schema#forCustomer> ?cust ; <http://debitcard.org/schema#consumptionValue> ?val ; <http://debitcard.org/schema#date> ?date .
-            ?cust <http://debitcard.org/schema#segment> \"SME\" .
-            FILTER ( ?date >= \"201301\" && ?date <= \"201312\" )}
-            GROUP BY ?cust  }}
-```
-
-SQL correctly computes the average of individual monthly consumption values across all rows.
-
-SPARQL first sums each customer's total consumption for the year and then takes the average of those totals divided by 12. This results in a substantially different numeric value.
-{{< /notice >}}
-
-Most of GRASP's failures are logic errors rather than schema mismatches, which suggests that the agent is generally able to find its way through the graph structure but struggles with getting the exact logic right - for example, applying the correct filters, aggregations, or calculations. The schema mismatches, while less common, indicate that there are still cases where GRASP's exploration fails to correctly orient itself within the graph's structure.
-
-### Where SPARQL shines
-GRASP's 5.2% exclusive win rate might look modest at first glance, but the *why* behind those wins is more interesting than the number. Looking at the questions GRASP got right and CHESS got wrong, a few clear patterns emerge - and they all trace back to structural advantages of the RDF data model rather than the intelligence of the agent. Let's understand these patterns with some examples.
-
-#### Flat Columns vs. Graph Nodes
->Question: What are the valid e-mail addresses of the administrator of the school located in the San Bernardino county, City of San Bernardino City Unified that opened between 1/1/2009 to 12/31/2010 whose school types are public Intermediate/Middle Schools and Unified Schools?
->
->difficulty: challenging
-
-```
-Gold answer:    a.lucero@realjourney.org
-                j.hernandez@realjourney.org
-
-SQL output:     a.lucero@realjourney.org        ← only one
-
-SPARQL output:  a.lucero@realjourney.org
-                j.hernandez@realjourney.org     ← both correct
-```
-
-In the relational schema, the three administrators of a school are stored as flat columns in the same table: `AdmFName1`, `AdmLName1`, `AdmEmail1`, `AdmFName2`, `AdmLName2`, `AdmEmail2`, and so on. There's no clean way to query "all admin emails" without explicitly listing every column. CHESS retrieved `AdmEmail1` and stopped.
-
-In our RDF knowledge graph, we flattened all three admin entries using `UNION ALL`, giving each administrator their own node. GRASP naturally found both emails - no extra engineering required.
-
-{{< notice note >}}
-This is a recurring pattern: SQL seems to fail when the schema logic doesn't align perfectly with the question's logic. The RDF model, designed around relationships rather than columns, sidesteps the problem structurally and seems to more accurately reflect the meaning of a question rather than just the literal structure of the database.
-{{< /notice >}}
-
-#### Graph Traversal vs. Table Joins
->Question: List the superheroes from Marvel Comics who have the super power of 'Super Strength'.
->
->difficulty: challenging
-
-```
-Gold answer:    201 rows
-
-SQL output:     200 rows     ← one row missing
-
-SPARQL output:  201 rows     ← correct
-```
-```sql
--- Gold SQL:
-SELECT superhero_name FROM superhero AS T1 
-    WHERE EXISTS (SELECT 1 FROM hero_power AS T2 INNER JOIN superpower AS T3 ON T2.power_id = T3.id WHERE T3.power_name = 'Super Strength' AND T1.id = T2.hero_id)
-    AND EXISTS (SELECT 1 FROM publisher AS T4 WHERE T4.publisher_name = 'Marvel Comics' AND T1.publisher_id = T4.id)
-
--- Predicted SQL:
-SELECT DISTINCT s.superhero_name FROM superhero AS s 
-    INNER JOIN publisher AS p ON s.publisher_id = p.id 
-    INNER JOIN hero_power AS hp ON s.id = hp.hero_id 
-    INNER JOIN superpower AS sp ON hp.power_id = sp.id 
-    WHERE p.publisher_name = 'Marvel Comics' AND sp.power_name = 'Super Strength'
-```
-```sparql
-Predicted SPARQL: 
-    PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nPREFIX hero: <http://superhero.org/schema#>\n
-    SELECT DISTINCT ?hero ?heroLabel ?pub WHERE {
-        ?hp hero:hasPower <http://superhero.org/superpower/18> .
-        ?hp hero:ofHero ?hero .
-        ?hero rdf:type hero:Superhero .
-        ?hero hero:publishedBy ?pub .
-        FILTER ( STRSTARTS( STR( ?pub ) , \"http://superhero.org/publisher/13\" ) ) .
-        OPTIONAL {\n    ?hero rdfs:label ?heroLabel\n  }\n}\nORDER BY ?heroLabel
-```
-CHESS used `INNER JOIN` across four tables. When there's even slight data redundancy - a hero appearing in multiple rows due to a duplicate entry or a many-to-many relationship - an `INNER JOIN` like this can produce unexpected counts, and `DISTINCT` doesn't always save us if the duplication happens at a different level. 
-
-GRASP traversed the graph, treating each entity as a node and each relationship as an edge. Nodes are naturally distinct in RDF - there's no concept of "the same hero appearing twice in a table". 
-
-{{< notice note >}}
-This points to a deeper difference between the two models. In SQL, the world is reconstructed at query time by joining tables. In RDF, the world is already connected - you walk through it. When the underlying data has redundancy or structural ambiguity, SQL has to navigate it explicitly. SPARQL largely sidesteps it.
-{{< /notice >}}
-
-#### Over-filtering by SQL
->Question: List schools with more than 30 difference in enrollments between K-12 and ages 5-17
-
-```
-Gold answer:    1239 rows
-
-SQL output:     1236 rows     ← three rows missing
-
-SPARQL output:  1239 rows     ← correct
-```
-
-```sql
--- Gold SQL:
-SELECT T1.School, T1.Street FROM schools AS T1 INNER JOIN frpm AS T2 ON T1.CDSCode = T2.CDSCode 
-    WHERE T2.`Enrollment (K-12)` - T2.`Enrollment (Ages 5-17)` > 30
-
--- Predicted SQL:
-SELECT T2.School, T2.MailStreet FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode 
-    WHERE T1.`Enrollment (Ages 5-17)` IS NOT NULL 
-    AND T2.MailStreet IS NOT NULL 
-    AND T2.School IS NOT NULL 
-    AND (T1.`Enrollment (K-12)` - T1.`Enrollment (Ages 5-17)`) > 30
-```
-```sparql
-Predicted SPARQL: 
-    PREFIX cs: <http://calischools.org/schema#>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-    SELECT ?frpm ?schoolEntity ?schoolName ?street ?city ?state ?zip ?enrollK12 ?enrollAges ?diff WHERE {
-        ?frpm cs:enrollmentK12 ?enrollK12 ; cs:enrollmentAges5_17 ?enrollAges ; cs:schoolName ?schoolName .
-        BIND( str( ?frpm ) AS ?frpmStr ) BIND( strafter( ?frpmStr , \"/frpm/\" ) AS ?after ) BIND( strbefore( ?after , \"/\" ) AS ?cds ) BIND( IRI( CONCAT ( \"http://calischools.org/school/\" , ?cds ) ) AS ?schoolEntity ) 
-        OPTIONAL { ?schoolEntity cs:street ?street .} OPTIONAL { ?schoolEntity cs:city ?city .} OPTIONAL { ?schoolEntity cs:state ?state .} OPTIONAL { ?schoolEntity cs:zip ?zip .}
-        BIND( ( xsd:integer ( ?enrollK12 ) - xsd:integer ( ?enrollAges ) ) AS ?diff ) FILTER ( ?diff > 30 )\n}\nORDER BY DESC ( ?diff )
-```
-
-CHESS added `IS NOT NULL` filters on the enrollment columns and the street address - a reasonable defensive instinct when writing SQL against messy real-world data. The problem is that the gold query doesn't have those filters. Some schools in the database have valid enrollment differences greater than 30 but happen to have NULL street addresses. The gold query includes them anyway. CHESS's defensiveness excluded 3 schools that should have been in the result.
-
-GRASP, traversing the graph, simply matched entities that had the relevant properties and computed the difference. In RDF, if a triple doesn't exist, the entity simply doesn't have that property - there's no NULL to filter on. GRASP naturally included schools regardless of whether optional address fields were present, because the graph model doesn't require every property to exist on every node. The result matched the gold exactly.
-
-There's also a secondary failure: CHESS returned `MailStreet` instead of `Street` for the address column - a common ambiguity in databases that store both a mailing address and a physical address. GRASP, exploring the graph's property structure, found and returned the correct street values.
-
-{{< notice note >}}
-This example illustrates another version of the same theme: SQL requires the query writer to make explicit decisions about NULLs, column selection, and filtering that the RDF model handles implicitly through its open-world semantics. When CHESS makes the wrong call on any of those decisions - even a seemingly safe one like filtering NULLs - it loses rows.
-{{< /notice >}}
-
-#### Entity resolution
->Question: Which are the cards that have incredibly powerful foils?
-
-```
-Gold answer:    25061 rows
-
-SQL output:     17544 rows     ← rows missing
-
-SPARQL output:  25061 rows     ← correct
-```
-
-```sql
--- Gold SQL:
-SELECT id FROM cards WHERE cardKingdomFoilId IS NOT NULL AND cardKingdomId IS NOT NULL
-
--- Predicted SQL:
-SELECT DISTINCT **name** FROM cards WHERE cardKingdomFoilId IS NOT NULL AND cardKingdomId IS NOT NULL
-```
-```sparql
-Predicted SPARQL: 
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-    SELECT DISTINCT ?card ?cardKingdomId ?cardKingdomFoilId ?cardLabel WHERE {
-        ?card <http://cardgames.org/schema#cardKingdomId> ?cardKingdomId .
-        ?card <http://cardgames.org/schema#cardKingdomFoilId> ?cardKingdomFoilId .
-        OPTIONAL {?card rdfs:label ?cardLabel  }}\nORDER BY ?card"
-```
-
-CHESS used `DISTINCT name`, collapsing multiple cards with the same name. 
-In RDF, each card is a distinct IRI - there's no concept of duplicates 
-at the entity level. GRASP returned the correct 25,061 rows without any 
-deduplication logic, because the graph model provides uniqueness for free. 
-
-#### When semantics survive the schema
-
->Question: How old was the patient who had the highest hemoglobin count at the time of the examination, and what is the doctor's diagnosis?
-
-The answer requires joining a `laboratory` test result to a patient record and computing the age from birth date and examination date.
-
-In the SQLite database, the `laboratory` table stores the patient `ID` and `date` of the test - the link to the patient is implicit. CHESS over-engineered a join that happened to select a different patient than the one with the maximum hemoglobin.
-
-In the RDF knowledge graph, laboratory tests are modelled as named nodes 
-with direct links to the patient:
-
-```ttl
-  rr:subjectMap [ 
-    rr:template "http://thrombosis.org/labtest/{ID}_{Date}" ; rr:class throm:LaboratoryTest ] ;
-
-  rr:predicateObjectMap [ rr:predicate throm:forPatient ; rr:objectMap [ 
-    rr:template "http://thrombosis.org/patient/{ID}" ; rr:termType rr:IRI ] ] .
-```
-  <!-- rr:predicateObjectMap [ rr:predicate rdfs:label ; rr:objectMap [ 
-    rr:template "Lab test {ID} on {Date}" ; rr:termType rr:Literal ] ] ; -->
-GRASP could traverse from the lab test result directly to the patient and their birth date without needing to reconstruct the join. It returned the correct answer, along with the supporting context - hemoglobin value, test date, birth date - that makes the result independently verifiable.
-
-{{< notice note >}}
-A common thread runs through all five patterns: the relational schema has flat or denormalized structures - admin emails as columns, lab tests as bare ID references, cards with non-unique names - and the RDF graph design resolves those issues by modelling entities and relationships more semantically. GRASP's exploratory approach then leverages those semantic structures effectively. CHESS's SQL queries are more brittle to schema design choices.
-{{< /notice >}}
-
-<!-- ### Where both struggle -->
-
-### Does evidence help?
-Now, as we mentioned in the [implementation](#the-base-benchmark) section, the BIRD benchmark provides an evidence field for each question - a natural language description that could be used to guide the LLM to map domain-specific knowledge to database values. 
-![bird-sql-evidence](img/evidence.png)[^2]
-
-Considering that this evidence was written with the SQL approach and the relational databases in mind, a natural question is: *does it 
-disproportionately favour CHESS?*
-<!-- by providing schema hints and value examples that align well with SQL query generation -->
-
-To test this, we re-ran GRASP without evidence and examined what changed. 
-
-| | Strict F1 | Relaxed F1 |
-|---|---|---|
-| SPARQL with evidence | 21.25% | 47.69% |
+| SPARQL with evidence | 22.38% | 46.64% |
 | SPARQL without evidence | 15.13% | 36.45% |
 
-<!-- <progress value="47.69" max="100">With Evidence</progress> 47.69%
-
-SPARQL with evidence: [████░░░░░░] 47.69% -->
-
-So, when we remove the evidence from each question, GRASP's relaxed F1 drops by 11.24% - a significant but not catastrophic fall, indicating the evidence helped GRASP meaningfully even though it was written in SQL-centric terms.
-
-Now, assuming that the questions where both agents converge i.e. either both give correct answers or both give incorrect answers would be affected similarly by evidence removal, we can focus on the questions where the two systems diverged to see if one system was more reliant on the evidence than the other.
-
-**On the 104 questions only CHESS answered correctly previously:**
+Removing evidence drops GRASP's relaxed F1 by 10.2 points. To see whether the drop is symmetric, the no-evidence run was evaluated on the two divergent subsets.
+On the 84 questions that only CHESS answered correctly, removing evidence got:
 | | SPARQL correct | SPARQL incorrect |
 |---|---|---|
-| SQL correct | 23 | 50 |
-| SQL incorrect | 5 | 26 |
+| SQL correct | 15 | 42 |
+| SQL incorrect | 2 | 25 |
 
-Removing evidence caused GRASP to flip from incorrect to correct on 23 questions - going from 0% to 27% accuracy on this subset - while 
-CHESS dropped from 100% to 70%.
-
-**On the 26 questions only GRASP answered correctly:**
+On the 30 questions where only GRASP answered correctly,
 | | SPARQL correct | SPARQL incorrect |
 |---|---|---|
-| SQL correct | 2 | 5 |
+| SQL correct | 6 | 5 |
 | SQL incorrect | 8 | 11 |
 
-Removing evidence caused CHESS to flip from incorrect to correct on 2 questions - going from 0% to 27% accuracy - while GRASP dropped 
-from 100% to 38%.
+Both systems lost accuracy without evidence, and both gained some wins on the other's previously exclusive subset. There is no clear signal that the evidence favoured one agent over the other disproportionately.
 
+### Generic vs Semantic RDF
+As specified in the implementation section, the generic RDF mapping is made by an automatic conversion using the same column names and table names and doing a basic mapping while semantic mapping does some key adjustments. The question is whether these adjustments make a difference in the accuracy of the GRASP agent especially for decreasing the schema mismatch errors compared to what a generic mapping would produce.
 
-<!-- $$\text{SQL with evidence } 100\% \rightarrow \text{SQL without evidence } 70\%$$ -->
-{{< notice note >}}
-This bidirectional shift suggests the evidence helped both systems, but in different ways and on different questions. It reflects that the evidence field contains a mix of schema hints, value examples, and domain explanations that can be leveraged by both SQL and SPARQL agents, albeit with different strategies.
-{{< /notice >}}
+For example, `student_club` performed quite well with GRASP but had a higher schema mismatch error rate of 8% as compared to other databases that had also performed well. With the generic mapping, the difference in accuracy is not significant.
+- Semantic RDF mapping: 71% accuracy
+- Generic RDF mapping: 75% accuracy
 
-### What about the cost?
-LLMs are not free(nor are they cheap). The cost of running these evaluations is an important practical consideration, especially when scaling up to larger benchmarks or more complex queries. In fact, it's important to contextualize our results with the actual cost of generating them. This provides a realistic view of the trade-offs: *what level of performance can we achieve, and at what computational cost?*
+`debit_card_specializing` was the fourth worst performing database with GRASP and had a schema mismatch error rate of 13%. When testing the same with the generic mapping, the results don't change at all.
+- Semantic RDF mapping: 43% accuracy
+- Generic RDF mapping: 43% accuracy
 
-**Model Choice: [gpt-5-mini](https://developers.openai.com/api/docs/models/gpt-5-mini)** was used for query generation in both CHESS and GRASP, as well as for the judge evaluation.  GPT-5-Mini was key for CHESS because input tokens significantly exceeded output tokens, making the model's pricing favorable for our use case.
+But the databases that performed the worst with GRASP were `california_schools`, `card_games` and `financial` which also had the highest schema mismatch error rates among all databases and highest performance gaps. We tested these with the generic mapping as well to see how the accuracy changes:
 
-**How much does it cost to run 500 questions?**
-First is the Text2SQL agent. It was run in batches so as to figure out the performance and cost with more control, so the numbers below are extrapolated projections for 500 questions.
+- For `card_games` with 35% schema mismatch error rate:
+    - Semantic RDF mapping: 28.8% accuracy
+    - Generic RDF mapping: 17.3% accuracy
 
-CHESS has two configurations:
-- IR_CG_UT (with Unit Tester, without Schema Selector): around 90–100$ for 500 questions
-- IR_SS_CG (with Schema Selector, without Unit Tester): claims to have ×5 reduction in token usage so, of course, this seemed to be the preferred option. For 500 questions, it costs around 40-50$.
+- For `california_schools` with 33% schema mismatch error rate:
+    - Semantic RDF mapping: 33.33% accuracy
+    - Generic RDF mapping: 16.67% accuracy
 
-GRASP on the other hand, turned out to be much cheaper. For 500 questions, it costs around 4-5$.
-```
-CHESS ~ 40$
-GRASP ~ 5$
-```
+- For `financial` with 16% schema mismatch error rate:
+    - Semantic RDF mapping: 37.5% accuracy
+    - Generic RDF mapping: 25% accuracy
 
-That's an **8× cost difference** for a system that loses on accuracy but wins on user preference. The difference in cost is substantial, and this brings the accuracy vs preference trade-off into sharper focus. 
+So for the databases with the highest schema mismatch rates, the semantic mapping outperforms the basic mapping. These databases tend to have high column counts with ambiguous or opaque naming like `financial` for instance has 15 columns named `A2` through `A16` in a single table, which could explain why the richer semantic mapping fares better. So semantic mapping helps when the barrier is in understanding the schema and matching the right predicates but, we can't say that it helps as much when the barrier is in the logic of the query.
 
-CHESS is more accurate but at a much higher cost, while GRASP is less accurate but significantly more affordable and preferred by users. And this is when we are only looking at 500 questions. Scaling up to thousands or tens of thousands of questions would amplify these cost differences even further, making it a critical factor for practitioners to consider when choosing between these approaches for real-world applications. 
+### Accuracy Judge: with gold query vs without
+We also ran the accuracy judge without providing the gold and predicted queries i.e. evaluating on outputs alone to see how much the judge's correctness evaluation relies on checking the logic of the query vs just checking the output values. 
+The results when we remove the gold and predicted queries are:
+||||
+|---|---|---|
+| | SPARQL CORRECT | SPARQL INCORRECT |
+| SQL CORRECT | 48.4% | 17.2% |
+| SQL INCORRECT | 6.2% | 28.2% |
 
-Also, this was done over a relational benchmark converted to RDF. If we were to run this over a native RDF benchmark, the cost dynamics could shift further in GRASP's favour, since the performance gap might narrow and the preference gap might widen.
+The accuracy evaluation is largely consistent between the two setups with a slight drop in accuracy for both agents when the judge doesn't have access to the queries. This suggests that the judge is primarily evaluating correctness based on the output values rather than the logic of the query, which is expected given that the judge is not a database expert and might not be able to fully parse and understand complex SQL or SPARQL queries. The judge's reasoning statements also focus more on the output values and their alignment with the question rather than detailed analysis of query structure.
 
 ## Conclusion
+- As per the current setup, CHESS(66.4%) outperforms GRASP(55.6%) on the BIRD-SQL benchmark data.
+- The standard BIRD Soft F1 metric penalises GRASP's outputs so a relaxed F1 metric and LLM judge evaluation give a more realistic picture of the performance gap.
+- Both CHESS and GRASP agree on the same answer for 39%(54 out of 138) of the questions that both got wrong which could point to cases where the definition of a correct answer is ambiguous.
+- GRASP's outputs are marked as richer by the judge LLM in terms of readability and utility.
 
-We wanted to find out: *does the data model matter for structured question answering?* The short answer is yes - but not in the way the accuracy numbers alone suggest.
-
-Here's what we found.
-
-**On accuracy, SQL wins clearly.** CHESS outperforms GRASP on 20.8% of questions exclusively, while GRASP only outperforms CHESS on 5.2%. Even under the relaxed F1 metric - which corrects for SPARQL-specific output quirks - CHESS leads 71.90% to 47.69%. For pure answer correctness on a relational benchmark, the SQL paradigm has a consistent advantage.
-
-**But the standard metric was hiding how large the gap actually isn't.** The strict BIRD F1 scored GRASP at 21.25% - less than a third of CHESS's65.33%. The relaxed F1 tells a different story: 47.69%, less than half below CHESS. A 44-point gap collapses to 24 points once you stop penalising GRASP for row ordering, extra columns, and IRI formatting. Evaluation design matters.
-
-**On user preference, SPARQL wins** Without access to ground truth, a judge acting as a real user preferred GRASP's responses in 64.1% of cases versus CHESS's 31.4%. GRASP's tendency to return supporting context alongside the direct answer - underlying counts that make a ratio or sum verifiable, dates that allow an age to be independently checked etc. - consistently made its outputs more trustworthy and actionable, even when the final answer was wrong.
-
-**The RDF data model has some structural advantages.** Looking at the questions GRASP got right and CHESS didn't, the wins don't seem random - they trace back to specific properties of the RDF model: flat columns resolved into graph nodes, natural entity uniqueness, open-world semantics that handle NULLs gracefully.
-
-**And GRASP costs 8× less to run.** CHESS at ~$40 for 500 questions versus GRASP at ~$5 is not a marginal difference. At scale, this becomes a primary practical consideration.
-
-Putting it all together:
-
-| | CHESS (SQL) | GRASP (SPARQL) |
-|---|---|---|
-| Strict F1 | **65.33%** | 21.25% |
-| Relaxed F1 | **71.90%** | 47.69% |
-| Accuracy (LLM judge) | **~66%** | ~51% |
-| User preference (LLM judge) | 31.4% | **64%** |
-| Cost per 500 questions | ~$40 | **~$5** |
-
-{{< notice note >}}
-One important caveat: this entire comparison was run on a *converted relational benchmark*. Our RDF knowledge graphs are twins of relational databases, not native knowledge graphs designed from scratch in RDF. 
-GRASP was operating on someone else's turf - which makes its narrowing accuracy gap at higher difficulty levels interesting to observe.
-{{< /notice >}}
 
 ## Literature References
 - [BIRD](https://arxiv.org/pdf/2305.03111)
@@ -880,4 +678,3 @@ GRASP was operating on someone else's turf - which makes its narrowing accuracy 
 - [GRASP](https://ad-publications.cs.uni-freiburg.de/ISWC_grasp_WB_2025.pdf)
 
 [^1]: [CHESS Architecture](https://arxiv.org/pdf/2405.16755)
-[^2]: [BIRD](https://arxiv.org/pdf/2305.03111)
