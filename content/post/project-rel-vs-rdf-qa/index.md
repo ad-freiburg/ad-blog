@@ -371,10 +371,60 @@ Script-based metrics compare output values mechanically and can miss edge cases,
 
 *Is each system's answer correct with respect to the ground truth?*
 
-The judge evaluates CHESS and GRASP outputs, comparing them to the ground truth, classifying each as `CORRECT`, `WRONG_ANSWER`, or `EXECUTION_ERROR`. SPARQL outputs get one additional category: `SCHEMA_MISMATCH` - distinguishing cases where GRASP used structurally wrong predicates from cases where the logic was simply incorrect.
+The judge evaluates CHESS and GRASP outputs, comparing them to the ground truth, classifying each as `CORRECT`, `WRONG_ANSWER`, or `EXECUTION_ERROR`.
 
 The judge is instructed to focus on semantic equivalence, not syntactic similarity - treating rows as unordered sets unless ordering is required, and allowing extra columns in SPARQL output as long as the correct answer is present. Result sets exceeding 30 rows are truncated to the first and last 5, with the total count always provided.
 
+The judge is also asked to categorize the incorrect GRASP answers further as:
+- Logical Error: These are the cases where judge identifies the logic of the SPARQL query to not match with that of the gold query. So the predicates and relationships in the query are plausible but there could be issues like wrong filtering, wrong aggregation granularity, wrong relationship direction, etc. that make the answer wrong.
+- Non-Logical Error: These are the cases where the judge is not able to find such a mistake in the query logic in comparison to the gold query logic, yet the SPARQL query still returns the wrong result — typically an empty or zero result. This typically happened with cases where the query assumes a predicate or graph structure that is not actually present in the KG. 
+
+**Example for Logical Error:**
+
+> Question: Does the KSV Cercle Brugge team have a slow, balanced or fast speed class?
+```sql
+-- Gold SQL query:
+SELECT DISTINCT t1.buildUpPlaySpeedClass FROM Team_Attributes AS t1 INNER JOIN Team AS t2 
+ON t1.team_api_id = t2.team_api_id WHERE t2.team_long_name = 'KSV Cercle Brugge'
+
+-- SPARQL query:
+PREFIX ef: <http://europeanfootball.org/schema#>
+SELECT ?attr ?label ?speed ( xsd:dateTime ( STRBEFORE( STRAFTER( ?label , \"(\" ) , \")\" ) ) AS ?date ) WHERE {
+    ?attr ef:forTeam <http://europeanfootball.org/team/9984> .
+    ?attr ef:buildUpPlaySpeedClass ?speed .  
+    ?attr rdfs:label ?label .
+    } 
+ORDER BY DESC ( ?date )
+LIMIT 1
+```
+The gold SQL selects DISTINCT `buildUpPlaySpeedClass` across all historical attribute records for that team, returning two values: Balanced and Fast. The SPARQL query correctly navigates to the same team and the same attribute, but then parses a date out of each attribute's label, orders by it descending, and applies `LIMIT 1` — returning only Balanced, the most recent record. The predicates and the graph traversal is right, but the gold query does not have any date filtering that the SPARQL query has.
+
+**Example for Non-Logical Error:**
+
+> Question: Based on the total cost for all event, what is the percentage of cost for Yearly Kickoff event?
+```sql
+-- Gold SQL query:
+SELECT CAST(SUM(CASE WHEN T1.event_name = 'Yearly Kickoff' THEN T3.cost ELSE 0 END) AS REAL) * 100 / SUM(T3.cost) 
+FROM event AS T1 INNER JOIN budget AS T2 ON T1.event_id = T2.link_to_event 
+                 INNER JOIN expense AS T3 ON T2.budget_id = T3.link_to_budget
+-- outputs 21.53
+
+
+-- SPARQL query:
+PREFIX sclub: <http://studentclub.org/schema#>
+SELECT ?kickoffEvent ?kickoffCost ?totalCost ?percent WHERE {  
+    {
+        SELECT ( SUM( ?kc ) AS ?kickoffCost ) ( SAMPLE( ?ke ) AS ?kickoffEvent ) WHERE {
+            ?ke a sclub:Event ; sclub:eventName \"Yearly Kickoff\" ; sclub:cost ?kc . }
+    }
+    {
+        SELECT ( SUM( ?tc ) AS ?totalCost ) WHERE {
+            ?ev a sclub:Event ; sclub:cost ?tc . }
+    }
+    BIND( IF( ?totalCost > 0 , ( ?kickoffCost / ?totalCost ) * 100 , 0 ) AS ?percent )}
+-- outputs 0
+```
+The gold query joins 3 tables (`event` → `budget` → `expense`) and sums costs from the `expense` table. The same structure exists in the knowledge graph as well but the SPARQL query sums `sclub:cost` directly off the `event` node itself. The judge compares the logic of the two queries and reasons that considering the empty set and the wrong traversal, this is a non-logical error. Checking the KG confirms that it follows the same structure as the SQL database and does not have `sclub:cost` directly on the event node, which is why the SPARQL query returns 0.
 
 <details>
 <summary>Judge Evaluation Sample Output</summary>
@@ -498,12 +548,12 @@ The soft F1 gap looks large - 42.85 percentage points. The relaxed F1 narrows th
 **GRASP Error Breakdown**
 
 Out of the 222 questions that GRASP got wrong:
-- 162 were `LOGIC ERROR` - LLM judge reasons that the SPARQL query returned an incorrect result set because the logic of the query was wrong
-- 60 were `SCHEMA MISMATCH` - LLM judge reasons that the SPARQL query returned zero or near-zero results because it used the wrong predicate name or the wrong encoded value for a property 
+- 162 were Logical Errors - core logic of SPARQL query deviates from that of the gold query, such as wrong filtering, wrong aggregation etc.
+- 60 were Non-Logical Errors - judge couldn't identify a logical mistake in the query but it still returned the wrong answer, typically due to structural mismatch(wrong predicate or graph structure assumed)
 
-The distribution of errors is not uniform across databases. Out of the total questions for a given database, the percentage of questions with logic errors and schema mismatches varies as:
+The distribution of errors is not uniform across databases. Out of the total questions for a given database, the percentage of questions with each error type varies as:
 
-| Database | Correct | Logic Error | Schema Mismatch |
+| Database | Correct | Logical Error | Non-Logical Error |
 |---|---|---|---|
 | superhero | 83% | 13% | 4% |
 | student_club | 71% | 21% | 8% |
@@ -517,24 +567,971 @@ The distribution of errors is not uniform across databases. Out of the total que
 | california_schools | 33% | 33% | 33% |
 | card_games | 29% | 35% | 35% |
 
-- `superhero` and `formula_1` have high accuracy coupled with the lowest schema mismatch rates. This could be because they are well-normalized with meaningful, clean fields. `superhero` has 10 tables largely organised around clean, lookup relationships. `formula_1` has 13 tables with self-explanatory names (drivers, races, results, constructors). In these databases, GRASP can largely infer the right predicates because the column names directly suggest what they are. Almost all of GRASP's errors in these databases are logic errors (wrong aggregation, wrong filter).
-- `card_games` and `california_schools` have the highest error rates with GRASP and also have the highest schema mismatch rates.
+- `superhero` and `formula_1` have high accuracy coupled with the lowest non-logical error rates(least structural mismatch). This could be because they are well-normalized with meaningful, clean fields. `superhero` has 10 tables largely organised around clean, lookup relationships. `formula_1` has 13 tables with self-explanatory names (drivers, races, results, constructors). In these databases, GRASP can largely infer the right predicates because the column names directly suggest what they are. Almost all of GRASP's errors in these databases are logic errors (wrong aggregation, wrong filter).
+- `card_games` and `california_schools` have the highest error rates with GRASP
     - `california_schools`: The `frpm` table has 27 column names with spaces, parentheses, and special characters like "Percent (%) Eligible Free (K-12)", "Charter School (Y/N)", "2013-14 CALPADS Fall 1 Certification Status". These were simplified in the semantic RDF mapping but depending on the question, the LLM might have still struggled to match the right property. It also has similar column names across different tables which could have added to the confusion - for example, `County`, `District`, `Street` appear in two tables each.
     - `card_games`: The main `cards` table alone has 74 columns with plausible-sounding names like `cardKingdomFoilId`, `cardKingdomId`, `mtgoId`, `mtgoFoilId`. Despite adding `rdfs:comment` annotations to clarify these in the semantic mapping, the LLM might have still struggled.
 - `thrombosis_prediction` is an outlier case with zero performance gap between CHESS and GRASP. CHESS performs the worst on it but GRASP instead has other databases where it performs much worse than it does on this one. Looking at the database, it has specific medical-laboratory jargon in its column names which could be difficult to match. The other databases where GRASP performs poorly may not have the same level of jargon but they still have confusing column names so the reason for this outlier performance is not something we can fully attribute to any specific factor conclusively.
 
-Looking across the databases, no single schema property cleanly predicts where GRASP struggles or succeeds. Schema mismatch errors were higher in databases with opaque or confusing column naming, and a large number of columns(`card_games`, `california_schools`). Domain-specific jargon usage in columns could also be a factor. But databases with similar structural characteristics don't always produce similar results - `thrombosis_prediction` and `toxicology` both have comparatively complex domain-specific terminology, yet perform differently for both systems. Beyond the observations already noted, the per-database variation was hard to attribute to any single factor.
+Looking across the databases, no single schema property cleanly predicts where GRASP struggles or succeeds. Error rates were higher in databases with opaque or confusing column naming, and a large number of columns(`card_games`, `california_schools`). Domain-specific jargon usage in columns could also be a factor. But databases with similar structural characteristics don't always produce similar results - `thrombosis_prediction` and `toxicology` both have comparatively complex domain-specific terminology, yet perform differently for both systems. Beyond the observations already noted, the per-database variation was hard to attribute to any single factor.
+
+Adding the set of questions from one database, where GRASP got it wrong, for reference:
+<details>
+<summary>Toxicology database - cases where both got it wrong</summary>
+
+Here are the questions from the `toxicology` database where both agents got it wrong.
+
+<details>
+<summary>QID 207 — What elements are in a double type bond? <code>challenging</code></summary>
+
+**Question:** What elements are in a double type bond?
+
+**Gold SQL**
+```sql
+SELECT DISTINCT T1.element
+FROM atom AS T1
+INNER JOIN bond AS T2 ON T1.molecule_id = T2.molecule_id
+INNER JOIN connected AS T3 ON T1.atom_id = T3.atom_id
+WHERE T2.bond_type = '='
+```
+
+**Gold Output**
+| element |
+|---|
+| c |
+| o |
+| cl |
+| h |
+| s |
+| n |
+| p |
+| f |
+| sn |
+| pb |
+| ca |
+| br |
+| cu |
+
+**Predicted SQL**
+```sql
+SELECT DISTINCT a.element
+FROM connected AS c
+INNER JOIN bond AS b ON c.bond_id = b.bond_id
+INNER JOIN atom AS a ON (a.atom_id = c.atom_id OR a.atom_id = c.atom_id2)
+WHERE b.bond_type = '='
+```
+
+**Predicted SQL Output**
+| element |
+|---|
+| c |
+| o |
+| n |
+| s |
+| ca |
+
+**Predicted SPARQL**
+```sparql
+PREFIX tox: <http://toxkg.org/schema#>
+SELECT DISTINCT ?element WHERE {
+  ?bond tox:bondType "=" .
+  ?bond tox:connectsAtom ?atom .
+  ?atom tox:element ?element .
+}
+ORDER BY ?element
+```
+
+**Predicted SPARQL Output**
+| element |
+|---|
+| Calcium |
+| Carbon |
+| Nitrogen |
+| Oxygen |
+| Sulfur |
+
+</details>
+
+---
+
+
+<details>
+<summary>QID 219 — Percentage of carcinogenic molecules in triple type bonds <code>challenging</code></summary>
+
+**Question:** What is the percentage of carcinogenic molecules in triple type bonds?
+
+**Gold SQL**
+```sql
+SELECT CAST(COUNT(DISTINCT CASE WHEN T2.label = '+' THEN T2.molecule_id ELSE NULL END) AS REAL)
+  * 100 / COUNT(DISTINCT T2.molecule_id)
+FROM atom AS T1
+INNER JOIN molecule AS T2 ON T1.molecule_id = T2.molecule_id
+INNER JOIN bond AS T3 ON T2.molecule_id = T3.molecule_id
+WHERE T3.bond_type = '#'
+```
+
+**Gold Output**
+| percentage |
+|---|
+| 66.6667 |
+
+**Predicted SQL**
+```sql
+SELECT CASE WHEN COUNT(b.bond_id) = 0 THEN 0
+  ELSE (SUM(CASE WHEN b.bond_type = '#' THEN 1 ELSE 0 END) * 100.0) / COUNT(b.bond_id) END AS percent
+FROM bond AS b
+INNER JOIN molecule AS m ON b.molecule_id = m.molecule_id
+WHERE m.label = '+'
+```
+
+**Predicted SQL Output**
+| percent |
+|---|
+| 0.0808 |
+
+**Predicted SPARQL**
+```sparql
+PREFIX tox: <http://toxkg.org/schema#>
+SELECT
+  ( ( SUM( IF( str( ?bondType ) = "#" , 1 , 0 ) ) * 100.0 ) / COUNT( ?bond ) AS ?percent )
+  ( COUNT( ?bond ) AS ?totalBonds )
+  ( SUM( IF( str( ?bondType ) = "#" , 1 , 0 ) ) AS ?tripleBonds )
+WHERE {
+  ?bond a tox:Bond ; tox:partOfMolecule ?mol ; tox:bondType ?bondType .
+  ?mol tox:hasCarcinogenicity "Carcinogenic" .
+}
+```
+
+**Predicted SPARQL Output**
+| percent | totalBonds | tripleBonds |
+|---|---|---|
+| 0.0808 | 3715 | 3 |
+
+</details>
+
+---
+
+<details>
+<summary>QID 234 — How many bonds involving atom 12 does molecule TR009 have? <code>moderate</code></summary>
+
+**Question:** How many bonds which involved atom 12 does molecule TR009 have?
+
+**Gold SQL**
+```sql
+SELECT COUNT(T2.bond_id)
+FROM bond AS T1
+INNER JOIN connected AS T2 ON T1.bond_id = T2.bond_id
+WHERE T1.molecule_id = 'TR009'
+AND T2.atom_id = T1.molecule_id || '_1'
+OR T2.atom_id2 = T1.molecule_id || '_2'
+```
+
+**Gold Output**
+| COUNT(bond_id) |
+|---|
+| 1041 |
+
+**Predicted SQL**
+```sql
+SELECT COUNT(DISTINCT T1.bond_id)
+FROM connected AS T1
+INNER JOIN bond AS T2 ON T1.bond_id = T2.bond_id
+WHERE T2.molecule_id = 'TR009'
+AND (T1.atom_id = 'TR009_12' OR T1.atom_id2 = 'TR009_12')
+```
+
+**Predicted SQL Output**
+| COUNT(DISTINCT bond_id) |
+|---|
+| 3 |
+
+**Predicted SPARQL**
+```sparql
+PREFIX tox: <http://toxkg.org/schema#>
+SELECT ( COUNT( DISTINCT ?bond ) AS ?bondCount ) ?molecule ?atom WHERE {
+  BIND( <http://toxkg.org/molecule/TR009> AS ?molecule )
+  BIND( <http://toxkg.org/atom/TR009_12> AS ?atom )
+  ?bond tox:connectsAtom ?atom ; tox:partOfMolecule ?molecule .
+}
+GROUP BY ?molecule ?atom
+```
+
+**Predicted SPARQL Output**
+| bondCount | molecule | atom |
+|---|---|---|
+| 3 | http://toxkg.org/molecule/TR009 | http://toxkg.org/atom/TR009_12 |
+
+</details>
+
+---
+
+<details>
+<summary>QID 281 — Tally elements of the 4th atom of each carcinogenic molecule <code>challenging</code></summary>
+
+**Question:** Tally the toxicology element of the 4th atom of each molecule that was carcinogenic.
+
+**Gold SQL**
+```sql
+SELECT DISTINCT T1.element
+FROM atom AS T1
+INNER JOIN molecule AS T2 ON T1.molecule_id = T2.molecule_id
+WHERE T2.label = '+' AND SUBSTR(T1.atom_id, -1) = '4' AND LENGTH(T1.atom_id) = 7
+```
+
+**Gold Output**
+| element |
+|---|
+| cl |
+| c |
+| br |
+| n |
+| o |
+| s |
+| h |
+| f |
+
+**Predicted SQL**
+```sql
+SELECT a.element, COUNT(*) AS tally
+FROM atom AS a
+INNER JOIN molecule AS m ON a.molecule_id = m.molecule_id
+WHERE m.label = '+' AND SUBSTR(a.atom_id, 7, 1) = '4'
+GROUP BY a.element
+ORDER BY COUNT(*) DESC
+```
+
+**Predicted SQL Output**
+| element | tally |
+|---|---|
+| c | 145 |
+| h | 59 |
+| o | 33 |
+| cl | 9 |
+| n | 8 |
+| br | 6 |
+| s | 5 |
+| na | 3 |
+| f | 1 |
+
+**Predicted SPARQL**
+```sparql
+PREFIX tox: <http://toxkg.org/schema#>
+SELECT ?element ( COUNT( ?atom ) AS ?count ) WHERE {
+  ?mol a tox:Molecule ; tox:hasCarcinogenicity ?car .
+  FILTER ( str( ?car ) = "Carcinogenic" )
+  ?atom a tox:Atom ; tox:partOfMolecule ?mol ; tox:element ?element .
+  BIND( STRAFTER( STR( ?atom ) , "/atom/" ) AS ?atom_id )
+  FILTER ( substr( ?atom_id , 7 , 1 ) = "4" )
+}
+GROUP BY ?element
+ORDER BY DESC ( ?count )
+```
+
+**Predicted SPARQL Output**
+| element | count |
+|---|---|
+| Carbon | 145 |
+| Hydrogen | 59 |
+| Oxygen | 33 |
+| Chlorine | 9 |
+| Nitrogen | 8 |
+| Bromine | 6 |
+| Sulfur | 5 |
+| Sodium | 3 |
+| Fluorine | 1 |
+
+</details>
+
+---
+
+<details>
+<summary>QID 198 — On average how many carcinogenic molecules are single bonded? <code>challenging</code></summary>
+
+**Question:** On average how many carcinogenic molecules are single bonded?
+
+**Gold SQL**
+```sql
+SELECT AVG(single_bond_count) FROM (
+  SELECT T3.molecule_id, COUNT(T1.bond_type) AS single_bond_count
+  FROM bond AS T1
+  INNER JOIN atom AS T2 ON T1.molecule_id = T2.molecule_id
+  INNER JOIN molecule AS T3 ON T3.molecule_id = T2.molecule_id
+  WHERE T1.bond_type = '-' AND T3.label = '+'
+  GROUP BY T3.molecule_id
+) AS subquery
+```
+
+**Gold Output**
+| AVG(single_bond_count) |
+|---|
+| 732.125 |
+
+**Predicted SQL**
+```sql
+SELECT CASE WHEN den.total_atoms = 0 THEN NULL
+  ELSE num.single_bonds * 1.0 / den.total_atoms END
+FROM (
+  SELECT COUNT(*) AS single_bonds FROM bond
+  INNER JOIN molecule ON bond.molecule_id = molecule.molecule_id
+  WHERE molecule.label = '+' AND bond.bond_type = '-'
+) AS num,
+(
+  SELECT COUNT(atom.atom_id) AS total_atoms FROM atom
+  INNER JOIN molecule ON atom.molecule_id = molecule.molecule_id
+  WHERE molecule.label = '+'
+) AS den
+```
+
+**Predicted SQL Output**
+| result |
+|---|
+| 0.8337 |
+
+**Predicted SPARQL**
+```sparql
+PREFIX tox: <http://toxkg.org/schema#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+SELECT ( AVG( ?ratio ) AS ?avg_single_per_atom ) WHERE {
+  {
+    SELECT ?mol ( COUNT( DISTINCT ?bond ) AS ?singleCount ) ( COUNT( DISTINCT ?atom ) AS ?atomCount ) WHERE {
+      ?mol tox:hasCarcinogenicity "Carcinogenic" .
+      ?atom tox:partOfMolecule ?mol .
+      OPTIONAL {
+        ?bond tox:connectsAtom ?atom .
+        ?bond tox:bondType "-" .
+      }
+    }
+    GROUP BY ?mol
+  }
+  BIND( IF( ?atomCount > 0 , xsd:decimal( ?singleCount ) / xsd:decimal( ?atomCount ) , 0 ) AS ?ratio )
+}
+```
+
+**Predicted SPARQL Output**
+| avg_single_per_atom |
+|---|
+| 0.417574 |
+
+</details>
+
+---
+
+
+<details>
+<summary>QID 247 — List elements of atoms that cannot bond with any other atoms <code>challenging</code></summary>
+
+**Question:** List all the elements of atoms that cannot bond with any other atoms.
+
+**Gold SQL**
+```sql
+SELECT DISTINCT T.element FROM atom AS T
+WHERE T.element NOT IN (
+  SELECT DISTINCT T1.element FROM atom AS T1
+  INNER JOIN connected AS T2 ON T1.atom_id = T2.atom_id
+)
+```
+
+**Gold Output**
+| element |
+|---|
+| na |
+| zn |
+| k |
+
+**Predicted SQL**
+```sql
+SELECT DISTINCT element FROM atom
+WHERE atom_id NOT IN (
+  SELECT atom_id FROM connected
+  UNION
+  SELECT atom_id2 FROM connected
+)
+```
+
+**Predicted SQL Output**
+| element |
+|---|
+| na |
+| cl |
+| h |
+| zn |
+| k |
+
+**Predicted SPARQL**
+```sparql
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX tox: <http://toxkg.org/schema#>
+SELECT DISTINCT ?element WHERE {
+  ?atom rdf:type tox:Atom ; tox:element ?element .
+  FILTER NOT EXISTS { ?bond tox:connectsAtom ?atom }
+}
+ORDER BY ?element
+```
+
+**Predicted SPARQL Output**
+| element |
+|---|
+| Chlorine |
+| Hydrogen |
+| Sodium |
+| Unknown Element |
+
+</details>
+
+---
+
+<details>
+<summary>QID 260 — Total atoms in triple-bond molecules containing phosphorus or bromine <code>moderate</code></summary>
+
+**Question:** Calculate the total atoms with triple-bond molecules containing the element phosphorus or bromine.
+
+**Gold SQL**
+```sql
+SELECT COUNT(T1.atom_id)
+FROM atom AS T1
+INNER JOIN molecule AS T2 ON T1.molecule_id = T2.molecule_id
+INNER JOIN bond AS T3 ON T2.molecule_id = T3.molecule_id
+WHERE T3.bond_type = '#' AND T1.element IN ('p', 'br')
+```
+
+**Gold Output**
+| COUNT(atom_id) |
+|---|
+| 1 |
+
+**Predicted SQL**
+```sql
+SELECT COUNT(a.atom_id) FROM atom AS a
+WHERE EXISTS (SELECT 1 FROM bond AS b WHERE b.molecule_id = a.molecule_id AND b.bond_type = '#')
+AND EXISTS (SELECT 1 FROM atom AS a2 WHERE a2.molecule_id = a.molecule_id AND a2.element IN ('p','br'))
+```
+
+**Predicted SQL Output**
+| COUNT(atom_id) |
+|---|
+| 4 |
+
+**Predicted SPARQL**
+```sparql
+PREFIX tox: <http://toxkg.org/schema#>
+SELECT ( SUM( ?atomCount ) AS ?totalAtoms ) WHERE {
+  {
+    SELECT ?mol ( COUNT( DISTINCT ?atom ) AS ?atomCount ) WHERE {
+      ?b tox:partOfMolecule ?mol ; tox:bondType "#" .
+      ?a1 tox:partOfMolecule ?mol ; tox:element ?elem .
+      FILTER ( ?elem IN ( "Phosphorus" , "Bromine" ) )
+      ?atom tox:partOfMolecule ?mol .
+    }
+    GROUP BY ?mol
+  }
+}
+```
+
+**Predicted SPARQL Output**
+| totalAtoms |
+|---|
+| 7 |
+
+</details>
+
+---
+
+<details>
+<summary>QID 263 — Percentage of chlorine in single bond molecules <code>challenging</code></summary>
+
+**Question:** What is the composition of element chlorine in percentage among the single bond molecules?
+
+**Gold SQL**
+```sql
+SELECT CAST(COUNT(CASE WHEN T.element = 'cl' THEN T.atom_id ELSE NULL END) AS REAL)
+  * 100 / COUNT(T.atom_id)
+FROM (
+  SELECT T1.atom_id, T1.element FROM atom AS T1
+  INNER JOIN molecule AS T2 ON T1.molecule_id = T2.molecule_id
+  INNER JOIN bond AS T3 ON T2.molecule_id = T3.molecule_id
+  WHERE T3.bond_type = '-'
+) AS T
+```
+
+**Gold Output**
+| percentage |
+|---|
+| 2.6840 |
+
+**Predicted SQL**
+```sql
+SELECT (SUM(CASE WHEN element = 'cl' THEN 1 ELSE 0 END) * 100.0) / COUNT(*) AS percent
+FROM atom
+WHERE molecule_id IN (SELECT molecule_id FROM bond WHERE bond_type = '-')
+```
+
+**Predicted SQL Output**
+| percent |
+|---|
+| 3.4824 |
+
+**Predicted SPARQL**
+```sparql
+PREFIX tox: <http://toxkg.org/schema#>
+SELECT
+  ( SUM( IF( str( ?element ) = "Chlorine" , 1 , 0 ) ) AS ?num_chlorine )
+  ( COUNT( ?atom ) AS ?total_atoms )
+  ( ( SUM( IF( str( ?element ) = "Chlorine" , 1 , 0 ) ) / COUNT( ?atom ) ) * 100 AS ?percent )
+WHERE {
+  ?bond tox:bondType "-" .
+  ?bond tox:connectsAtom ?atom .
+  ?atom tox:element ?element .
+}
+```
+
+**Predicted SPARQL Output**
+| num_chlorine | total_atoms | percent |
+|---|---|---|
+| 314 | 15486 | 2.0276 |
+
+</details>
+
+---
+
+---
+
+<details>
+<summary>QID 201 — Percentage of carbon in double-bond molecules <code>moderate</code></summary>
+
+**Question:** What is the percentage of carbon in double-bond molecules?
+
+**Gold SQL**
+```sql
+SELECT CAST(COUNT(DISTINCT CASE WHEN T1.element = 'c' THEN T1.atom_id ELSE NULL END) AS REAL)
+  * 100 / COUNT(DISTINCT T1.atom_id)
+FROM atom AS T1
+INNER JOIN bond AS T2 ON T1.molecule_id = T2.molecule_id
+WHERE T2.bond_type = '='
+```
+
+**Gold Output**
+| percentage |
+|---|
+| 38.8096 |
+
+**Predicted SQL**
+```sql
+SELECT (SUM(CASE WHEN T1.element = 'c' THEN 1 ELSE 0 END) * 1.0) / COUNT(T1.atom_id)
+FROM atom AS T1
+INNER JOIN (SELECT DISTINCT molecule_id FROM bond WHERE bond_type = '=') AS T2
+  ON T1.molecule_id = T2.molecule_id
+```
+
+**Predicted SQL Output**
+| percentage |
+|---|
+| 0.3881 |
+
+**Predicted SPARQL**
+```sparql
+PREFIX tox: <http://toxkg.org/schema#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+SELECT ?carbons ?total ( ( xsd:double( ?carbons ) / xsd:double( ?total ) ) AS ?percentage ) WHERE {
+  {
+    SELECT ( COUNT( ?atom ) AS ?total ) WHERE {
+      ?bond a tox:Bond ; tox:bondType "=" ; tox:partOfMolecule ?mol .
+      ?atom tox:partOfMolecule ?mol .
+    }
+  }
+  {
+    SELECT ( COUNT( ?carbonAtom ) AS ?carbons ) WHERE {
+      ?bond2 a tox:Bond ; tox:bondType "=" ; tox:partOfMolecule ?mol2 .
+      ?carbonAtom tox:partOfMolecule ?mol2 ; tox:element ?el .
+      FILTER ( lcase( str( ?el ) ) = "carbon" )
+    }
+  }
+}
+```
+
+**Predicted SPARQL Output**
+| carbons | total | percentage |
+|---|---|---|
+| 20966 | 102779 | 0.203991 |
+
+</details>
+
+
+</details>
+
+<br>
+
+<details>
+<summary>Toxicology database - cases where only GRASP got it wrong</summary>
+
+Here are all the questions from the `toxicology` database where only GRASP got it wrong:
+<details>
+<summary>QID 197 — Calculate the average number of oxygen atoms in single-bonded molecules <code>moderate</code></summary>
+
+**Question:** Calculate the average number of oxygen atoms in single-bonded molecules.
+
+**Gold SQL**
+```sql
+SELECT AVG(oxygen_count) FROM (
+  SELECT T1.molecule_id, COUNT(T1.element) AS oxygen_count
+  FROM atom AS T1
+  INNER JOIN bond AS T2 ON T1.molecule_id = T2.molecule_id
+  WHERE T2.bond_type = '-' AND T1.element = 'o'
+  GROUP BY T1.molecule_id
+) AS oxygen_counts
+```
+
+**Gold Output**
+| AVG(oxygen_count) |
+|---|
+| 99.6835 |
+
+**Predicted SPARQL**
+```sparql
+PREFIX tox: <http://toxkg.org/schema#>
+SELECT ( AVG( ?oCount ) AS ?avgOxygenPerSingleBondedMolecule ) WHERE {
+  {
+    SELECT ?molecule ( COUNT( DISTINCT ?atom ) AS ?oCount ) WHERE {
+      ?atom tox:partOfMolecule ?molecule ; tox:element "Oxygen" .
+      FILTER NOT EXISTS {
+        ?bond tox:partOfMolecule ?molecule ; tox:bondType ?bt .
+        FILTER ( ?bt != "-" )
+      }
+    }
+    GROUP BY ?molecule
+  }
+}
+```
+
+**SPARQL Output**
+| avgOxygenPerSingleBondedMolecule |
+|---|
+| 2.30769 |
+
+</details>
+
+---
+
+<details>
+<summary>QID 208 — Which type of label is the most numerous in atoms with hydrogen? <code>moderate</code></summary>
+
+**Question:** Which type of label is the most numerous in atoms with hydrogen?
+
+**Gold SQL**
+```sql
+SELECT T.label FROM (
+  SELECT T2.label, COUNT(T2.molecule_id)
+  FROM atom AS T1
+  INNER JOIN molecule AS T2 ON T1.molecule_id = T2.molecule_id
+  WHERE T1.element = 'h'
+  GROUP BY T2.label
+  ORDER BY COUNT(T2.molecule_id) DESC
+  LIMIT 1
+) t
+```
+
+**Gold Output**
+| label |
+|---|
+| - |
+
+**Predicted SPARQL**
+```sparql
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX tox: <http://toxkg.org/schema#>
+SELECT ?labelProp ( COUNT( DISTINCT ?atom ) AS ?count ) WHERE {
+  ?atom rdf:type tox:Atom ; tox:element "Hydrogen" ; ?labelProp ?labelVal .
+  FILTER ( CONTAINS( LCASE( STR( ?labelProp ) ) , "label" ) )
+}
+GROUP BY ?labelProp
+ORDER BY DESC ( ?count )
+LIMIT 1
+```
+
+**SPARQL Output**
+| labelProp | count |
+|---|---|
+| http://www.w3.org/2000/01/rdf-schema#label | 4034 |
+
+</details>
+
+---
+
+<details>
+<summary>QID 220 — List top three elements of molecule TR000 in alphabetical order <code>challenging</code></summary>
+
+**Question:** Please list top three elements of the toxicology of the molecule TR000 in alphabetical order.
+
+**Gold SQL**
+```sql
+SELECT DISTINCT T.element
+FROM atom AS T
+WHERE T.molecule_id = 'TR000'
+ORDER BY T.element
+LIMIT 3
+```
+
+**Gold Output**
+| element |
+|---|
+| c |
+| cl |
+| h |
+
+**Predicted SPARQL**
+```sparql
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX tox: <http://toxkg.org/schema#>
+SELECT ?toxElement ?label WHERE {
+  BIND( <http://toxkg.org/molecule/TR000> AS ?molecule )
+  ?molecule ?p ?toxElement .
+  FILTER ( STRSTARTS( STR( ?p ) , STR( tox: ) ) ) .
+  OPTIONAL { ?toxElement rdfs:label ?toxElementLabel . }
+  BIND( COALESCE ( STR( ?toxElementLabel ) , STR( ?toxElement ) ) AS ?label )
+}
+ORDER BY LCASE( ?label )
+LIMIT 3
+```
+
+**SPARQL Output**
+| toxElement | label |
+|---|---|
+| Carcinogenic | Carcinogenic |
+
+</details>
+
+---
+
+<details>
+<summary>QID 228 — Percentage of hydrogen in molecule TR206 to four decimal places <code>moderate</code></summary>
+
+**Question:** How much of the hydrogen in molecule TR206 is accounted for? Please provide your answer as a percentage with four decimal places.
+
+**Gold SQL**
+```sql
+SELECT ROUND(
+  CAST(COUNT(CASE WHEN T.element = 'h' THEN T.atom_id ELSE NULL END) AS REAL)
+  * 100 / COUNT(T.atom_id), 4
+)
+FROM atom AS T
+WHERE T.molecule_id = 'TR206'
+```
+
+**Gold Output**
+| percent |
+|---|
+| 45.4545 |
+
+**Predicted SPARQL**
+```sparql
+PREFIX tox: <http://toxkg.org/schema#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+SELECT ?molecule ?total ?hydrogen ?percentStr WHERE {
+  BIND( <http://toxkg.org/molecule/TR206> AS ?molecule )
+  { SELECT ( COUNT( ?atom ) AS ?total ) WHERE { ?atom tox:partOfMolecule ?molecule . } }
+  {
+    SELECT ( COUNT( ?hAtom ) AS ?hydrogen ) WHERE {
+      ?hAtom tox:partOfMolecule ?molecule ; tox:element ?el .
+      FILTER ( lcase( str( ?el ) ) = "hydrogen" || lcase( str( ?el ) ) = "h" )
+    }
+  }
+  BIND( ( xsd:decimal( ?hydrogen ) * 100.0 ) / xsd:decimal( ?total ) AS ?rawPercent )
+  ...
+}
+```
+
+**SPARQL Output**
+| molecule | total | hydrogen | percentStr |
+|---|---|---|---|
+| http://toxkg.org/molecule/TR206 | 18267 | 4034 | 22.0835 |
+
+</details>
+
+---
+
+<details>
+<summary>QID 230 — Elements and label of molecule TR060 <code>challenging</code></summary>
+
+**Question:** What are the elements of the toxicology and label of molecule TR060?
+
+**Gold SQL**
+```sql
+SELECT DISTINCT T1.element, T2.label
+FROM atom AS T1
+INNER JOIN molecule AS T2 ON T1.molecule_id = T2.molecule_id
+WHERE T2.molecule_id = 'TR060'
+```
+
+**Gold Output**
+| element | label |
+|---|---|
+| c | - |
+| h | - |
+| o | - |
+| n | - |
+| cl | - |
+
+**Predicted SPARQL**
+```sparql
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX tox: <http://toxkg.org/schema#>
+SELECT ?prop ?propLabel ?obj WHERE {
+  BIND( <http://toxkg.org/molecule/TR060> AS ?m )
+  ?m ?prop ?obj .
+  FILTER ( STRSTARTS( STR( ?prop ) , STR( tox: ) ) || ?prop = rdfs:label )
+  OPTIONAL { ?prop rdfs:label ?propLabel . }
+}
+```
+
+**SPARQL Output**
+| prop | propLabel | obj |
+|---|---|---|
+| http://toxkg.org/schema#hasCarcinogenicity | null | Non-Carcinogenic |
+| http://www.w3.org/2000/01/rdf-schema#label | null | Molecule TR060 |
+
+</details>
+
+---
+
+<details>
+<summary>QID 239 — How many connections does atom 19 have? <code>simple</code></summary>
+
+**Question:** How many connections does the atom 19 have?
+
+**Gold SQL**
+```sql
+SELECT COUNT(T.bond_id)
+FROM connected AS T
+WHERE SUBSTR(T.atom_id, -2) = '19'
+```
+
+**Gold Output**
+| COUNT(bond_id) |
+|---|
+| 377 |
+
+**Predicted SPARQL**
+```sparql
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX tox: <http://toxkg.org/schema#>
+SELECT ?atom ( COUNT( DISTINCT ?bond ) AS ?connections ) ?atomLabel WHERE {
+  ?bond tox:connectsAtom ?atom .
+  FILTER ( regex( str( ?atom ) , "_19$" ) )
+  OPTIONAL { ?atom rdfs:label ?atomLabel }
+}
+GROUP BY ?atom ?atomLabel
+ORDER BY DESC ( ?connections )
+```
+
+**SPARQL Output** *(219 rows — showing first)*
+| atom | connections | atomLabel |
+|---|---|---|
+| http://toxkg.org/atom/TR186_19 | 4 | Atom TR186_19 (Carbon) |
+
+</details>
+
+---
+
+<details>
+<summary>QID 240 — List all elements of molecule TR004 <code>challenging</code></summary>
+
+**Question:** List all the elements of the toxicology of the molecule "TR004".
+
+**Gold SQL**
+```sql
+SELECT DISTINCT T.element
+FROM atom AS T
+WHERE T.molecule_id = 'TR004'
+```
+
+**Gold Output**
+| element |
+|---|
+| s |
+| n |
+| o |
+| c |
+| h |
+| p |
+
+**Predicted SPARQL**
+```sparql
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX tox: <http://toxkg.org/schema#>
+SELECT ?p ?o ?o_label WHERE {
+  <http://toxkg.org/molecule/TR004> ?p ?o .
+  FILTER ( STRSTARTS( STR( ?p ) , STR( tox: ) ) )
+  OPTIONAL { ?o rdfs:label ?o_label }
+}
+ORDER BY ?p
+```
+
+**SPARQL Output**
+| p | o | o_label |
+|---|---|---|
+| http://toxkg.org/schema#hasCarcinogenicity | Non-Carcinogenic | null |
+
+</details>
+
+---
+
+<details>
+<summary>QID 273 — Percentage of chlorine in carcinogenic molecules <code>moderate</code></summary>
+
+**Question:** What is the percentage of element chlorine in carcinogenic molecules?
+
+**Gold SQL**
+```sql
+SELECT CAST(COUNT(CASE WHEN T1.element = 'cl' THEN T1.element ELSE NULL END) AS REAL)
+  * 100 / COUNT(T1.element)
+FROM atom AS T1
+INNER JOIN molecule AS T2 ON T1.molecule_id = T2.molecule_id
+WHERE T2.label = '+'
+```
+
+**Gold Output**
+| percentage |
+|---|
+| 3.1419 |
+
+**Predicted SPARQL**
+```sparql
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX tox: <http://toxkg.org/schema#>
+SELECT ?percentage ?withCl ?total WHERE {
+  {
+    SELECT ( COUNT( DISTINCT ?m ) AS ?total ) WHERE {
+      ?m rdf:type tox:Molecule ; tox:hasCarcinogenicity "Carcinogenic" .
+    }
+  }
+  {
+    SELECT ( COUNT( DISTINCT ?m2 ) AS ?withCl ) WHERE {
+      ?m2 rdf:type tox:Molecule ; tox:hasCarcinogenicity "Carcinogenic" .
+      ?a tox:partOfMolecule ?m2 ; tox:element "Chlorine" .
+    }
+  }
+  BIND( ( ( ?withCl * 100.0 ) / ?total ) AS ?percentage )
+}
+```
+
+**SPARQL Output**
+| percentage | withCl | total |
+|---|---|---|
+| 28.9474 | 44 | 152 |
+
+</details>
+</details>
 
 ### Without Ground Truth:
 When we remove the ground truth and ask the judge to compare the two outputs directly, some of the overall statistics look like this:
 
-**Agreement between the two agents**
+**Agreement between the two agents:**
+
 Of the 138 questions where both the agents got it wrong accuracy-wise, the judge found that:
-- 54 questions had `FULL_AGREEMENT` - the two agents returned the exactly same answer
+- 54 questions had `FULL_AGREEMENT` - the two agents returned the exact same answer
 - 26 questions had `PARTIAL_AGREEMENT` - the two agents returned answers that had some overlap but were not identical
 - 58 questions had `TOTAL_DISAGREEMENT` - the two agents returned completely different answers
 
-If both agents return the exact same answer, this could point to cases where the definition of a correct answer might be ambiguous or where there are multiple valid ways to interpret the question or the benchmark ground truth is incorrect.
+For instances where both the agents got wrong answers, these could point to cases where that the benchmark ground truth may be ambiguous or incorrect, or that there are multiple valid interpretations of the question. While ambiguity cannot be ruled out in any of these three categories, FULL_AGREEMENT is the strongest indicator since both agents independently arrived at the same answer despite using different data models and query languages.
 
 <details open>
 <summary>Example</summary>
@@ -628,31 +1625,31 @@ On the 30 questions where only GRASP answered correctly,
 Both systems lost accuracy without evidence, and both gained some wins on the other's previously exclusive subset. There is no clear signal that the evidence favoured one agent over the other disproportionately.
 
 ### Generic vs Semantic RDF
-As specified in the implementation section, the generic RDF mapping is made by an automatic conversion using the same column names and table names and doing a basic mapping while semantic mapping does some key adjustments. The question is whether these adjustments make a difference in the accuracy of the GRASP agent especially for decreasing the schema mismatch errors compared to what a generic mapping would produce.
+As specified in the implementation section, the generic RDF mapping is made by an automatic conversion using the same column names and table names and doing a basic mapping while semantic mapping does some key adjustments. The question is whether these adjustments make a difference in the accuracy of the GRASP agent compared to what a generic mapping would produce, especially for decreasing the non-logical errors which were typically caused by structural mismatch.
 
-For example, `student_club` performed quite well with GRASP but had a higher schema mismatch error rate of 8% as compared to other databases that had also performed well. With the generic mapping, the difference in accuracy is not significant.
+For example, `student_club` performed quite well with GRASP but had a higher non-logical error rate of 8% as compared to other databases that had also performed well. With the generic mapping, the difference in accuracy is not significant.
 - Semantic RDF mapping: 71% accuracy
 - Generic RDF mapping: 75% accuracy
 
-`debit_card_specializing` was the fourth worst performing database with GRASP and had a schema mismatch error rate of 13%. When testing the same with the generic mapping, the results don't change at all.
+`debit_card_specializing` was the fourth worst performing database with GRASP. When testing the same with the generic mapping, the results don't change at all.
 - Semantic RDF mapping: 43% accuracy
 - Generic RDF mapping: 43% accuracy
 
-But the databases that performed the worst with GRASP were `california_schools`, `card_games` and `financial` which also had the highest schema mismatch error rates among all databases and highest performance gaps. We tested these with the generic mapping as well to see how the accuracy changes:
+But the databases that performed the worst with GRASP were `california_schools`, `card_games` and `financial` which also had the highest non-logical error rates among all databases and highest performance gaps. We tested these with the generic mapping as well to see how the accuracy changes:
 
-- For `card_games` with 35% schema mismatch error rate:
+- For `card_games`:
     - Semantic RDF mapping: 28.8% accuracy
     - Generic RDF mapping: 17.3% accuracy
 
-- For `california_schools` with 33% schema mismatch error rate:
+- For `california_schools`:
     - Semantic RDF mapping: 33.33% accuracy
     - Generic RDF mapping: 16.67% accuracy
 
-- For `financial` with 16% schema mismatch error rate:
+- For `financial`:
     - Semantic RDF mapping: 37.5% accuracy
     - Generic RDF mapping: 25% accuracy
 
-So for the databases with the highest schema mismatch rates, the semantic mapping outperforms the basic mapping. These databases tend to have high column counts with ambiguous or opaque naming like `financial` for instance has 15 columns named `A2` through `A16` in a single table, which could explain why the richer semantic mapping fares better. So semantic mapping helps when the barrier is in understanding the schema and matching the right predicates but, we can't say that it helps as much when the barrier is in the logic of the query.
+So for the databases with the highest error rates, the semantic mapping outperforms the basic mapping. These databases tend to have high column counts with ambiguous or opaque naming like `financial` for instance has 15 columns named `A2` through `A16` in a single table, which could explain why the richer semantic mapping fares better. So semantic mapping helps when the barrier is in understanding the schema and matching the right predicates but, we can't say conclusively whether it helps as much when the barrier is in the logic of the query itself like wrong filtering or aggregations.
 
 ### Accuracy Judge: with gold query vs without
 We also ran the accuracy judge without providing the gold and predicted queries i.e. evaluating on outputs alone to see how much the judge's correctness evaluation relies on checking the logic of the query vs just checking the output values. 
