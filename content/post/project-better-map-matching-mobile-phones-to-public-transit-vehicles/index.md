@@ -7,6 +7,7 @@ tags: ["map-matching", "GTFS", "public transit", "mobile phones", "flutter", "C+
 categories: ["project"]
 image: "img/freiburg-nahverkehr.jpg"
 draft: false
+justified: true
 ---
 
 In this blog post, we compare two dynamic map matching algorithms for matching a mobile phone to a public transit vehicle (PTV).
@@ -23,6 +24,7 @@ In this blog post, we compare two dynamic map matching algorithms for matching a
     - [Transition probability](#transition-probability)
     - [Fast graph building](#fast-graph-building)
   - [Flask as our API](#flask-as-our-api)
+- [Evaluation](#evaluation)
 - [Frontend](#frontend)
   - [Flutter as our framework](#flutter-as-our-framework)
   - [Content of the app](#content-of-the-app)
@@ -83,6 +85,8 @@ In the old approach, candidates are edges. All edges that are close to the event
 This old approach has the downside that we find a good spatial solution first, and only afterwards check whether it is temporally valid.
 
 In the new approach
+
+Both approaches have the downside that they rely on linear interpolation for estimating where the PTV is between two stops. This is not accurate for _trip segments_ with varying speeds.
 
 We have the GTFS shapes network, where \\(G_{network}\\) and 
 
@@ -147,11 +151,50 @@ With this approach we can greatly reduce the number of edges and therefore get r
 Map matching is computationally expensive and requires a representation of the public transit network in memory.
 Therefore, it is not feasible to calculate the Markov Chain on a mobile device such as a smartphone.
 Instead, the mobile device continuously records GPS points with a corresponding timestamp. Then, these GPS points are sent to our API on a server.
-The transit network is already loaded in memory on the server, so it can quickly calculate the map matching. 
+The transit network is already loaded in memory on the server, so it can quickly calculate the map matching.
 After calculating a matched path on the server, we only need to return information for displaying the matched path to the mobile device.
 All the requests and responses can be easily handled with [Flask](https://flask.palletsprojects.com/en/2.1.x/) as our API.
 The framework we used for our app makes use of [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) to check if the API permits the actual request.
 Not handling those on the server-side leads to errors. Luckily, there is an [extension](https://flask-cors.readthedocs.io/en/latest/) for Flask to handle these CORS requests.
+
+# Evaluation
+
+In this chapter, we compare PTS and PTVM with regard to query time and accuracy. PTVM strongly outperforms PTS in both categories.
+
+## Method
+
+We consider all trips of the GTFS dataset VAGFR of Freiburg's PTV agency VAG on Wednesday 15th of October 2025. We precalculate simulated trajectories along each trip \\(t\\), which is a list of events \\(ev_{(\texttt{t}, \delta)}\\). Here, \\(\delta \in (\texttt{min_delay},\ \texttt{max_delay})\\) describes noise on top of the time point of the event. For each event on a trip segment (between two stops), we linearly interpolate the timepoint \\(tp\\) based on the arrival/departure time at a trip's previous and next stop. We add a \\(\delta\\) to each \\(tp\\) to simulate some noise in the PTV network. Essentially, this either slows down or speeds up a simulated PTV along a trip segment.
+
+Not only do we consider query time and accuracy on every single trip, we also examine the same metrics for all trip segments along the way.
+
+In order to differentiate the difficulty of a query, we introduce _Activeness_. Trips and trip segments have Activeness \\(a_t\\) or \\(a_{ts}\\). We calculate Activeness based on how many trips pass an edge \\(e_t\\) within our time window: Activeness \\(a_{e_t}\\) of edge \\(e_t\\). Then, for each trip segment \\(ts_t\\) of trip \\(t\\), \\(a_{ts_t} = \texttt{avg}(a_{e_t})\\) for all edges within the trip segment. Similarly, we calculate a trip's Activeness \\(a_t = \texttt{avg}(a_{e_t})\\) for all edges of the trip. Generally, we expect a query to be more difficult if a trip or a trip segment is rather active, as there are more candidates to choose from.
+
+VAGFR contains 3329 trips that start on Wednesday 2025.10.15 00:00:00 and serve two or more stops within 24 hours from then. We generate 912,434 events for all trips, or on average 274 events per trip. As one PTS query averages 0.482 seconds, we can expect a runtime of \\(\sim 122\\) hours on a single core to simulate all trips. As we want to speed up the simulation by parallelizing, we run several PTS backend instances with gunicorn. Only one backend instance does not suffice with one GIL-bound Flask API. With 8 processes, we get the simulation run time down to about 18 hours on a home machine with an AMD Ryzen 5 5600X.
+
+## Settings
+
+For both PTS and PTVM, we can choose the allowed earliness / delay in minutes, as well the GPS radius in meters and the maximum amout of HMM states. For both, we choose the following configuration:
+
+| Parameter | Value | Description |
+| --- | --- | --- |
+| \\(\texttt{EARLINESS\_MINUTES}\\) | 5 | Maximum allowed earliness in minutes for temporal candidate query component |
+| \\(\texttt{DELAY\_MINUTES}\\) | 5 | Maximum allowed delay in minutes for temporal candidate query component |
+| \\(\texttt{GPS\_RADIUS\_M}\\) | 50 | Radius in meters for spatial query component |
+| \\(\texttt{MAX\_HMM\_STATES}\\) | 10 | Maximum number of HMM states to consider per event |
+
+For PTVM, we choose the following configurable parameters:
+
+| Parameter | Value | Description |
+| --- | --- | --- |
+| \\(\texttt{NO\_TRIP\_PENALTY}\\) | 1000 | Penalty if no trip is assigned (no matching found) |
+| \\(\texttt{TRIP\_CHANGE\_PENALTY}\\) | 1000 | Penalty for matching to a different trip than the matching from last request |
+| \\(\texttt{TRANSITION\_PENALTY}\\) | 100 | Penalty if trips are different between events of two HMM layers |
+| \\(\texttt{EMISSION\_PENALTY}\\) | 1000 | Maximum emission score |
+| \\(\texttt{TEMPORAL\_WEIGHT}\\) | 0.5 | Weighting factor for temporal and spatial component of emission score. 0.5 means equal weighting. 0.3 means 30% temporal, 70% spatial. |
+| \\(\texttt{CELL\_SIZE\_KM}\\) | 5 | Grid cell size in kilometers |
+| \\(\texttt{CALENDAR_TIME_INTERVAL_H}\\) | 24 | Slot size of each calendar time interval in hours |
+
+PTS has no other configurable parameters.
 
 # Frontend
 ## Flutter as our framework
