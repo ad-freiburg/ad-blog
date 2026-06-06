@@ -65,15 +65,14 @@ A typical use of MM is a navigation systen, where the gps points of a car get ma
 In Dynamic Map Matching (DMM), instead of matching to a static map, we match to moving targets on an underlying static graph. In our case, the GTFS shapes can be represented as a directed graph \\(G_\texttt{network}\\).
 In this graph, each GPS point of a shape is represented as a node and successive points in a shape are connected with a directed edge.
 
-Mobile devices emit **Events** \\(ev = (\texttt{lat}, \texttt{lon}, \texttt{ts})\\), where we abbreviate timestamp with **ts**.
+Mobile devices emit **Events** \\(ev = (\texttt{lat}, \texttt{lon}, \texttt{time})\\), where we abbreviate timestamp with **time**.
 
 The aim of our dynamic map matching algorithms \\(F_\texttt{DMM}\\) is to match a list of Events \\(EV = [ev_0, ..., ev_{n-1}]\\) to both spatial and temporal dimensions, such that the most likely trip \\(t_\texttt{best}\\) is returned: \\(F_\texttt{DMM}(EV) = t_\texttt{best}\\)
 
 ### Hidden Markov Models
 
 The map matching can be solved by using a [Hidden Markov Model (HMM)](https://en.wikipedia.org/wiki/Hidden_Markov_model).
-A HMM is used when a process can likely be modeled by a Markov chain (The probability of transitioning from one state to another is solely
-dependant on the current state), but its states are unknown.
+A HMM is used when a process can likely be modeled by a Markov chain (The probability of transitioning from one state to another is solely dependant on the current state), but its states are unknown.
 
 In the old approach, we filter the GTFS shapes network graph \\(G_{network}\\) spatially to get **candidates** \\(c_j \in C\\) for each event \\(ev_i\\). With these, we create HMM graph \\(G_\texttt{HMM}\\), which consists of \\(|EV|\\) layers. We find the shortest path through the network, based on emission probabilities \\(P_\texttt{emission}\\) and transition probabilities \\(P_\texttt{transition}\\) (see [infographic])
 
