@@ -98,8 +98,6 @@ WHERE {
 
 Of course a conversion from the internally used epoch time to a date object was necessary. Firstly the total days contained in the epoch time duration werde extracted using `std::chrono::floor<std::chrono::days>`. Using these days a `std::chrono::year_month_day` is constructed. Then from the remaining duration the total amount of seconds are extracted using `std::chrono::floor<std::chrono::seconds>`. With the seconds a `std::chrono::hh_mm_ss` is constructed. This object will automatically make a time from the seconds. Then again from the remaining duration the milliseconds are extracted. If the year of the `std::chrono::year_month_day` is in [-9999, 9999] a date is constructed using the methods of `std::chrono::year_month_day` and `std::chrono::hh_mm_ss` to immediately get the year, month, day, hours, minutes and seconds. The milliseconds are added to the seconds which will result in a `double` value. If the year is not in the range a large year object, that only contains the year, is constructed.
 
-TODO: makeFrom Epoch
-
 ### Addition/Subtraction
 
 The following operations were implemented in this project: 
@@ -109,7 +107,22 @@ The following operations were implemented in this project:
 |`xsd:date - xsd:dayTimeDuration`|The result will be the date and time that is the time of the duration earlier than the date. | `xsd:dateTime` |
 |`xsd:dateTime - xsd:dateTime`| As above this will compute the duration between the two dates. Here also taking into account the time. | `xsd:dayTimeDuration`|
 |`xsd:dateTime - xsd:dayTimeDuration`| As above this results in a date and time that is the time of the duration earlier than the date. | `xsd:dateTime`|
-||||
+|`xsd:gYear - xsd:gYear`| As with dates this will yield the duration between the two years. |`xsd:dayTimeDuration`|
+|`xsd:date + xsd:dayTimeDuration`| Similar to above the result will be a date that is the time of the duration later than the original date. |`xsd:dateTime`|
+|`xsd:dateTime + xsd:dayTimeDuration`|Here again the result will be the time of the duration later than the original date and time. |`xsd:dateTime`|  
+
+
+In QLever the subtractions of `xsd:date`and `xsd:dateTime` and `xsd:gYear` (that are in [-9999, 9999]) are all handled the same. Internally they are all interpreted as a date and can thus be turned into an [epoch time](#epoch-time). The subtraction is done between both millisecond epoch times. From the result an according duration is constructed as a result.  
+Since they are all internally seen as the same class, it is also possible to subtract between them.
+
+For the subtraction of two so called `LargeYears`, a `xsd:gYear` outside of [-9999, 9999], both years will be used to create two corresponding `std::chrono::year_month_day` (using Jan 1.). The difference between those years will then be computed by subtracting the `std::chrono::sys_days`. The total amount of days between the two years is then fetched by using the `count`-method of the difference. This days amount is used to construct the resulting duration.  
+
+The subtraction and addition between two `xsd:dayTimeDuration` objects is more simple. Internally the durations are stored by a total amount of milliseconds. Therefore the computation is just done between the amounts of milliseconds. Then the duration type needs to be set according to whether the duration is positive or negative and the new result duration is constructed using the result of the computation.  
+
+Lastly for the subtraction and addition between a date type (`xsd:date` or `xsd:dateTime`) and a `xsd:dayTimeDuration` a combination of the previous procedures is used. The computation is done between the epoch representation of the date and the total amount of milliseconds of the duration. The result of this computation will again be a epoch time, that will be converted into a date again [as seen above](#epoch-time).
+
+
+
 
 
 TODO: focus on subtraction (addition is equivalent)
