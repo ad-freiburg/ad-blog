@@ -57,6 +57,12 @@ GTFS also gives us arrival and departure times for every stop on a trip.
 **Service information**\
 Every trip operates based on a service, which describes whether the trip is active on a given weekday. There can also be exceptions for specific dates, e.g. holidays.
 
+### Active Trips
+
+We consider a trip as active during time point \\(t\\), if \\(\texttt{trip\_start} < t < \texttt{trip\_end}\\) for \\(\texttt{trip\_start}, \texttt{trip\_end} \in \texttt{stop_times}(\texttt{trip})\\).
+
+Similarly, we consider an edge as active during time point \\(t\\), if the edge is part of a shape that is used by an active trip.
+
 ## Map Matching to a Dynamic Map
 
 Map Matching (MM) describes the process of fitting (often noisy) recorded points to the trajectory of a vehicle on a static map. [IMG?]
@@ -82,17 +88,24 @@ While the candidates in the old PTS approach are a filtered set of edges from GT
 
 #### PTS
 
-In the old approach, candidates are edges. All edges that are close to the event locations [(see Figure 1)](#fig:g_network) are candidates in \\(G_\texttt{HMM}\\) [(see Figure 2)](#fig:g_hmm).
-We then find the shortest path through \\(G_\texttt{HMM}\\), which gives a set of shortest path edges \\(E_\texttt{sp}\\). After this step, we take the GTFS shape that is most common along all \\(e \in E_\texttt{sp}\\). From this shape, we choose an active trip with the mose occurences on the edges of \\(E_\texttt{sp}\\). If there is a tie, only then do we do a more precise time based matching.
-Generally, this old approach tries find a good spatial solution first, and only afterwards checks whether it is temporally valid.
+On an incoming event from a user request, the older approach PTS starts by querying an R-Tree for close edges to the event location. PTS then filters roughly by time, so we just consider edges that are generally active during the event time. In this context, active means that the edge is used by a trip that is actively moving anywhere on its shape at the event time.
+
+Now, PTS adds these edges to a HMM. In PTS, HMM-candidates are edges. All edges that are close to the event locations [(see Figure 1)](#fig:g_network) are candidates in \\(G_\texttt{HMM}\\) [(see Figure 2)](#fig:g_hmm).
 
 {{< figure id="fig:g_network" src="img/PTS_G_network.png" alt="G_network" width="600" caption="Figure 1: \\(G_{\text{network}}\\) contains all edges. The two colored points are events (timestamped locations) emitted by a user. In this example, all edges are close to an event." >}}
 
 {{< figure id="fig:g_hmm" src="img/PTS_G_HMM.png" alt="G_HMM" width="600" caption="Figure 2: \\(G_{\text{HMM}}\\) has one column for each event. Each event column contains all edges that are close to the event. The red path \\([\texttt{Start}, e^0_{ev_0}, e^0_{ev_1}, \texttt{End}]\\) is the shortest path through \\(G_{\text{HMM}}\\) (compare with the [\\(G_{\text{network}}\\)-Figure 1 above](#fig:g_network))." >}}
 
+We then find the shortest path through \\(G_\texttt{HMM}\\), which gives a set of shortest path edges \\(E_\texttt{sp}\\). After this step, we take the GTFS shape that is most common along all \\(e \in E_\texttt{sp}\\). From this shape, we choose an active trip with the mose occurences on the edges of \\(E_\texttt{sp}\\). If there is a tie, only then do we do a more precise time based matching.
+Generally, this old approach tries find a good spatial solution first, and only afterwards checks whether it is temporally valid.
+
 #### PTVM
 
-In the new approach, both spatial and temporal dimensions are taken into consideration simultaneously. The weight of the dimensions can be tuned with a parameter. In the PTVM-approach candidates are trips, not edges as in PTS.
+In the new approach PTVM, both spatial and temporal dimensions are taken into consideration simultaneously. The weight of the dimensions can be tuned with a parameter. In the PTVM-approach, HMM-candidates are trips, not edges as in PTS.
+
+PTVM starts by querying its Geocalendar Index (GCI) for crude spatial and temporal trip candidates. A GCI consists of a grid containing spatial candidate trips [(see Figure 3)](#fig:grid), as well as a calendar, which is a list of evenly spaced time intervals, which each contain trips that are active at any point during the interval.
+
+After querying \\(\texttt{GCI}(ev) = \texttt{grid}(ev) \cap \texttt{calendar}(ev)\\), 
 
 {{< figure id="fig:grid" src="img/PTVM_Grid.png" alt="PTVM Grid" width="800" caption="Figure 3: PTVM's spatial component of the GCI: Each cell in the grid contains a list of trips that are on any of the edges passing the cell. In this example, the blue shape is the shape trips \\(\texttt{T1}\\) and \\(\texttt{T2}\\), while the pink shape holds trips \\(\texttt{T3}\\) and \\(\texttt{T4}\\). The cell on the top left grid-position thus holds the list \\([\texttt{T3}, \texttt{T4}]\\), while the top right cell holds \\([\texttt{T1}, \texttt{T2}, \texttt{T3}, \texttt{T4}]\\)." >}}
 
