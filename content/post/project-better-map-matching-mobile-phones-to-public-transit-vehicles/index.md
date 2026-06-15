@@ -57,11 +57,17 @@ GTFS also gives us arrival and departure times for every stop on a trip.
 **Service information**\
 Every trip operates based on a service, which describes whether the trip is active on a given weekday. There can also be exceptions for specific dates, e.g. holidays.
 
+### Trip Segments
+
+We can subdivide a trip into k segments, where each segment describes the part of the trip between two stops. [img?]
+
 ### Active Trips
 
 We consider a trip as active during time point \\(t\\), if \\(\texttt{trip\_start} < t < \texttt{trip\_end}\\) for \\(\texttt{trip\_start}, \texttt{trip\_end} \in \texttt{stop_times}(\texttt{trip})\\).
 
 Similarly, we consider an edge as active during time point \\(t\\), if the edge is part of a shape that is used by an active trip.
+
+We can relax the definition of activeness by allowing for a slack \\((\texttt{earliness},\ \texttt{delay})\\) before and after the trip's start / end time.
 
 ## Map Matching to a Dynamic Map
 
@@ -105,7 +111,7 @@ In the new approach PTVM, both spatial and temporal dimensions are taken into co
 
 PTVM starts by querying its Geocalendar Index (GCI) for crude spatial and temporal trip candidates. A GCI consists of a grid containing spatial candidate trips [(see Figure 3)](#fig:grid), as well as a calendar, which is a list of evenly spaced time intervals, which each contain trips that are active at any point during the interval.
 
-After querying \\(\texttt{GCI}(ev) = \texttt{grid}(ev) \cap \texttt{calendar}(ev)\\), 
+After querying a list of trips \\(\texttt{GCI}(ev) = \texttt{grid}(ev) \cap \texttt{calendar}(ev)\\), we loop over all of their trip segments. We first filter by 50m radius, then by a \\((\texttt{earliness},\ \texttt{delay})\\)-relaxed time window to get both close and active trip candidates. 
 
 {{< figure id="fig:grid" src="img/PTVM_Grid.png" alt="PTVM Grid" width="800" caption="Figure 3: PTVM's spatial component of the GCI: Each cell in the grid contains a list of trips that are on any of the edges passing the cell. In this example, the blue shape is the shape trips \\(\texttt{T1}\\) and \\(\texttt{T2}\\), while the pink shape holds trips \\(\texttt{T3}\\) and \\(\texttt{T4}\\). The cell on the top left grid-position thus holds the list \\([\texttt{T3}, \texttt{T4}]\\), while the top right cell holds \\([\texttt{T1}, \texttt{T2}, \texttt{T3}, \texttt{T4}]\\)." >}}
 
