@@ -74,35 +74,31 @@ The aim of our dynamic map matching algorithms \\(F_\texttt{DMM}\\) is to match 
 The map matching can be solved by using a [Hidden Markov Model (HMM)](https://en.wikipedia.org/wiki/Hidden_Markov_model).
 A HMM is used when a process can likely be modeled by a Markov chain (The probability of transitioning from one state to another is solely dependant on the current state), but its states are unknown.
 
-In the old approach, we filter the GTFS shapes network graph \\(G_{network}\\) spatially to get **candidates** \\(c_j \in C\\) for each event \\(ev_i\\). With these, we create HMM graph \\(G_\texttt{HMM}\\), which consists of \\(|EV|\\) layers. We find the shortest path through the network, based on emission probabilities \\(P_\texttt{emission}\\) and transition probabilities \\(P_\texttt{transition}\\) (see [infographic])
+In both approaches PTS and PTVM, we get **HMM candidates** \\(c_j \in C_\texttt{PTS}\\) for each event \\(ev_i\\). With these, we create HMM graph \\(G_\texttt{HMM}\\), which consists of \\(|EV|\\) layers. We find the shortest path through the network, based on emission probabilities \\(P_\texttt{emission}\\) and transition probabilities \\(P_\texttt{transition}\\) (see [infographic]).
 
 ### What is a Candidate? Old vs New Approach
 
-This is where the old and new approaches differ.
+While the candidates in the old PTS approach are a filtered set of edges from GTFS shapes network graph \\(G_{network}\\), the new PTVM approach uses a set of filtered trips as candidates.
 
-In the old approach, candidates are edges. All edges that are close to the event location are candidates in \\(G_\texttt{HMM}\\). We then find the shortest path through \\(G_\texttt{HMM}\\), which gives a set of shortest path edges \\(E_\texttt{sp}\\). After this step, we take the GTFS shape that is most common along all \\(e \in E_\texttt{sp}\\).  for active trips on it, which gives us possible best trips to choose from.
-This old approach has the downside that we find a good spatial solution first, and only afterwards check whether it is temporally valid.
+#### PTS
 
-In the new approach
+In the old approach, candidates are edges. All edges that are close to the event locations [(see Figure 1)](#fig:g_network) are candidates in \\(G_\texttt{HMM}\\) [(see Figure 2)](#fig:g_hmm).
+We then find the shortest path through \\(G_\texttt{HMM}\\), which gives a set of shortest path edges \\(E_\texttt{sp}\\). After this step, we take the GTFS shape that is most common along all \\(e \in E_\texttt{sp}\\). From this shape, we choose an active trip with the mose occurences on the edges of \\(E_\texttt{sp}\\). If there is a tie, only then do we do a more precise time based matching.
+Generally, this old approach tries find a good spatial solution first, and only afterwards checks whether it is temporally valid.
+
+{{< figure id="fig:g_network" src="img/PTS_G_network.png" alt="G_network" width="600" caption="Figure 1: \\(G_{\text{network}}\\) contains all edges. The two colored points are events (timestamped locations) emitted by a user. In this example, all edges are close to an event." >}}
+
+{{< figure id="fig:g_hmm" src="img/PTS_G_HMM.png" alt="G_HMM" width="600" caption="Figure 2: \\(G_{\text{HMM}}\\) has one column for each event. Each event column contains all edges that are close to the event. The red path \\([\texttt{Start}, e^0_{ev_0}, e^0_{ev_1}, \texttt{End}]\\) is the shortest path through \\(G_{\text{HMM}}\\) (compare with the [\\(G_{\text{network}}\\)-Figure 1 above](#fig:g_network))." >}}
+
+#### PTVM
+
+In the new approach, both spatial and temporal dimensions are taken into consideration simultaneously. The weight of the dimensions can be tuned with a parameter. In the PTVM-approach candidates are trips, not edges as in PTS.
+
+{{< figure id="fig:grid" src="img/PTVM_Grid.png" alt="PTVM Grid" width="800" caption="Figure 3: PTVM's spatial component of the GCI: Each cell in the grid contains a list of trips that are on any of the edges passing the cell. In this example, the blue shape is the shape trips \\(\texttt{T1}\\) and \\(\texttt{T2}\\), while the pink shape holds trips \\(\texttt{T3}\\) and \\(\texttt{T4}\\). The cell on the top left grid-position thus holds the list \\([\texttt{T3}, \texttt{T4}]\\), while the top right cell holds \\([\texttt{T1}, \texttt{T2}, \texttt{T3}, \texttt{T4}]\\)." >}}
 
 Both approaches have the downside that they rely on linear interpolation for estimating where the PTV is between two stops. This is not accurate for _trip segments_ with varying speeds.
 
 We have the GTFS shapes network, where \\(G_{network}\\) and 
-
-We can model the Markov Chain by creating a directed graph \\(G_{markov}\\).
-Each node represents a possible edge \\(e \in G_{network}\\) and the edges of \\(G_{markov}\\) contain the probability of a transition from one node to another \\(P_{transition}(e^1 \to e^2)\\).
-We create a starting node, and then add all edges that are close to the first GPS point \\(c_1 \in C\\). 
-Then, we add edges between the starting node and every node from the first GPS point \\(c_1\\). 
-After that, we add all edges that are close to the second GPS point and connect these with the nodes of the previous GPS point. 
-We repeat this for each GPS point in \\(C\\). In the end, we add an end node and connect it to the nodes of the last GPS point.
-<img src="img/markov_chain.png" title="Markov Chain"></img>
-If we assign meaningful transition probabilities to the edges in \\(G_{markov}\\), we can find the shortest path from the start node to the end node. 
-This will give us edges that are on a path that fits best to the GPS points.
-With this in mind, we do not really have probabilities, but instead those can be thought of as weights. 
-We use [Djikstra's algorithm](https://en.wikipedia.org/wiki/Dijkstra's_algorithm), which finds the shortest path by summing up all the weights on a path. 
-As a consequence, if a path has higher probability, the weight needs to be smaller.
-Note that the Djikstra's algorithm typically adds all the weights together, but probabilities are usually multiplied. 
-This is why we use the logarithmic space for the probabilities. Hence, adding weights corresponds to multiplying the squared probabilities.
 
 ### Transition probability
 The transition probability describes the likelihood of getting from one state in the Markov Chain to another.
