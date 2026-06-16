@@ -35,7 +35,7 @@ In this blog post, we compare two dynamic map matching algorithms for matching a
 
 # Introduction
 
-We present an algorithm to deduce the public transit vehicle (PTV) a mobile phone is travelling in in real time. In a nutshell, this is based on analyzing the last few GPS points of the device and applying our spatio-temporal map matching algorithm, which uses static (non-realtime) PTV schedule information.
+We present an algorithm to deduce the public transit vehicle (PTV) a mobile phone is travelling in real time. In a nutshell, this is based on analyzing the last few GPS points of the device and applying our spatio-temporal map matching algorithm, which uses static (non-realtime) PTV schedule information.
 
 This project aims to improve on Robin Wu's and my previous work [1-3], by improving accuracy and speed. We therefore re-design our previous spatio-temporal map-matching algorithm conceptually. We further improve query speed by implementing the reworked backend in C++.
 
@@ -140,16 +140,24 @@ The spatio-temporal score is then calulcated as followed, using the tunable para
 \end{cases}
 \end{equation}
 
-The temporal component of the score is visualized in [in Figure 5](#fig-temporal-emission).
+The spatial component linearly rises from \\(\texttt{dist}(p_{e_j}) \geq r \to 0\\) to \\(\texttt{dist}(p_{e_j}) = 0 \to \\)
+The temporal component of the score is visualized [in Figure 5](#fig-temporal-emission).
 
-{{< figure id="fig-temporal-emission" src="img/PTVM_temporal_emission.png" alt="PTVM Temporal Emission Score" width="800" caption="> Figure 5: The temporal component of the emission score is at its maximum for punctual \\(tp_{p_{e_j}}\\) and linearly decreases to zero on tunable earliness and delay threshold values." >}}
+{{< figure id="fig-temporal-emission" src="img/PTVM_temporal_emission.png" alt="PTVM Temporal Emission Score" width="800" caption="> Figure 5: The temporal component of the emission score is \\(0\\) for punctual \\(tp_{p_{e_j}}\\) and linearly increases to its maximum on tunable earliness and delay threshold values." >}}
 
 In order to determine the HMM candidates, we choose the maximum trip segment score \\(c_{t_i} \max \texttt{score}(ts_{t_i})\\) for all trips. If \\(c_{t_i} < \texttt{emission_threshold}\\), trip \\(t_i\\) is chosen as a HMM candidate for event \\(ev\\). We can recycle \\(c_{t_i}\\) for the HMM emission score.
 
+#### PTVM HMM
+
+A HMM is a layered directed acyclic graph (LDAG), which enables us to use a heap-queue-free layer relaxation algorithm to find the shortest path from start to the end node.
+
 ### Transition probability
+
 The transition probability describes the likelihood of getting from one state in the Markov Chain to another.
 As a reminder, the transition probability is the weight from a node \\(e^1\\) to one of its outgoing neighbors \\(e^2\\) in \\(G_{markov}\\).
+
 <img src="img/transition.png" title="Transition"></img>
+
 Firstly, each node represents an edge, and we want to include the length of the edge in the weight. 
 The length can be calculated with the [great circle distance](https://en.wikipedia.org/wiki/Great-circle_distance) between the two end points of an edge.
 Then, we try to find the shortest path from \\(e^1\\) to \\(e^2\\) within \\(G_{network}\\).
@@ -159,15 +167,19 @@ Since we are getting all close edges within a 100 meters radius, the opposite di
 If we remember the order of the edges in a shape, we can check if the edges are in ascending order oder descending order.
 Travelling in descending order means that we are travelling in the opposite direction of the shape. Thus, we penalize this direction.
 In contrast, an ascending order corresponds to the correct direction, so we just set the penalty to 0.
+
 \begin{align*}
     P_{transition}(e^1 \to e^2) &= ||e^1||_{great\\_circle} + ||e^2||_{great\\_circle}\newline
     &\phantom{\text{= }} + \text{len_shortest\_path}(e^1, e^2) + \text{direction\_penalty}(e^1, e^2)
 \end{align*}
+
 If there is no such direct path available, we penalize this path by adding a high weight.
 This has the effect that this path can then still be matched if there is no other possibility. This can happen due to a transfer between vehicles.\
 As the start and end nodes of \\(G_{markov}\\) do not represent edges, we need a different transition probability for those.
 For the start node, we use the shortest great circle distance of the first GPS point to the first edge as weight.
+
 <img src="img/transition_start.png" title="Transition from Start"></img>
+
 In the same manner, we calculate the distance between the last edge to the last GPS point.
 As a result, we get a shape where the start and end points are close to the GPS points.
 
