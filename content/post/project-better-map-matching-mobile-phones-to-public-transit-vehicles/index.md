@@ -96,30 +96,55 @@ While the candidates in the old PTS approach are a filtered set of edges from GT
 
 On an incoming event from a user request, the older approach PTS starts by querying an R-Tree for close edges to the event location. PTS then filters roughly by time, so we just consider edges that are generally active during the event time. In this context, active means that the edge is used by a trip that is actively moving anywhere on its shape at the event time.
 
-Now, PTS adds these edges to a HMM. In PTS, HMM-candidates are edges. All edges that are close to the event locations [(see Figure 1)](#fig:g_network) are candidates in \\(G_\texttt{HMM}\\) [(see Figure 2)](#fig:g_hmm).
+<div id="fig-g_network"></div>
 
-{{< figure id="fig:g_network" src="img/PTS_G_network.png" alt="G_network" width="800" caption="> Figure 1: \\(G_{\text{network}}\\) contains all edges. The two colored points are events (timestamped locations) emitted by a user. In this example, all edges are close to an event." >}}
+Now, PTS adds these edges to a HMM. In PTS, HMM-candidates are edges. All edges that are close to the event locations [(see Figure 1)](#fig-g_network) are candidates in \\(G_\texttt{HMM}\\) [(see Figure 2)](#fig-g_hmm).
 
-{{< figure id="fig:g_hmm" src="img/PTS_G_HMM.png" alt="G_HMM" width="800" caption="> Figure 2: \\(G_{\text{HMM}}\\) has one column for each event. Each event column contains all edges that are close to the event. The red path \\([\texttt{Start}, e^0_{ev_0}, e^0_{ev_1}, \texttt{End}]\\) is the shortest path through \\(G_{\text{HMM}}\\) (compare with the [\\(G_{\text{network}}\\)-Figure 1 above](#fig:g_network))." >}}
+{{< figure id="fig-g_network" src="img/PTS_G_network.png" alt="G_network" width="800" caption="> Figure 1: \\(G_{\text{network}}\\) contains all edges. The two colored points are events (timestamped locations) emitted by a user. In this example, all edges are close to an event, meaning they are within the event radius." >}}
+
+<div id="fig-g_hmm"></div>
+
+{{< figure id="fig-g_hmm" src="img/PTS_G_HMM.png" alt="G_HMM" width="800" caption="> Figure 2: \\(G_{\text{HMM}}\\) has one column for each event. Each event column contains all edges that are close to the event. The red path \\([\texttt{Start}, e^0_{ev_0}, e^0_{ev_1}, \texttt{End}]\\) is the shortest path through \\(G_{\text{HMM}}\\) (compare with the [\\(G_{\text{network}}\\)-Figure 1 above](#fig-g_network))." >}}
 
 We then find the shortest path through \\(G_\texttt{HMM}\\), which gives a set of shortest path edges \\(E_\texttt{sp}\\). After this step, we take the GTFS shape that is most common along all \\(e \in E_\texttt{sp}\\). From this shape, we choose an active trip with the mose occurences on the edges of \\(E_\texttt{sp}\\). If there is a tie, only then do we do a more precise time based matching.
 Generally, this old approach tries find a good spatial solution first, and only afterwards checks whether it is temporally valid.
 
 #### PTVM
 
-In the new approach PTVM, both spatial and temporal dimensions are taken into consideration simultaneously. The weight of the dimensions can be tuned with a parameter. In the PTVM-approach, HMM-candidates are trips, not edges as in PTS.
+In the new approach PTVM, both spatial and temporal dimensions are taken into consideration simultaneously. The weight of the dimensions can be tuned with a parameter \\(\psi\\). In the PTVM-approach, HMM-candidates are trips, not edges as in PTS.
 
-PTVM starts by querying its Geocalendar Index (GCI) for crude spatial and temporal trip candidates. A GCI consists of a grid containing spatial candidate trips [(see Figure 3)](#fig:grid), as well as a calendar, which is a list of evenly spaced time intervals, which each contain trips that are active at any point during the interval.
+<div id="fig-grid"></div>
 
-{{< figure id="fig:grid" src="img/PTVM_Grid.png" alt="PTVM Grid" width="800" caption="> Figure 3: PTVM's spatial component of the GCI: Each cell in the grid contains a list of trips that are on any of the edges passing the cell. In this example, the blue shape is the shape trips \\(\texttt{T1}\\) and \\(\texttt{T2}\\), while the pink shape holds trips \\(\texttt{T3}\\) and \\(\texttt{T4}\\). The cell on the top left grid-position thus holds the list \\([\texttt{T3}, \texttt{T4}]\\), while the top right cell holds \\([\texttt{T1}, \texttt{T2}, \texttt{T3}, \texttt{T4}]\\)." >}}
+PTVM starts by querying its Geocalendar Index (GCI) for crude spatial and temporal trip candidates. A GCI consists of a grid containing spatial candidate trips [(see Figure 3)](#fig-grid), as well as a calendar, which is a list of evenly spaced time intervals, which each contain trips that are active at any point during the interval.
 
-After querying a list of trips \\(\texttt{GCI}(ev) = \texttt{grid}(ev) \cap \texttt{calendar}(ev)\\), we loop over all of their trip segments. We first filter by \\(k=50m\\) radius, then by a \\((\texttt{earliness},\ \texttt{delay})\\)-relaxed time window to get both close and active trip segments. On these remaining trip segments, we calculate a mixed spatio-temporal score.
+{{< figure id="fig-grid" src="img/PTVM_Grid.png" alt="PTVM Grid" width="800" caption="> Figure 3: PTVM's spatial component of the GCI: Each cell in the grid contains a list of trips that are on any of the edges passing the cell. In this example, the blue shape is the shape trips \\(\texttt{T1}\\) and \\(\texttt{T2}\\), while the pink shape holds trips \\(\texttt{T3}\\) and \\(\texttt{T4}\\). The cell on the top left grid-position thus holds the list \\([\texttt{T3}, \texttt{T4}]\\), while the top right cell holds \\([\texttt{T1}, \texttt{T2}, \texttt{T3}, \texttt{T4}]\\)." >}}
 
-{{< figure id="fig:emission" src="img/PTVM_mixed_emission_score.png" alt="PTVM Mixed Emission Score" width="800" caption="> Figure 4: This Figure visualizes the calculation of the spatio-temporal emission score, that is calculated for each PTVM HMM candidate trip. The orange point represents a user emitted event location \\(ev\\), the orange circle around it the \\(k=50m\\) radius. The alternating black and red lines represent edges of an active trip segment passing through the event radius. For all edges \\(e_i\\) in the event radius, we determine the closest point \\(p_{e_i}\\) to \\(ev\\), represented as turqouise points. Based on the stop times of the trip segment, we interpolate the expected time of the PTV at each \\(p_{e_i}\\). The final emission score for this trip is the best combination of time discrepancy and spatial distance." >}}
+<div id="fig-emission"></div>
 
-Both approaches have the downside that they rely on linear interpolation for estimating where the PTV is between two stops. This is not accurate for _trip segments_ with varying speeds.
+After querying a list of trips \\(\texttt{GCI}(ev) = \texttt{grid}(ev) \cap \texttt{calendar}(ev)\\), we loop over all trip segments \\(ts_{t_i}\\) for all of these trips \\(t_i\\). We first filter by radius \\(r\\), then by a \\((\texttt{earliness},\ \texttt{delay})\\)-relaxed time window to get both close and active trip segments. On these remaining trip segments, we calculate a spatio-temporal score, [visualized in Figure 4](#fig-emission). For all edges \\(e_j = e_{ts_{t_i}}\\) in the event radius, we determine the closest point \\(p_{e_j}\\) to \\(ev\\). Based on the stop times of the trip segment, we interpolate the expected time \\(tp_{p_{e_j}}\\) of the PTV at each \\(p_{e_j}\\).
 
-We have the GTFS shapes network, where \\(G_{network}\\) and 
+{{< figure id="fig-emission" src="img/PTVM_mixed_emission_score.png" alt="PTVM Mixed Emission Score" width="800" caption="> Figure 4: This Figure visualizes the calculation of the spatio-temporal emission score, that is calculated for each PTVM HMM candidate trip. The orange point shows a user emitted event location \\(ev\\), the orange circle around it the event radius \\(r\\). The alternating black and red lines represent edges of an active trip segment passing through the event radius. The arrow points to the interpolated position of the trip on no delay or earliness \\(p_\texttt{on\_time}\\). For all edges \\(e_i\\) in the event radius, we determine the closest point \\(p_{e_i}\\) to \\(ev\\), represented as turqouise points. Based on the stop times of the trip segment, we interpolate the expected time of the PTV at each \\(p_{e_i}\\). The final emission score for this trip is the best combination of time discrepancy and spatial distance." >}}
+
+<div id="fig-emission-equation"></div>
+
+The spatio-temporal score is then calulcated as followed, using the tunable parameter \\(\psi \in [0, 1]\\) and the time at the position where the PTV should be without any delay \\(tp_\texttt{on\_time}\\):
+
+<div id="fig-temporal-emission"></div>
+
+\begin{equation}
+\texttt{score}(ts_{t_i}) = \psi \cdot \texttt{spatial}(ts_{t_i}) + (1 - \psi) \cdot \texttt{temporal}(ts_{t_i})\\\\
+\texttt{spatial}(ts_{t_i}) = \frac{\texttt{dist}(p_{e_j},\ ev)}{r}\\\\
+\texttt{temporal}(ts_{t_i}) = \begin{cases}
+  \frac{tp_\texttt{on\_time} - tp_{p_{e_j}}}{\texttt{allowed\_delay}}, & \text{if trip delayed:}\ (tp_{p_{e_j}} < tp_\texttt{on\_time})\\\\
+  \frac{tp_{p_{e_j}} - tp_\texttt{on\_time}}{\texttt{allowed\_earliness}}, & \text{if trip early:}\ (tp_\texttt{on\_time} < tp_{p_{e_j}})\\\\
+\end{cases}
+\end{equation}
+
+The temporal component of the score is visualized in [in Figure 5](#fig-temporal-emission).
+
+{{< figure id="fig-temporal-emission" src="img/PTVM_temporal_emission.png" alt="PTVM Temporal Emission Score" width="800" caption="> Figure 5: The temporal component of the emission score is at its maximum for punctual \\(tp_{p_{e_j}}\\) and linearly decreases to zero on tunable earliness and delay threshold values." >}}
+
+In order to determine the HMM candidates, we choose the maximum trip segment score \\(c_{t_i} \max \texttt{score}(ts_{t_i})\\) for all trips. If \\(c_{t_i} < \texttt{emission_threshold}\\), trip \\(t_i\\) is chosen as a HMM candidate for event \\(ev\\). We can recycle \\(c_{t_i}\\) for the HMM emission score.
 
 ### Transition probability
 The transition probability describes the likelihood of getting from one state in the Markov Chain to another.
@@ -270,3 +295,9 @@ Now, we have generated timed GPS points which can be used by our selenium script
 
 # Installation
 You can try everything out on your own by cloning our [GitHub repository](https://github.com/TheRealTirreg/PublicTransitSnapper/) and following the instructions in the README.md.
+
+# TODO
+
+Speedup: Replace grid with R-Tree, cache HMM layers for one event. Not needed because fast enough for our purposes.
+
+Both approaches have the downside that they rely on linear interpolation for estimating where the PTV is between two stops. This is not accurate for trip segments with varying speeds.
