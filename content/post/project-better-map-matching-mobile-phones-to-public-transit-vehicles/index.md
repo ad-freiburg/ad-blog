@@ -125,20 +125,20 @@ After querying a list of trips \\(\texttt{GCI}(ev) = \texttt{grid}(ev) \cap \tex
 
 {{< figure id="fig-emission" src="img/PTVM_mixed_emission_score.png" alt="PTVM Mixed Emission Score" width="800" caption="> Figure 4: This Figure visualizes the calculation of the spatio-temporal emission score, that is calculated for each PTVM HMM candidate trip. The orange point shows a user emitted event location \\(ev\\), the orange circle around it the event radius \\(r\\). The alternating black and red lines represent edges of an active trip segment passing through the event radius. The arrow points to the interpolated position of the trip on no delay or earliness \\(p_\texttt{on\_time}\\). For all edges \\(e_i\\) in the event radius, we determine the closest point \\(p_{e_i}\\) to \\(ev\\), represented as turqouise points. Based on the stop times of the trip segment, we interpolate the expected time of the PTV at each \\(p_{e_i}\\). The final emission score for this trip is the best combination of time discrepancy and spatial distance." >}}
 
-<div id="fig-emission-equation"></div>
+<div id="eq-emission-equation"></div>
 
-The spatio-temporal score is then calulcated as followed, using the tunable parameter \\(\psi \in [0, 1]\\) and the time at the position where the PTV should be without any delay \\(tp_\texttt{on\_time}\\):
+The spatio-temporal score is then calulcated [as followed](#eq-emission-equation), using the tunable parameter \\(\psi \in [0, 1]\\) and the time at the position where the PTV should be without any delay \\(tp_\texttt{on\_time}\\):
 
 <div id="fig-temporal-emission"></div>
 
-\begin{equation}
-\texttt{score}(ts_{t_i}) = \psi \cdot \texttt{spatial}(ts_{t_i}) + (1 - \psi) \cdot \texttt{temporal}(ts_{t_i})\\\\
-\texttt{spatial}(ts_{t_i}) = \frac{\texttt{dist}(p_{e_j},\ ev)}{r}\\\\
-\texttt{temporal}(ts_{t_i}) = \begin{cases}
+\begin{align}
+\texttt{score}(ts_{t_i}) &= \psi \cdot \texttt{spatial}(ts_{t_i}) + (1 - \psi) \cdot \texttt{temporal}(ts_{t_i})\\\\[1em]
+\texttt{spatial}(ts_{t_i}) &= \frac{\texttt{dist}(p_{e_j},\ ev)}{r}\\\\[1em]
+\texttt{temporal}(ts_{t_i}) &= \begin{cases}
   \frac{tp_\texttt{on\_time} - tp_{p_{e_j}}}{\texttt{allowed\_delay}}, & \text{if trip delayed:}\ (tp_{p_{e_j}} < tp_\texttt{on\_time})\\\\
   \frac{tp_{p_{e_j}} - tp_\texttt{on\_time}}{\texttt{allowed\_earliness}}, & \text{if trip early:}\ (tp_\texttt{on\_time} < tp_{p_{e_j}})\\\\
 \end{cases}
-\end{equation}
+\end{align}
 
 The spatial component linearly rises from \\(\texttt{dist}(p_{e_j}) \geq r \to 0\\) to \\(\texttt{dist}(p_{e_j}) = 0 \to \\)
 The temporal component of the score is visualized [in Figure 5](#fig-temporal-emission).
@@ -149,7 +149,31 @@ In order to determine the HMM candidates, we choose the maximum trip segment sco
 
 #### PTVM HMM
 
-A HMM is a layered directed acyclic graph (LDAG), which enables us to use a heap-queue-free layer relaxation algorithm to find the shortest path from start to the end node.
+A HMM is a layered directed acyclic graph (LDAG), which enables us to use a heap-queue-free layer relaxation algorithm to find the shortest path from start to the end node in \\(\mathcal{O}(|E|+|V|)\\) time. Here, \\(E_l \in E\\) holds all trips per event layer \\(l\\). \\(V_{l \to l+1} \in V\\) holds all transitions between layers \\(l\\) and \\(l+1\\). Further, \\(E_{(l, i)} \in E_l\\) points to the \\(i\\)-th trip candidate in layer \\(l\\). Similarly, \\(V_{(l, i) \to (l+1, j)} \in V_{l \to l+1}\\) points to the edge connecting the \\(i\\)-th trip candidate in layer \\(l\\) to the \\(j\\)-th trip candidate in layer \\(l+1\\).
+
+In our HMM calculations, we minimize \\(\texttt{score} \in [0, \infty)\\) instead of maximizing Markov probabilities \\(p \in [0, 1]\\). This is equivalent to a HMM, as \\(\texttt{score}\\) is derived from the negative log-likelihood of the Markov probabilities.
+
+**Emission Score**\
+The emission score is already precomputed in the candidate selection step. It indicates the relevance of a trip for an event (recall [Equation 1](#eq-emission-equation)):
+
+<div id="eq-transition"></div>
+
+**Transition Score**\
+The transition score, can be expressed [in the following way](#eq-transition), for layer \\(l\\) and the trip the user has been matched to the previous request \\(t_\texttt{prev}\\):
+
+\begin{align}
+\texttt{transition}(E, V, t_\texttt{prev}) &= \texttt{trip\_change\_hmm}(V) + \texttt{trip\_change\_prev}(E, t_\texttt{prev})\\\\[1em]
+\texttt{trip\_change\_hmm}(V) &= \begin{cases}
+  0, & \begin{aligned}&\text{if the trip does not change}\\\\ &\text{between layers:}\\\\ &V_{i \to j} = V_{(l, i) \to (l+1, j)}\end{aligned}\\\\[0.5em]
+  \texttt{transition\_penalty}, & \begin{aligned}&\text{if the trip changes}\\\\ &\text{between layers:}\\\\ &V_{i \to j} \neq V_{(l, i) \to (l+1, j)}\end{aligned}\\\\[0.5em]
+\end{cases}\\\\[1em]
+\texttt{trip\_change\_prev}(E, t_\texttt{prev}) &= \begin{cases}
+  0, & \begin{aligned}&\text{if the previous matching}\\\\ &\text{result and the last layer are}\\\\ &\text{identical:}\ t_\texttt{prev} = E_{(|EV|-1, i)}\end{aligned}\\\\[0.5em]
+  \texttt{trip\_change\_penalty}, & \begin{aligned}&\text{if the previous matching}\\\\ &\text{result and the last layer}\\\\ &\text{differ:}\ t_\texttt{prev} \neq E_{(|EV|-1, i)}\end{aligned}\\\\[0.5em]
+\end{cases}\\\\[1em]
+\end{align}
+
+
 
 ### Transition probability
 
