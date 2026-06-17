@@ -153,13 +153,13 @@ A HMM is a layered directed acyclic graph (LDAG), which enables us to use a heap
 
 In our HMM calculations, we minimize \\(\texttt{score} \in [0, \infty)\\) instead of maximizing Markov probabilities \\(p \in [0, 1]\\). This is equivalent to a HMM, as \\(\texttt{score}\\) is derived from the negative log-likelihood of the Markov probabilities.
 
+<div id="eq-transition"></div>
+
 **Emission Score**\
 The emission score is already precomputed in the candidate selection step. It indicates the relevance of a trip for an event (recall [Equation 1](#eq-emission-equation)):
 
-<div id="eq-transition"></div>
-
 **Transition Score**\
-The transition score, can be expressed [in the following way](#eq-transition), for layer \\(l\\) and the trip the user has been matched to the previous request \\(t_\texttt{prev}\\):
+The transition score can be expressed [in the following way](#eq-transition), for layer \\(l\\) and the trip the user has been matched to the previous request \\(t_\texttt{prev}\\):
 
 \begin{align}
 \texttt{transition}(E, V, t_\texttt{prev}) &= \texttt{trip\_change\_hmm}(V) + \texttt{trip\_change\_prev}(E, t_\texttt{prev})\\\\[1em]
@@ -172,8 +172,6 @@ The transition score, can be expressed [in the following way](#eq-transition), f
   \texttt{trip\_change\_penalty}, & \begin{aligned}&\text{if the previous matching}\\\\ &\text{result and the last layer}\\\\ &\text{differ:}\ t_\texttt{prev} \neq E_{(|EV|-1, i)}\end{aligned}\\\\[0.5em]
 \end{cases}\\\\[1em]
 \end{align}
-
-
 
 ### Transition probability
 
