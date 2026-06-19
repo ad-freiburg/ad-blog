@@ -197,33 +197,59 @@ PTVM essentially consists of 4 parts:
 
 #### GTFS Reader
 
-Generally, we store  a type (e.g. Edge, Trip, TripSegment), accumulate all of them in a vector (e.g. Edges, Trips, TripSegments) and link to them with an index (e.g. EdgeId, TripId, TripSegmentId).
+The GTFS Reader reads GTFS files and writes it into datastructures.
 
 Time-related data is converted to UTC, from the time zone marked in the GTFS agencies.txt file.
 
 Geometric distances are generally measured with the haversine distance formula.
 
-We share the following implementation details. Some of them are concluded from balancing query speed and RAM usage.
+We break down the GTFS shapes into edges. As many shapes partially follow the same path as other edges, there are many duplicated edges. For the \\(243,657\\) shapes of the [full Germany dataset](https://gtfs.de/de/feeds/de_full/) for example, we can reduce the amount of edges from \\(109,668,551\\) to \\(12,526,535\\), which is a reduction of \\(88.58\\%\\).
 
-- 
+The GTFS Reader calculates TripSegments ([see Table 1](#table-struct-members)), which is a spatial component of a trip.
 
-| Name | Type | Explanation |
-| --- | --- | --- |
-| Point | float lat, float lon | coordinate point |
-| Edge | float lat1, float lon1, float lat2, float lon2, float len_m | coordinates and length |
-| Edges | vector<Edge> | lists all edges |
-| EdgeId | uint32_t |  Links to Edges. There are TODO edges in GermanyGTFS, 2^32 = 4_294_967_296 suffices |
-| Trip | string route_id, string service_id, string shape_id, vector<TripSegmentIds> ts_ids | We use the original GTFS strins for easier debugging. They do not take up a relevant amount of space. Links to its edges using the trip segments. |
-| Trips | vector<Trip> | lists all trips |
-| TripId | uint32_t | Links to Trips. As a precaution, covers more than 2^16 = 65,536 trips |
-| RelTripSegmentIdx | uint16_t | Specifies the position of a TripSegment within a Trip  |
-| TripSegment | vector<EdgeId>, RelTsIdx idx, float len_m | References the edges of the TS, the position where it is in the trip, and the accumulated edge length |
-| TripSegmentId | uint32_t | There are usually more trip segments than trips, 2^32 = 4_294_967_296 suffices even for the GermanyGTFS dataset TODO |
-| --- | --- | --- |
+<div id="table-struct-members"></div>
+
+Generally, we generate structs (e.g. Edge, Trip, TripSegment), accumulate all of them in a vector (e.g. Edges, Trips, TripSegments) and link to them with an index (e.g. EdgeId, TripId, TripSegmentId).
+
+In the following table, we explain choices for some datastructures we had to make in order to optimize the RAM/Query-Speed tradeoff.
+
+  | Name | Struct members or Type | Explanation |
+  | --- | --- | --- |
+  | Edge | float lat1, float lon1,<br>float lat2, float lon2,<br>float len_m | Edge lengths have to be calculated<br>multiple times during query time. |
+  | Edges | vector\<Edge\> | Lists all edges. |
+  | EdgeId | uint32_t | Links to Edges. There are 12,526,535<br>unique edges in GermanyGTFS,<br>2^32 = 4_294_967_296 suffices |
+  | Trip | string route_id,<br>string service_id,<br>string shape_id,<br>vector\<TripSegmentId\> ts_ids | We use the original GTFS strings for easier debugging.<br>They do not take up a relevantamount of space.<br>Links to its edgesusing the trip segments. |
+  | Trips | vector\<Trip\> | Lists all trips. |
+  | TripId | uint32_t | Links to Trips. As a precaution,<br>covers more than 2^16 = 65,536 trips |
+  | RelTripSegmentIdx | uint16_t | Specifies the position of a TripSegment within a Trip |
+  | TripSegment | vector\<EdgeId\>,<br>RelTsIdx idx,<br>float len_m | References the edges of the TS,<br>the position where it is in the trip,<br>and the accumulated edge length |
+  | TripSegmentId | uint32_t | There are usually more trip segments than trips,<br>2^32 = 4_294_967_296 suffices even for<br>the GermanyGTFS dataset |
+
+<div id="table-ram-datastructures"></div>
+
+It is very hard to give an accurate measure on how much ram each datastructure takes up, as this varies from machine to machine, but we can give rough estimates for different datasets in [Table 2](#table-ram-datastructures).
+
+| RAM USAGE in MB | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | Switzerland |
+| --- | --- | --- | --- | --- | --- | --- |
+| Shapes | --- | --- | --- | --- | --- | --- |
+| Edges | TBD | 0.55 | 1.91 | 19.63 | 20.27 | --- |
+| Routes | --- | --- | --- | --- | --- | --- |
+| Stops | --- | --- | --- | --- | --- | --- |
+
+We are sure that RAM usage can be optimized further without affecting the performance, but as the improvement over PTS is already enormous, we did not see the necessity to spend more time on that.
 
 # Evaluation
 
 In this chapter, we compare PTS and PTVM with regard to query time and accuracy. PTVM strongly outperforms PTS in both categories.
+
+<div id="table-ram-pts-ptvm"></div>
+
+We compare the RAM usage of PTS and PTVM on different datasets in [Table 3](#table-ram-pts-ptvm)
+
+| RAM USAGE in GB | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | Switzerland |
+| --- | --- | --- | --- | --- | --- | --- |
+| PTS | --- | --- | --- | --- | --- | --- |
+| PTVM | TBD | 0.55 | 1.91 | 19.63 | 20.27 | --- |
 
 ## Method
 
