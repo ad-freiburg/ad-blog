@@ -17,14 +17,22 @@ In this blog post, we compare two dynamic map matching algorithms for matching a
 - [Content](#content)
 - [Introduction](#introduction)
 - [Backend](#backend)
-  - [Introduction to GTFS](#introduction-to-gtfs)
+  - [Introduction to GTFS and related Terms](#introduction-to-gtfs-and-related-terms)
+    - [Trip Segments](#trip-segments)
+    - [Active Trips](#active-trips)
   - [Map Matching to a Dynamic Map](#map-matching-to-a-dynamic-map)
     - [Hidden Markov Models](#hidden-markov-models)
     - [What is a Candidate? Old vs New Approach](#what-is-a-candidate-old-vs-new-approach)
-    - [Transition probability](#transition-probability)
-    - [Fast graph building](#fast-graph-building)
-  - [Flask as our API](#flask-as-our-api)
+    - [Public Transit Snapper (PTS)](#public-transit-snapper-pts)
+    - [Public Transit Vehicle Matcher (PTVM)](#public-transit-vehicle-matcher-ptvm)
+    - [PTVM HMM](#ptvm-hmm)
+      - [Emission Score](#emission-score)
+      - [Transition Score](#transition-score)
+    - [PTVM Preprocessing and Implementation](#ptvm-preprocessing-and-implementation)
+      - [GTFS Reader](#gtfs-reader)
 - [Evaluation](#evaluation)
+  - [Method](#method)
+  - [Settings](#settings)
 - [Frontend](#frontend)
   - [Flutter as our framework](#flutter-as-our-framework)
   - [Content of the app](#content-of-the-app)
@@ -32,6 +40,7 @@ In this blog post, we compare two dynamic map matching algorithms for matching a
   - [Using selenium to manipulate a devices GPS location](#using-selenium-to-manipulate-a-devices-gps-location)
   - [Generating fake GPS data](#generating-fake-gps-data)
 - [Installation](#installation)
+- [TODO](#todo)
 
 # Introduction
 
@@ -41,7 +50,7 @@ This project aims to improve on Robin Wu's and my previous work [1-3], by improv
 
 # Backend
 
-## Introduction to GTFS
+## Introduction to GTFS and related Terms
 
 The General Transit Feed Specification ([GTFS](https://developers.google.com/transit/gtfs)) lets PTV agencies describe the following static schedule properties:
 
@@ -84,15 +93,15 @@ The aim of our dynamic map matching algorithms \\(F_\texttt{DMM}\\) is to match 
 ### Hidden Markov Models
 
 The map matching can be solved by using a [Hidden Markov Model (HMM)](https://en.wikipedia.org/wiki/Hidden_Markov_model).
-A HMM is used when a process can likely be modeled by a Markov chain (The probability of transitioning from one state to another is solely dependant on the current state), but its states are unknown.
+A HMM is used when a process can likely be modeled by a Markov chain (The probability of transitioning from one state to another is solely dependant on the current state), but its states are unknown. We can reconstruct the states by finding the shortest path through the HMM, based on emission probabilities \\(P_\texttt{emission}\\) and transition probabilities \\(P_\texttt{transition}\\) (see [infographic]).
 
-In both approaches PTS and PTVM, we get **HMM candidates** \\(c_j \in C_\texttt{PTS}\\) for each event \\(ev_i\\). With these, we create HMM graph \\(G_\texttt{HMM}\\), which consists of \\(|EV|\\) layers. We find the shortest path through the network, based on emission probabilities \\(P_\texttt{emission}\\) and transition probabilities \\(P_\texttt{transition}\\) (see [infographic]).
+In both approaches PTS and PTVM, we get **HMM candidates** \\(c_j \in C_\texttt{PTS}\\) for each event \\(ev_i\\). With these, we create HMM graph \\(G_\texttt{HMM}\\), which consists of \\(|EV|\\) layers. We find the shortest path through the network
 
 ### What is a Candidate? Old vs New Approach
 
 While the candidates in the old PTS approach are a filtered set of edges from GTFS shapes network graph \\(G_{network}\\), the new PTVM approach uses a set of filtered trips as candidates.
 
-#### PTS
+### Public Transit Snapper (PTS)
 
 On an incoming event from a user request, the older approach PTS starts by querying an R-Tree for close edges to the event location. PTS then filters roughly by time, so we just consider edges that are generally active during the event time. In this context, active means that the edge is used by a trip that is actively moving anywhere on its shape at the event time.
 
@@ -109,7 +118,7 @@ Now, PTS adds these edges to a HMM. In PTS, HMM-candidates are edges. All edges 
 We then find the shortest path through \\(G_\texttt{HMM}\\), which gives a set of shortest path edges \\(E_\texttt{sp}\\). After this step, we take the GTFS shape that is most common along all \\(e \in E_\texttt{sp}\\). From this shape, we choose an active trip with the mose occurences on the edges of \\(E_\texttt{sp}\\). If there is a tie, only then do we do a more precise time based matching.
 Generally, this old approach tries find a good spatial solution first, and only afterwards checks whether it is temporally valid.
 
-#### PTVM
+### Public Transit Vehicle Matcher (PTVM)
 
 In the new approach PTVM, both spatial and temporal dimensions are taken into consideration simultaneously. The weight of the dimensions can be tuned with a parameter \\(\psi\\). In the PTVM-approach, HMM-candidates are trips, not edges as in PTS.
 
@@ -147,7 +156,7 @@ The temporal component of the score is visualized [in Figure 5](#fig-temporal-em
 
 In order to determine the HMM candidates, we choose the maximum trip segment score \\(c_{t_i} \max \texttt{score}(ts_{t_i})\\) for all trips. If \\(c_{t_i} < \texttt{emission_threshold}\\), trip \\(t_i\\) is chosen as a HMM candidate for event \\(ev\\). We can recycle \\(c_{t_i}\\) for the HMM emission score.
 
-#### PTVM HMM
+### PTVM HMM
 
 A HMM is a layered directed acyclic graph (LDAG), which enables us to use a heap-queue-free layer relaxation algorithm to find the shortest path from start to the end node in \\(\mathcal{O}(|E|+|V|)\\) time. Here, \\(E_l \in E\\) holds all trips per event layer \\(l\\). \\(V_{l \to l+1} \in V\\) holds all transitions between layers \\(l\\) and \\(l+1\\). Further, \\(E_{(l, i)} \in E_l\\) points to the \\(i\\)-th trip candidate in layer \\(l\\). Similarly, \\(V_{(l, i) \to (l+1, j)} \in V_{l \to l+1}\\) points to the edge connecting the \\(i\\)-th trip candidate in layer \\(l\\) to the \\(j\\)-th trip candidate in layer \\(l+1\\).
 
@@ -155,10 +164,12 @@ In our HMM calculations, we minimize \\(\texttt{score} \in [0, \infty)\\) instea
 
 <div id="eq-transition"></div>
 
-**Emission Score**\
+#### Emission Score
+
 The emission score is already precomputed in the candidate selection step. It indicates the relevance of a trip for an event (recall [Equation 1](#eq-emission-equation)):
 
-**Transition Score**\
+#### Transition Score
+
 The transition score can be expressed [in the following way](#eq-transition), for layer \\(l\\) and the trip the user has been matched to the previous request \\(t_\texttt{prev}\\):
 
 \begin{align}
@@ -173,64 +184,42 @@ The transition score can be expressed [in the following way](#eq-transition), fo
 \end{cases}\\\\[1em]
 \end{align}
 
-### Transition probability
+### PTVM Preprocessing and Implementation
 
-The transition probability describes the likelihood of getting from one state in the Markov Chain to another.
-As a reminder, the transition probability is the weight from a node \\(e^1\\) to one of its outgoing neighbors \\(e^2\\) in \\(G_{markov}\\).
+In this section, we discuss the implementation side of PTVM.
 
-<img src="img/transition.png" title="Transition"></img>
+PTVM essentially consists of 4 parts:
 
-Firstly, each node represents an edge, and we want to include the length of the edge in the weight. 
-The length can be calculated with the [great circle distance](https://en.wikipedia.org/wiki/Great-circle_distance) between the two end points of an edge.
-Then, we try to find the shortest path from \\(e^1\\) to \\(e^2\\) within \\(G_{network}\\).
-We add the lengths of the shortest path to the transition probability. 
-Furthermore, we need to consider the direction of travel. This is important for shapes that are close to each other, but go in opposite directions.
-Since we are getting all close edges within a 100 meters radius, the opposite direction is a possibility in the Markov Chain.
-If we remember the order of the edges in a shape, we can check if the edges are in ascending order oder descending order.
-Travelling in descending order means that we are travelling in the opposite direction of the shape. Thus, we penalize this direction.
-In contrast, an ascending order corresponds to the correct direction, so we just set the penalty to 0.
+1. A GTFS Reader that reads the GTFS and writes it into datastructures
+2. A Geocalendar Index that is able to query spatially and temporally local trips
+3. A HMM that predicts the most likely trip candidate
+4. An API to communicate with the frontend or a user simulation
 
-\begin{align*}
-    P_{transition}(e^1 \to e^2) &= ||e^1||_{great\\_circle} + ||e^2||_{great\\_circle}\newline
-    &\phantom{\text{= }} + \text{len_shortest\_path}(e^1, e^2) + \text{direction\_penalty}(e^1, e^2)
-\end{align*}
+#### GTFS Reader
 
-If there is no such direct path available, we penalize this path by adding a high weight.
-This has the effect that this path can then still be matched if there is no other possibility. This can happen due to a transfer between vehicles.\
-As the start and end nodes of \\(G_{markov}\\) do not represent edges, we need a different transition probability for those.
-For the start node, we use the shortest great circle distance of the first GPS point to the first edge as weight.
+Generally, we store  a type (e.g. Edge, Trip, TripSegment), accumulate all of them in a vector (e.g. Edges, Trips, TripSegments) and link to them with an index (e.g. EdgeId, TripId, TripSegmentId).
 
-<img src="img/transition_start.png" title="Transition from Start"></img>
+Time-related data is converted to UTC, from the time zone marked in the GTFS agencies.txt file.
 
-In the same manner, we calculate the distance between the last edge to the last GPS point.
-As a result, we get a shape where the start and end points are close to the GPS points.
+Geometric distances are generally measured with the haversine distance formula.
 
-### Fast graph building
-In order to generate the most likely path, we need to quickly build a graph and also try to keep the graph as small as possible. 
-We could just add all edges that are close to the GPS points, e.g. in a 100 meters radius, to our Markov Chain.
-This works well in areas with little traffic and not many public transit routes. However, we run into performance issues in busy areas such as city centers. 
-This is because calculating the shortest path takes much longer in a bigger Markov Chain graphs.
-In order to mitigate this issue, we filter unnecessary nodes.\
-Firstly, for every GPS point, we fetch all edges that are within a 100 meters radius. 
-Then, we only consider those edges that have traffic of a public transit vehicle at the included timestamp.\
-For that, we can pre-calculate the timeframe where a given vehicle is active on a particular edge. 
-We can only fetch times for each stop of the vehicle from the GTFS data. Typically, there are multiple edges between the stops. 
-Inorder to minimize the number of edges we get, we try to calculate an exact time frame for each edge between two stops.
-The main difficulty in this approach is that the coordinates of a stop do not lie on the edges of a shape for a trip.
-Thus, we need to split the shape at the stops. We can project every stop coordinate onto the shape line to find the closest edge. Then we can split the edge at these projected points.
-As this calculation is computationally rather expensive, we can pre-calculate the split shapes for each trip and use them to calculate the time frame later.\
-We only include the edge in \\(G_{markov}\\) if there is any traffic on the edge at the timestamp. 
-With this approach we can greatly reduce the number of edges and therefore get results much faster.
+We share the following implementation details. Some of them are concluded from balancing query speed and RAM usage.
 
-## Flask as our API
-Map matching is computationally expensive and requires a representation of the public transit network in memory.
-Therefore, it is not feasible to calculate the Markov Chain on a mobile device such as a smartphone.
-Instead, the mobile device continuously records GPS points with a corresponding timestamp. Then, these GPS points are sent to our API on a server.
-The transit network is already loaded in memory on the server, so it can quickly calculate the map matching.
-After calculating a matched path on the server, we only need to return information for displaying the matched path to the mobile device.
-All the requests and responses can be easily handled with [Flask](https://flask.palletsprojects.com/en/2.1.x/) as our API.
-The framework we used for our app makes use of [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) to check if the API permits the actual request.
-Not handling those on the server-side leads to errors. Luckily, there is an [extension](https://flask-cors.readthedocs.io/en/latest/) for Flask to handle these CORS requests.
+- 
+
+| Name | Type | Explanation |
+| --- | --- | --- |
+| Point | float lat, float lon | coordinate point |
+| Edge | float lat1, float lon1, float lat2, float lon2, float len_m | coordinates and length |
+| Edges | vector<Edge> | lists all edges |
+| EdgeId | uint32_t |  Links to Edges. There are TODO edges in GermanyGTFS, 2^32 = 4_294_967_296 suffices |
+| Trip | string route_id, string service_id, string shape_id, vector<TripSegmentIds> ts_ids | We use the original GTFS strins for easier debugging. They do not take up a relevant amount of space. Links to its edges using the trip segments. |
+| Trips | vector<Trip> | lists all trips |
+| TripId | uint32_t | Links to Trips. As a precaution, covers more than 2^16 = 65,536 trips |
+| RelTripSegmentIdx | uint16_t | Specifies the position of a TripSegment within a Trip  |
+| TripSegment | vector<EdgeId>, RelTsIdx idx, float len_m | References the edges of the TS, the position where it is in the trip, and the accumulated edge length |
+| TripSegmentId | uint32_t | There are usually more trip segments than trips, 2^32 = 4_294_967_296 suffices even for the GermanyGTFS dataset TODO |
+| --- | --- | --- |
 
 # Evaluation
 
