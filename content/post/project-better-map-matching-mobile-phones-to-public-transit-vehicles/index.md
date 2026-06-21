@@ -241,9 +241,9 @@ In the following table, we explain choices for some datastructures we had to mak
   | Route | std::string agency_id,<br>std::string route_short_name,<br>uint8_t route_type,<br>uint32_t route_color,<br>uint32_t route_text_color | Contains the information from routes.txt |
   | RoutesMap | std::map\<std::string, Route\> | For easier debugging and implementation speed,<br>we resort to a std::map and choose not to have a<br>separate RouteId. This can be optimized in the future. |
 
-## Geocalendar Index (GCI)
+## Geocalendar Index
 
-A GCI can be queried for a trip candidate that is both spatially and temporally close to a given Event. Its purpose is reduce the amout of HMM trip candidates to check from the potentially large GTFS dataset.
+A Geocalendar Index (GCI) can be queried for a trip candidate that is both spatially and temporally close to a given Event. Its purpose is reduce the amout of HMM trip candidates to check from the potentially large GTFS dataset.
 
 For the spatial part of the GCI, we implement a grid with a fixed width and height for each cell (e.g. 5 kilometers). Each cell contains a \\(\texttt{std::vector}\\) of \\(\texttt{std::set\<TripId\>}\\) for every trip passing the cell geographically.
 
