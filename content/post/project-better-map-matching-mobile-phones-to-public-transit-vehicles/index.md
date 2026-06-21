@@ -16,13 +16,13 @@ In this blog post, we compare two dynamic map matching algorithms for matching a
 
 - [Content](#content)
 - [Introduction](#introduction)
-- [Backend](#backend)
-  - [Introduction to GTFS and related Terms](#introduction-to-gtfs-and-related-terms)
-    - [Trip Segments](#trip-segments)
-    - [Active Trips](#active-trips)
+- [Background](#background)
+  - [Introduction to GTFS](#introduction-to-gtfs)
+  - [Trip Segments](#trip-segments)
+  - [Active Trips](#active-trips)
   - [Map Matching to a Dynamic Map](#map-matching-to-a-dynamic-map)
     - [Hidden Markov Models](#hidden-markov-models)
-    - [What is a Candidate? Old vs New Approach](#what-is-a-candidate-old-vs-new-approach)
+    - [What is a Candidate?](#what-is-a-candidate)
     - [Public Transit Snapper (PTS)](#public-transit-snapper-pts)
     - [Public Transit Vehicle Matcher (PTVM)](#public-transit-vehicle-matcher-ptvm)
     - [PTVM HMM](#ptvm-hmm)
@@ -48,9 +48,11 @@ We present an algorithm to deduce the public transit vehicle (PTV) a mobile phon
 
 This project aims to improve on Robin Wu's and my previous work [1-3], by improving accuracy and speed. We therefore re-design our previous spatio-temporal map-matching algorithm conceptually. We further improve query speed by implementing the reworked backend in C++.
 
-# Backend
+TODO Motivation
 
-## Introduction to GTFS and related Terms
+# Background
+
+## Introduction to GTFS
 
 The General Transit Feed Specification ([GTFS](https://developers.google.com/transit/gtfs)) lets PTV agencies describe the following static schedule properties:
 
@@ -66,11 +68,15 @@ GTFS also gives us arrival and departure times for every stop on a trip.
 **Service information**\
 Every trip operates based on a service, which describes whether the trip is active on a given weekday. There can also be exceptions for specific dates, e.g. holidays.
 
-### Trip Segments
+## Trip Segments
 
 We can subdivide a trip into k segments, where each segment describes the part of the trip between two stops. [img?]
 
-### Active Trips
+## Close Trips
+
+A trip or a trip segment is considered as close (to a point \\(p\\)) if any of the edges of the trip's/trip segment's shape pass trough a radius of \\(p\\).
+
+## Active Trips
 
 We consider a trip as active during time point \\(t\\), if \\(\texttt{trip\_start} < t < \texttt{trip\_end}\\) for \\(\texttt{trip\_start}, \texttt{trip\_end} \in \texttt{stop_times}(\texttt{trip})\\).
 
@@ -86,9 +92,9 @@ A typical use of MM is a navigation systen, where the gps points of a car get ma
 In Dynamic Map Matching (DMM), instead of matching to a static map, we match to moving targets on an underlying static graph. In our case, the GTFS shapes can be represented as a directed graph \\(G_\texttt{network}\\).
 In this graph, each GPS point of a shape is represented as a node and successive points in a shape are connected with a directed edge.
 
-Mobile devices emit **Events** \\(ev = (\texttt{lat}, \texttt{lon}, \texttt{time})\\), where we abbreviate timestamp with **time**.
+### Events
 
-The aim of our dynamic map matching algorithms \\(F_\texttt{DMM}\\) is to match a list of Events \\(EV = [ev_0, ..., ev_{n-1}]\\) to both spatial and temporal dimensions, such that the most likely trip \\(t_\texttt{best}\\) is returned: \\(F_\texttt{DMM}(EV) = t_\texttt{best}\\)
+Mobile devices emit Events \\(ev = (\texttt{lat}, \texttt{lon}, \texttt{time})\\), containing the geographical location and the current time.
 
 ### Hidden Markov Models
 
@@ -97,17 +103,25 @@ A HMM is used when a process can likely be modeled by a Markov chain (The probab
 
 In both approaches PTS and PTVM, we get **HMM candidates** \\(c_j \in C_\texttt{PTS}\\) for each event \\(ev_i\\). With these, we create HMM graph \\(G_\texttt{HMM}\\), which consists of \\(|EV|\\) layers. We find the shortest path through the network
 
-### What is a Candidate? Old vs New Approach
+While the candidates in the old PTS approach are a filtered set of edges from GTFS shapes network graph \\(G_{network}\\), the new PTVM approach uses a set of filtered trips as candidates. In the following chapter, we explain the differences between PTS and PTVM in more detail.
 
-While the candidates in the old PTS approach are a filtered set of edges from GTFS shapes network graph \\(G_{network}\\), the new PTVM approach uses a set of filtered trips as candidates.
+# PTS vs PTVM: Differences in the queries
 
-### Public Transit Snapper (PTS)
+The aim of our dynamic map matching algorithms is to match a list of Events \\(EV = [ev_0, ..., ev_{n-1}]\\) to both spatial and temporal dimensions, such that the most likely trip \\(t_\texttt{best}\\) is returned.
+
+<div id="fig-pts-ptvm-overview"></div>
+
+In this chapter, we go through the query process of both PTS and PTVM, to highlight the differences in the queries. See [Figure ???]() for an overview.
+
+{{< figure id="fig-pts-ptvm-overview" src="img/PTS_vs_PTVM_approaches.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? presents an overview over the pipeline differences on a trip matching query for PTS and PTVM." >}}
+
+## Public Transit Snapper (PTS)
 
 On an incoming event from a user request, the older approach PTS starts by querying an R-Tree for close edges to the event location. PTS then filters roughly by time, so we just consider edges that are generally active during the event time. In this context, active means that the edge is used by a trip that is actively moving anywhere on its shape at the event time.
 
 <div id="fig-g_network"></div>
 
-Now, PTS adds these edges to a HMM. In PTS, HMM-candidates are edges. All edges that are close to the event locations [(see Figure 1)](#fig-g_network) are candidates in \\(G_\texttt{HMM}\\) [(see Figure 2)](#fig-g_hmm).
+Now, PTS adds these edges to a HMM. In PTS, HMM-candidates are edges. All edges that are close to the event locations [(see Figure 1)](#fig-g_network) are candidates in \\(G_\texttt{HMM}\\) (see [Figure 2](#fig-g_hmm)).
 
 {{< figure id="fig-g_network" src="img/PTS_G_network.png" alt="G_network" width="800" caption="> Figure 1: \\(G_{\text{network}}\\) contains all edges. The two colored points are events (timestamped locations) emitted by a user. In this example, all edges are close to an event, meaning they are within the event radius." >}}
 
@@ -118,7 +132,7 @@ Now, PTS adds these edges to a HMM. In PTS, HMM-candidates are edges. All edges 
 We then find the shortest path through \\(G_\texttt{HMM}\\), which gives a set of shortest path edges \\(E_\texttt{sp}\\). After this step, we take the GTFS shape that is most common along all \\(e \in E_\texttt{sp}\\). From this shape, we choose an active trip with the mose occurences on the edges of \\(E_\texttt{sp}\\). If there is a tie, only then do we do a more precise time based matching.
 Generally, this old approach tries find a good spatial solution first, and only afterwards checks whether it is temporally valid.
 
-### Public Transit Vehicle Matcher (PTVM)
+## Public Transit Vehicle Matcher (PTVM)
 
 In the new approach PTVM, both spatial and temporal dimensions are taken into consideration simultaneously. The weight of the dimensions can be tuned with a parameter \\(\psi\\). In the PTVM-approach, HMM-candidates are trips, not edges as in PTS.
 
@@ -184,9 +198,9 @@ The transition score can be expressed [in the following way](#eq-transition), fo
 \end{cases}\\\\[1em]
 \end{align}
 
-### PTVM Preprocessing and Implementation
+# Preprocessing and Implementation Details of PTVM
 
-In this section, we discuss the implementation side of PTVM.
+In this chapter, we discuss the preprocessing of GTFS data and further implementation details of PTVM.
 
 PTVM essentially consists of 4 parts:
 
@@ -195,7 +209,7 @@ PTVM essentially consists of 4 parts:
 3. A HMM that predicts the most likely trip candidate
 4. An API to communicate with the frontend or a user simulation
 
-#### GTFS Reader
+## GTFS Reader
 
 The GTFS Reader reads GTFS files and writes it into datastructures.
 
@@ -207,36 +221,43 @@ We break down the GTFS shapes into edges. As many shapes partially follow the sa
 
 The GTFS Reader calculates TripSegments ([see Table 1](#table-struct-members)), which is a spatial component of a trip.
 
-<div id="table-struct-members"></div>
+Generally, we generate structs (e.g. Edge, Trip, TripSegment), accumulate all of them in an \\(\texttt{std::vector}\\) (e.g. Edges, Trips, TripSegments) and link to them with an index (e.g. EdgeId, TripId, TripSegmentId). For smaller GTFS data like the information from routes.txt, we just store a map mapping from the original route_id to what we need for the query.
 
-Generally, we generate structs (e.g. Edge, Trip, TripSegment), accumulate all of them in a vector (e.g. Edges, Trips, TripSegments) and link to them with an index (e.g. EdgeId, TripId, TripSegmentId).
+<div id="table-struct-members"></div>
 
 In the following table, we explain choices for some datastructures we had to make in order to optimize the RAM/Query-Speed tradeoff.
 
   | Name | Struct members or Type | Explanation |
   | --- | --- | --- |
   | Edge | float lat1, float lon1,<br>float lat2, float lon2,<br>float len_m | Edge lengths have to be calculated<br>multiple times during query time. |
-  | Edges | vector\<Edge\> | Lists all edges. |
+  | Edges | std::vector\<Edge\> | Lists all edges. |
   | EdgeId | uint32_t | Links to Edges. There are 12,526,535<br>unique edges in GermanyGTFS,<br>2^32 = 4_294_967_296 suffices |
-  | Trip | string route_id,<br>string service_id,<br>string shape_id,<br>vector\<TripSegmentId\> ts_ids | We use the original GTFS strings for easier debugging.<br>They do not take up a relevantamount of space.<br>Links to its edgesusing the trip segments. |
-  | Trips | vector\<Trip\> | Lists all trips. |
+  | Trip | std::string route_id,<br>std::string service_id,<br>std::string shape_id,<br>std::vector\<TripSegmentId\> ts_ids | We use the original GTFS strings for easier debugging.<br>They do not take up a relevantamount of space.<br>Links to its edgesusing the trip segments. |
+  | Trips | std::vector\<Trip\> | Lists all trips. |
   | TripId | uint32_t | Links to Trips. As a precaution,<br>covers more than 2^16 = 65,536 trips |
   | RelTripSegmentIdx | uint16_t | Specifies the position of a TripSegment within a Trip |
-  | TripSegment | vector\<EdgeId\>,<br>RelTsIdx idx,<br>float len_m | References the edges of the TS,<br>the position where it is in the trip,<br>and the accumulated edge length |
+  | TripSegment | std::vector\<EdgeId\>,<br>RelTsIdx idx,<br>float len_m | References the edges of the TS,<br>the position where it is in the trip,<br>and the accumulated edge length |
   | TripSegmentId | uint32_t | There are usually more trip segments than trips,<br>2^32 = 4_294_967_296 suffices even for<br>the GermanyGTFS dataset |
+  | Route | std::string agency_id,<br>std::string route_short_name,<br>uint8_t route_type,<br>uint32_t route_color,<br>uint32_t route_text_color | Contains the information from routes.txt |
+  | RoutesMap | std::map\<std::string, Route\> | For easier debugging and implementation speed,<br>we resort to a std::map and choose not to have a<br>separate RouteId. This can be optimized in the future. |
 
-<div id="table-ram-datastructures"></div>
+## Geocalendar Index (GCI)
 
-It is very hard to give an accurate measure on how much ram each datastructure takes up, as this varies from machine to machine, but we can give rough estimates for different datasets in [Table 2](#table-ram-datastructures).
+A GCI can be queried for a trip candidate that is both spatially and temporally close to a given Event. Its purpose is reduce the amout of HMM trip candidates to check from the potentially large GTFS dataset.
 
-| RAM USAGE in MB | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | Switzerland |
-| --- | --- | --- | --- | --- | --- | --- |
-| Shapes | --- | --- | --- | --- | --- | --- |
-| Edges | TBD | 0.55 | 1.91 | 19.63 | 20.27 | --- |
-| Routes | --- | --- | --- | --- | --- | --- |
-| Stops | --- | --- | --- | --- | --- | --- |
+For the spatial part of the GCI, we implement a grid with a fixed width and height for each cell (e.g. 5 kilometers). Each cell contains a \\(\texttt{std::vector}\\) of \\(\texttt{std::set\<TripId\>}\\) for every trip passing the cell geographically.
 
-We are sure that RAM usage can be optimized further without affecting the performance, but as the improvement over PTS is already enormous, we did not see the necessity to spend more time on that.
+We choose a grid for the sake of implementation speed, even though a tree-like structure (e.g. an R-Tree, see PTS) would likely speed up the PTVM query process a lot, as it would reduce the amount of trips to check at the very beginning of the query pipeline [see pipeline img TODO](). However, as we will see in the [evaluation section](#evaluation), the proof of concept stands and PTVM drastically outperfomrs PTS in query speed already.
+
+As for the temporal part of the GCI, we chose a \\(\texttt{std::vector}\\) of time slots \\(\texttt{std::set\<TripTime\>}\\) of equal size (e.g. 24 hours), where each time slot contains all trips that are at least partially active within the time slot. We store \\(\texttt{TripTime}\\)s instead of \\(\texttt{TripId}\\)s, in order to allow for trips that have a duration longer than the length of the time slots. For example, for a slot size of 24h and a daily operating TripId \\(1\\) with a trip duration of 30 hours, a time slot would hold \\(\\{(1, 2026.01.01), (1, 2026.01.02)\\}\\).
+
+<div id="eq-gci"></div>
+
+In a prior version of the GCI, we tried merging the spatial and temporal components in one vector [as in Equation ???](#eq-gci):
+
+\begin{equation}
+\underbrace{\texttt{std::vector}}\_{\text{grid idx}} \texttt{<}\underbrace{\texttt{std::vector}}\_{\text{calendar idx}} \texttt{<}\underbrace{\texttt{std::set\<TripTime\>}}_{\text{spat. \& temp. relevant}} \texttt{>}\texttt{>}
+\end{equation}
 
 # Evaluation
 
