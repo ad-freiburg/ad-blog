@@ -163,7 +163,7 @@ The spatio-temporal score is then calulcated [as followed](#eq-emission-equation
 \end{cases}
 \end{align}
 
-The spatial component linearly rises from \\(\texttt{dist}(p_{e_j}) \geq r \to 0\\) to \\(\texttt{dist}(p_{e_j}) = 0 \to \\)
+The spatial component linearly increases from \\(\texttt{dist}(p_{e_j}) \geq r \to 0\\) to \\(\texttt{dist}(p_{e_j}) = 0 \to \\)
 The temporal component of the score is visualized [in Figure 5](#fig-temporal-emission).
 
 {{< figure id="fig-temporal-emission" src="img/PTVM_temporal_emission.png" alt="PTVM Temporal Emission Score" width="800" caption="> Figure 5: The temporal component of the emission score is \\(0\\) for punctual \\(tp_{p_{e_j}}\\) and linearly increases to its maximum on tunable earliness and delay threshold values." >}}
@@ -172,9 +172,13 @@ In order to determine the HMM candidates, we choose the maximum trip segment sco
 
 ### PTVM HMM
 
-A HMM is a layered directed acyclic graph (LDAG), which enables us to use a heap-queue-free layer relaxation algorithm to find the shortest path from start to the end node in \\(\mathcal{O}(|E|+|V|)\\) time. Here, \\(E_l \in E\\) holds all trips per event layer \\(l\\). \\(V_{l \to l+1} \in V\\) holds all transitions between layers \\(l\\) and \\(l+1\\). Further, \\(E_{(l, i)} \in E_l\\) points to the \\(i\\)-th trip candidate in layer \\(l\\). Similarly, \\(V_{(l, i) \to (l+1, j)} \in V_{l \to l+1}\\) points to the edge connecting the \\(i\\)-th trip candidate in layer \\(l\\) to the \\(j\\)-th trip candidate in layer \\(l+1\\).
+A HMM is a layered directed acyclic graph (LDAG), which enables us to use a heap-queue-free layer relaxation algorithm to find the shortest path from start to the end node in \\(\mathcal{O}(|E|+|V|)\\) time. Here, \\(E_l \in E\\) holds all _trip nodes_ per event layer \\(l\\). \\(V_{l \to l+1} \in V\\) holds all _transition edges_ between layers \\(l\\) and \\(l+1\\). Further, \\(E_{(l, i)} \in E_l\\) points to the \\(i\\)-th trip candidate in layer \\(l\\). Similarly, \\(V_{(l, i) \to (l+1, j)} \in V_{l \to l+1}\\) points to the transition edges connecting the \\(i\\)-th trip candidate in layer \\(l\\) to the \\(j\\)-th trip candidate in layer \\(l+1\\).
+
+The number of transition edges \\(V_{l \to l+1}\\) increases quadratically for any trip node additions to \\(E_{l}\\) or \\(E_{l+1}\\). Hence, finding the shortest path through the HMM and consequentially minimizing the PTVM query time profits from keeping the amount of trip nodes per layer as low as possible. This is one key reason why PTVM query time is that much quicker, as we will see in [the evaluation chapter](#evaluation).
 
 In our HMM calculations, we minimize \\(\texttt{score} \in [0, \infty)\\) instead of maximizing Markov probabilities \\(p \in [0, 1]\\). This is equivalent to a HMM, as \\(\texttt{score}\\) is derived from the negative log-likelihood of the Markov probabilities.
+
+TODO discuss similarity to Viterbi? Is this Viterbi?
 
 <div id="eq-transition"></div>
 
@@ -247,17 +251,25 @@ A Geocalendar Index (GCI) can be queried for a trip candidate that is both spati
 
 For the spatial part of the GCI, we implement a grid with a fixed width and height for each cell (e.g. 5 kilometers). Each cell contains a \\(\texttt{std::vector}\\) of \\(\texttt{std::set\<TripId\>}\\) for every trip passing the cell geographically.
 
-We choose a grid for the sake of implementation speed, even though a tree-like structure (e.g. an R-Tree, see PTS) would likely speed up the PTVM query process a lot, as it would reduce the amount of trips to check at the very beginning of the query pipeline [see pipeline img TODO](). However, as we will see in the [evaluation section](#evaluation), the proof of concept stands and PTVM drastically outperfomrs PTS in query speed already.
+We choose a grid for the sake of implementation speed, even though a tree-like structure (e.g. an R-Tree, see PTS) would likely speed up the PTVM query process a lot, as it would reduce the amount of trips to check at the very beginning of the query pipeline [(recall Figure ???)](#fig-pts-ptvm-overview). However, as we will see in the [evaluation section](#evaluation), the proof of concept stands and PTVM drastically outperfomrs PTS in query speed already.
 
 As for the temporal part of the GCI, we chose a \\(\texttt{std::vector}\\) of time slots \\(\texttt{std::set\<TripTime\>}\\) of equal size (e.g. 24 hours), where each time slot contains all trips that are at least partially active within the time slot. We store \\(\texttt{TripTime}\\)s instead of \\(\texttt{TripId}\\)s, in order to allow for trips that have a duration longer than the length of the time slots. For example, for a slot size of 24h and a daily operating TripId \\(1\\) with a trip duration of 30 hours, a time slot would hold \\(\\{(1, 2026.01.01), (1, 2026.01.02)\\}\\).
 
+Hence, in order to query the GCI for \\(\texttt{TripTime}\\)s that are both in the right cell and in the right time slot, we apply a zipper algorithm on the sorted cell and time slot contents during query runtime. TODO elaborate zipper?
+
 <div id="eq-gci"></div>
 
-In a prior version of the GCI, we tried merging the spatial and temporal components in one vector [as in Equation ???](#eq-gci):
+In a prior version of the GCI, we tried merging the spatial and temporal components in one vector [as in Equation ???](#eq-gci).
 
 \begin{equation}
 \underbrace{\texttt{std::vector}}\_{\text{grid idx}} \texttt{<}\underbrace{\texttt{std::vector}}\_{\text{calendar idx}} \texttt{<}\underbrace{\texttt{std::set\<TripTime\>}}_{\text{spat. \& temp. relevant}} \texttt{>}\texttt{>}
 \end{equation}
+
+However, this lead to a disproportionate increase in building time and RAM usage for a minor increase in query time. TODO example on Germany GTFS set with building time, ram and query time O-Notation?
+
+### HMM
+
+
 
 # Evaluation
 
@@ -368,6 +380,6 @@ You can try everything out on your own by cloning our [GitHub repository](https:
 
 # TODO
 
-Speedup: Replace grid with R-Tree, cache HMM layers for one event. Not needed because fast enough for our purposes.
+Speedup: Replace grid with R-Tree, cache HMM layers for one event. Not needed because fast enough for our purposes. Replace Zipper by one datastructure in GCI.
 
 Both approaches have the downside that they rely on linear interpolation for estimating where the PTV is between two stops. This is not accurate for trip segments with varying speeds.
