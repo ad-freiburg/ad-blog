@@ -113,7 +113,7 @@ The aim of our dynamic map matching algorithms is to match a list of Events \\(E
 
 In this chapter, we go through the query process of both PTS and PTVM, to highlight the differences in the queries. See [Figure ???]() for an overview.
 
-{{< figure id="fig-pts-ptvm-overview" src="img/PTS_vs_PTVM_approaches.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? presents an overview over the pipeline differences on a trip matching query for PTS and PTVM." >}}
+{{< figure id="fig-pts-ptvm-overview" src="img/PTS_vs_PTVM_approaches.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? presents an overview over the pipeline differences on a trip matching query for PTS and PTVM. One can see that PTVM filters more trips early on in the query pipeline due to the rough time window filter. Furthermore, PTVM filters more trips before the HMM insertion and makes use of a mixed score, which incorporates the temporal component of the dynamic map matching directly into the HMM." >}}
 
 ## Public Transit Snapper (PTS)
 
