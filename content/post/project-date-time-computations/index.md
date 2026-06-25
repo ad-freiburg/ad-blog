@@ -21,6 +21,7 @@ This project enables more usage of dates and times in [QLever](https://github.co
 - [Implementation](#implementation)
   - [Epoch Time](#epoch-time)
   - [Addition/Subtraction](#additionsubtraction)
+- [Evaluation](#evaluation)
 - [Discussion](#discussion)
 - [Conclusion](#conclusion)
 
@@ -121,11 +122,102 @@ The subtraction and addition between two `xsd:dayTimeDuration` objects is more s
 
 Lastly for the subtraction and addition between a date type (`xsd:date` or `xsd:dateTime`) and a `xsd:dayTimeDuration` a combination of the previous procedures is used. The computation is done between the epoch representation of the date and the total amount of milliseconds of the duration. The result of this computation will again be a epoch time, that will be converted into a date again [as seen above](#epoch-time).
 
+## Evaluation
+There are two things to be shown for this project. First since the internal subtraction/addition logic was changed, we need to be sure that the subtraction/addition of `xsd:int` and `xsd:decimal` can still be done in the same time. Secondly the subtraction/addition of date or time objects should be fast.  
 
+### `xsd:int` and `xsd:decimal`
+To test this, two versions of a `qlever-server` are compared on the same datasets and queries. For the build without the changes from this project, the last commit before was taken. The datasets consists of 30'000 random `xsd:int`/`xsd:decimals`. As the result of the operations does not matter here this is enough to get 900'000'000 computations via the cartesian product. Simple queries were used that computed the sum of the 9'000'000 subtractions/additions. Using this it could also be ensured that the computation results did not change between the two versions. Example query for subtraction of `xsd:int`:
+```sparql
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+SELECT (SUM(?diff) AS ?sumDiff) WHERE {
+  ?x <http://example.org/value> ?value .
+  ?y <http://example.org/value> ?value2 .
+  BIND((?value - ?value2) AS ?diff)
+}
+```
+  
+| **`xsd:int`**       | **subtraction** | subtraction (only BIND) | subtraction (only CARTESIAN) | **addition** | addition (only BIND) | addition (only CARTESIAN) |
+|----------------|-------------|-------------------------|------------------------------|----------|----------------------|--------------------------|
+| **before changes** |     28.488ms        |  18,576ms      |        4,671ms               |    27.968ms      |     18,086ms       |     4,703ms       |
+| **after changes**  |     29.136ms    |    19,732ms      |        4,508ms        |     28.995     |     19,621       |    4,506      |  
 
+For both the subtraction and the addition of `xsd:int` the computations are only about a millisecond slower than before. This change should not be noticeable and it could also be caused by other changes that happened after the first commits of this project.  
+  
 
+| **`xsd:decimal`**       | **subtraction** | subtraction (only BIND) | subtraction (only CARTESIAN) | **addition** | addition (only BIND) | addition (only CARTESIAN) |
+|----------------|-------------|-------------------------|------------------------------|----------|----------------------|--------------------------|
+| **before changes** |     34.866ms         |   22,951ms     |       5,892ms               |    34.127ms      |    22,478ms        |     5,599ms       |
+| **after changes**  |     32.133ms    |      21,298ms    |       5,872ms         |    34.204ms      |   22,293ms        |    6,725ms    |  
 
-TODO: focus on subtraction (addition is equivalent)
+Here the subtraction of `xsd:decimal` is even faster than before the changes and the addition is just as fast as before. This change cannot come from the implementations of this project. Therefore the changes of computation times probably comes from other changes done to the codebase or is just due to fluctuation.
+
+### Date and time operations
+For the evaluation of the operations implemented in this project, different queries and datasets were used.  
+The subtraction of two dates was tested on two different datasets. First a dataset of all start dates (`P580`) and end dates (`P582`) in Wikidata was constructed. On it the following query computed 813'608 subtractions between a end and its corresponding start date resulting in a total duration of this object `?x`:  
+```sparql
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+SELECT * WHERE {
+  ?x wdt:P580 ?start .
+  ?x wdt:P582 ?end .
+  BIND(?end - ?start AS ?duration)
+}
+```
+
+To get even more computations a second dataset was constructed of the birth dates (`P569`) and death dates (`P570`) of humans in Wikidata. Here a similar query computed the lifespans (as a duration) of 3'655'482 humans: 
+```sparql
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+SELECT ?duration
+WHERE {
+  ?y wdt:P569 ?birth_date .
+  ?y wdt:P570 ?death_date .
+  BIND(?death_date - ?birth_date AS ?duration)
+}
+```   
+
+| dataset   | #subtractions | total time | time for BIND | time for JOIN |
+|-----------|-------------------|-----------|-----------|-----------|
+| **start-end** | 813'608 |  153ms      |   58ms       |     53ms     |
+| **lifespan**  |  3'655'482  |    378ms           |    215ms       |    159ms       |  
+
+This evaluation clearly shows that the subtraction of two dates (`xsd:date`/`xsd:dateTime`) can be computed fast and again that this subtraction can be really helpful for new insights on real life data.  
+To also evaluate subtractions containing `xsd:dayTimeDuration` a third dataset was constructed using the lifespan query shown above. The new dataset contained every birth and death date and a corresponding lifespan duration (`?duration` in the query above) for each human in Wikidata. Using this the time for the computation of subtraction/addition between `xsd:date`/`xsd:dateTime` and `xsd:dayTimeDuration` could be measured:
+
+```sparql
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+SELECT ?result ?correct
+WHERE {
+  ?y wdt:P569 ?birth_date .
+  ?y wdt:P570 ?death_date .
+  ?y <http://example.org/lifespan> ?lifespan .
+  BIND((?death_date - ?lifespan) AS ?result) .
+  BIND((?result = ?birth_date) AS ?correct) .
+}
+```  
+
+The query above also checked if the computed result was correct, as the dataset contained both birth and death date and the lifespan should be exacty the time between them. Strangely enough for some computations `?correct` was false, which indicated that the computation was faulty. After a closer look it was clear that these "errors" were caused by humans with multiple birth or death dates in Wikidata and therefore they don't matter in this project.    
+
+The dataset also allowed for tests of the subtraction/addition of `xsd:dayTimeDuration` objects using this query (or it's counterpart):  
+
+```sparql
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT (COUNT(*) AS ?count) (MIN(?result) AS ?min) (MAX(?result) AS ?max) WHERE {
+  { SELECT ?lifespan1 WHERE { ?y <http://example.org/lifespan> ?lifespan1 } LIMIT 4000 }
+  { SELECT ?lifespan2 WHERE { ?x <http://example.org/lifespan> ?lifespan2 } LIMIT 4000 }
+  BIND(?lifespan1 + ?lifespan2 AS ?result)
+}
+```
+
+Here as with the evaluation of `xsd:int`/`xsd:decimal` the result of the computations did not matter. Therefore the cartesian product was used again to increase the number of operations.  
+
+| operation           | #operations | total computation | only BIND |
+|---------------------|-------------|-------------------|-----------|
+| **date - duration**     |  3'951'938   |     740ms        |   267ms        |
+| **date + duration**     |  3'951'938   |     910ms        |    299ms       |
+| **duration - duration** |  16'000'000  |    1262ms        |    742ms       |
+| **duration + duration**  |  16'000'000  |    1208ms        |    727ms       |
+
+This again shows that the implementation of this project enables reasonably fast computation between dates and/or durations even on larger datasets.  
 
 ## Discussion
 
