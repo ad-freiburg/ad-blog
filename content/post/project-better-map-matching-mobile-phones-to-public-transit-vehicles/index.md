@@ -269,30 +269,15 @@ However, this lead to a disproportionate increase in building time and RAM usage
 
 ### HMM
 
+Our implementation of a HMM cholds up to \\(\texttt{MAX\_HMM\_STATES}\\) layers plus two single-node start/end layers. There is no preprocessing needed.
 
+### API
+
+The PTVM API serves the same endpoints as PTS, in order to communicate with the old frontend, except for \\(\texttt{/chat}\\), which could be implemented on demand. \\(\texttt{/map-match}\\) has been renamed to \\(\texttt{/trip-match}\\) and still returns the most likely trip. \\(\texttt{/connections}\\) still fetches the transfer options at the next stop and \\(\texttt{/shapes}\\) still responds with the shape corresponding to a given trip id.
 
 # Evaluation
 
 In this chapter, we compare PTS and PTVM with regard to query time and accuracy. PTVM strongly outperforms PTS in both categories.
-
-<div id="table-ram-pts-ptvm"></div>
-
-We compare the RAM usage of PTS and PTVM on different datasets in [Table 3](#table-ram-pts-ptvm)
-
-| RAM USAGE in GB | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | Switzerland |
-| --- | --- | --- | --- | --- | --- | --- |
-| PTS | --- | --- | --- | --- | --- | --- |
-| PTVM | TBD | 0.55 | 1.91 | 19.63 | 20.27 | --- |
-
-## Method
-
-We consider all trips of the GTFS dataset VAGFR of Freiburg's PTV agency VAG on Wednesday 15th of October 2025. We precalculate simulated trajectories along each trip \\(t\\), which is a list of events \\(ev_{(\texttt{t}, \delta)}\\). Here, \\(\delta \in (\texttt{min_delay},\ \texttt{max_delay})\\) describes noise on top of the time point of the event. For each event on a trip segment (between two stops), we linearly interpolate the timepoint \\(tp\\) based on the arrival/departure time at a trip's previous and next stop. We add a \\(\delta\\) to each \\(tp\\) to simulate some noise in the PTV network. Essentially, this either slows down or speeds up a simulated PTV along a trip segment.
-
-Not only do we consider query time and accuracy on every single trip, we also examine the same metrics for all trip segments along the way.
-
-In order to differentiate the difficulty of a query, we introduce _Activeness_. Trips and trip segments have Activeness \\(a_t\\) or \\(a_{ts}\\). We calculate Activeness based on how many trips pass an edge \\(e_t\\) within our time window: Activeness \\(a_{e_t}\\) of edge \\(e_t\\). Then, for each trip segment \\(ts_t\\) of trip \\(t\\), \\(a_{ts_t} = \texttt{avg}(a_{e_t})\\) for all edges within the trip segment. Similarly, we calculate a trip's Activeness \\(a_t = \texttt{avg}(a_{e_t})\\) for all edges of the trip. Generally, we expect a query to be more difficult if a trip or a trip segment is rather active, as there are more candidates to choose from.
-
-VAGFR contains 3329 trips that start on Wednesday 2025.10.15 00:00:00 and serve two or more stops within 24 hours from then. We generate 912,434 events for all trips, or on average 274 events per trip. As one PTS query averages 0.482 seconds, we can expect a runtime of \\(\sim 122\\) hours on a single core to simulate all trips. As we want to speed up the simulation by parallelizing, we run several PTS backend instances with gunicorn. Only one backend instance does not suffice with one GIL-bound Flask API. With 8 processes, we get the simulation run time down to about 18 hours on a home machine with an AMD Ryzen 5 5600X.
 
 ## Settings
 
@@ -319,27 +304,43 @@ For PTVM, we choose the following configurable parameters:
 
 PTS has no other configurable parameters.
 
-# Frontend
-## Flutter as our framework
-In order to match a mobile phone to a public transit vehicle, we needed an interface for the user. 
-As we could not decide whether to build a web-app or a mobile app, we chose to use [Flutter](https://flutter.dev) for our frontend.
-Flutter is an open source framework developed by Google for building web-apps and apps for iOS or Android, all from a singe codebase.
-The programming language used for Flutter apps is [Dart](https://dart.dev), which is designed and optimized for UI (Exactly what we needed!).
+## Method
 
-## Content of the app
-There are three pages, all of which we can show using examples from the city of 
-[Freiburg](https://de.wikipedia.org/wiki/Freiburg_im_Breisgau) with GTFS from the [Freiburger Verkehrs AG (VAG)](https://www.vag-freiburg.de/service-infos/downloads/gtfs-daten).\
-The first page shows the public transit vehicle the user has been matched to, as well as the next stop.\
-<img src="img/frontend_frontpage.png" title="frontpage" width="800"></img>
-The second page shows the matched vehicle on a line in the color specified for the route in the GTFS data.\
-<img src="img/frontend_map_hauptbahnhof.png" title="line 2 on the main station bridge" width="800"></img>
-<img src="img/frontend_map_schwarzwaldstrasse.png" title="line 1 in the Schwarzwaldstraße" width="800"></img>
-<img src="img/frontend_map_bus.png" title="a bus line" width="800"></img>
-The third page shows the transfer possibilities at the next stop if the device has been matched to a trip.\
-<img src="img/frontend_connections_page.png" title="connections page" width="800"></img>
+We consider all trips of the GTFS dataset VAGFR of Freiburg's PTV agency VAG on Wednesday 15th of October 2025. We precalculate simulated trajectories along each trip \\(t\\), which is a list of events \\(ev_{(\texttt{t}, \delta)}\\). Here, \\(\delta \in (\texttt{min_delay},\ \texttt{max_delay})\\) describes noise on top of the time point of the event. For each event on a trip segment (between two stops), we linearly interpolate the timepoint \\(tp\\) based on the arrival/departure time at a trip's previous and next stop. We add a \\(\delta\\) to each \\(tp\\) to simulate some noise in the PTV network. Essentially, this either slows down or speeds up a simulated PTV along a trip segment.
+
+Not only do we consider query time and accuracy on every single trip, we also examine the same metrics for all trip segments along the way.
+
+In order to differentiate the difficulty of a query, we introduce _Activeness_. Trips and trip segments have Activeness \\(a_t\\) or \\(a_{ts}\\). We calculate Activeness based on how many trips pass an edge \\(e_t\\) within our time window: Activeness \\(a_{e_t}\\) of edge \\(e_t\\). Then, for each trip segment \\(ts_t\\) of trip \\(t\\), \\(a_{ts_t} = \texttt{avg}(a_{e_t})\\) for all edges within the trip segment. Similarly, we calculate a trip's Activeness \\(a_t = \texttt{avg}(a_{e_t})\\) for all edges of the trip. Generally, we expect a query to be more difficult if a trip or a trip segment is more active, as there are more candidates to choose from.
+
+VAGFR contains 3329 trips that start on Wednesday 2025.10.15 00:00:00 and serve two or more stops within 24 hours from then. We generate 912,434 events for all trips, or on average 274 events per trip. As one PTS query averages 0.482 seconds, we can expect a runtime of \\(\sim 122\\) hours on a single core to simulate all trips. As we want to speed up the simulation by parallelizing, we run several PTS backend instances with gunicorn. Only one backend instance does not suffice with one GIL-bound Flask API. With 8 processes, we get the simulation run time down to about 18 hours on a home machine with an AMD Ryzen 5 5600X.
+
+## RAM Usage
+
+<div id="table-ram-pts-ptvm"></div>
+
+We compare the RAM usage of PTS and PTVM on different datasets in [Table 3](#table-ram-pts-ptvm). The RAM evaluation as conducted on a home machine with 54GB RAM. As we can see, PTVM uses up significantly less space.
+
+Freiburg-Short is a [VAGFR](https://www.vag-freiburg.de/service-infos/downloads/gtfs-daten) dataset reduced to trips active on 2025/10/15.
+All DE-* datasets are from [gtfs.de](https://gtfs.de/de/feeds/).
+CH-full is the full dataset of [Swiss Opentransport](https://data.opentransportdata.swiss/dataset/timetable-2026-gtfs2020), excluding shapes that are not within swiss borders.
+
+| GB | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-full |
+| --- | --- | --- | --- | --- | --- | --- |
+| Disk use GTFS | 0.55 | 0.33 | 0.5 | 6.2 | 7 | 4.84 |
+| RAM usage PTS | 0.58 | 4.3 | 6.9 | >54 | >54 | >54 |
+| RAM usage PTVM | 0.28 | 0.55 | 1.91 | 19.63 | 20.27 | 15.33 |
+
+## Speed and Accuracy
+
+TODO
+
+# Frontend
+
+PTVM works with the same frontend as PTS and has not been changed relevantly for this project. See [Gerrit Freiwald's Bachelor Thesis](https://ad-publications.cs.uni-freiburg.de/theses/Bachelor_Gerrit_Freiwald_2022.pdf) for a more in-depth look.
 
 # Testing
-As it would be very exhausting and expensive to code on board of a bus or tram on a laptop, to see if the map matching algorithm actually works, we wrote a tool to simplify the task.
+
+As it would be very exhausting and expensive to develop on board of a bus or tram on a laptop to see if the dynamic map matching algorithm currently works, we simulate the movement...
 
 ## Using selenium to manipulate a devices GPS location
 In the chrome devtools, one can use the location sensor to manipulate one's position.\
