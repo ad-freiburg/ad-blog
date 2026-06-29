@@ -337,13 +337,27 @@ Due to time constraints, we manually find a configuration that works well enough
 
 Of course, this [naive strategy](https://en.wiktionary.org/wiki/graduate_student_descent) only works well enough because the parameters have a low covariance. For a more optimal setting, we suggest to run a hyperparameter optimization algorithm in order to try to get closer to a pareto-optimal parameter configuration.
 
+<div id="fig-activeness-freiburg-short"></div>
+
+In order to differentiate the difficulty of a query, we introduce _Activeness_. Trips and trip segments have Activeness \\(a_t\\) or \\(a_{ts}\\). We calculate Activeness based on how many trips pass an edge \\(e_t\\) within our time window: Activeness \\(a_{e_t}\\) of edge \\(e_t\\). Then, for each trip segment \\(ts_t\\) of trip \\(t\\), \\(a_{ts_t} = \texttt{avg}(a_{e_t})\\) for all edges within the trip segment. Similarly, we calculate a trip's Activeness \\(a_t = \texttt{avg}(a_{e_t})\\) for all edges of the trip. Generally, we expect a query to be more difficult for a more active trip or trip segment, as there are more candidates to choose from.
+
+{{< figure id="fig-activeness-freiburg-short" src="img/activeness_freiburg-short.png" alt="Activeness Freiburg Short" width="800" caption="> ???">}}
+
 ### Results
 
-<div id="fig-3-3-opt-whole-trips-acc-qtime"></div>
+<div id="fig-0-0-opt-whole-trips-acc-qtime"></div>
 
-As for the results of the parameter optimization, we can see that giving PTVM a higher \\(\texttt{GPS\_RADIUS\_M}\\) leads to a better matching for trips with a small delay. This in combination with a more time-focussed \\(\texttt{TEMPORAL\_WEIGHT}\\) causes an improved calculation of the emission score ([recall Figure ???](#fig-emission)). As a consequence, the average accuracy on even very active trips remains high for small delays (see Figures [???](#fig-3-3-opt-whole-trips-acc-qtime) and [???]()).
+As for the results of the parameter optimization, we can see that giving PTVM a higher \\(\texttt{GPS\_RADIUS\_M}\\) leads to a better matching for trips with a small delay, especially in combination with a more time-focussed \\(\texttt{TEMPORAL\_WEIGHT}\\). This causes an improved calculation of the emission score ([recall Figure ???](#fig-emission)). As a consequence, the average accuracy on even very active trips remains high for small delays (see Figures [???](#fig-0-0-opt-whole-trips-acc-qtime) and [???](#fig-0-0-opt-ts-quantiles)). TODO 6-6.
 
-{{< figure id="fig-3-3-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_3,_3.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? presents an overview over the pipeline differences on a trip matching query for PTS and PTVM. One can see that PTVM filters more trips early on in the query pipeline due to the rough time window filter. Furthermore, PTVM filters more trips before the HMM insertion and makes use of a mixed score, which incorporates the temporal component of the dynamic map matching directly into the HMM." >}}
+{{< figure id="fig-0-0-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_0,_0.png" alt="Default vs Optimized Parameter PTVM Performances" width="800">}}
+{{< figure id="fig-3-3-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_3,_3.png" alt="PTS vs PTVM approaches" width="800">}}
+{{< figure id="fig-6-6-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_6,_6.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? compares two versions of PTVM. The orange version has unoptimized default parameters, the blue version optimized parameters ([as in table TODO](TODO)). While PTVM version with optimized parameters is minimalistically slower, the performance gain in accuracy is substantial. _Note: the query times can only be compared within the same delay plots, due to different temperatures in the server room at calculation times_ " >}}
+
+<div id="fig-0-0-opt-ts-quantiles"></div>
+
+{{< figure id="fig-0-0-opt-ts-quantiles" src="img/parameter_optimization/quantiles_line_segments_0,_0.png" alt="PTS vs PTVM approaches" width="800">}}
+{{< figure id="fig-3-3-opt-ts-quantiles" src="img/parameter_optimization/quantiles_line_segments_3,_3.png" alt="PTS vs PTVM approaches" width="800">}}
+{{< figure id="fig-6-6-opt-ts-quantiles" src="img/parameter_optimization/quantiles_line_segments_6,_6.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ???" >}}
 
 # Evaluation
 
@@ -386,8 +400,6 @@ We consider all trips of the GTFS dataset VAGFR of Freiburg's PTV agency VAG on 
 TODO img of simulated trajectory
 
 Not only do we consider query time and accuracy on every single trip, we also examine the same metrics for all trip segments along the way.
-
-In order to differentiate the difficulty of a query, we introduce _Activeness_. Trips and trip segments have Activeness \\(a_t\\) or \\(a_{ts}\\). We calculate Activeness based on how many trips pass an edge \\(e_t\\) within our time window: Activeness \\(a_{e_t}\\) of edge \\(e_t\\). Then, for each trip segment \\(ts_t\\) of trip \\(t\\), \\(a_{ts_t} = \texttt{avg}(a_{e_t})\\) for all edges within the trip segment. Similarly, we calculate a trip's Activeness \\(a_t = \texttt{avg}(a_{e_t})\\) for all edges of the trip. Generally, we expect a query to be more difficult for a more active trip or trip segment, as there are more candidates to choose from.
 
 VAGFR contains 3329 trips that start on Wednesday 2025.10.15 00:00:00 and serve two or more stops within 24 hours from then. We generate 912,434 events for all trips, or on average 274 events per trip. As one PTS query averages 0.482 seconds, we can expect a runtime of \\(\sim 122\\) hours on a single core to simulate all trips. As we want to speed up the simulation by parallelizing, we run several PTS backend instances with gunicorn. Only one backend instance does not suffice with one GIL-bound Flask API. With 8 processes, we get the simulation run time down to about 18 hours on a home machine with an AMD Ryzen 5 5600X.
 
