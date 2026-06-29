@@ -42,7 +42,7 @@ In this blog post, we compare two dynamic map matching algorithms for matching a
 - [Evaluation](#evaluation)
   - [RAM Usage](#ram-usage)
   - [Boot Time](#boot-time)
-  - [Accuracy and query speed](#accuracy-and-query-speed)
+  - [Accuracy and Query Time](#accuracy-and-query-time)
     - [Method](#method)
 - [Frontend](#frontend)
 - [Testing](#testing)
@@ -55,7 +55,7 @@ In this blog post, we compare two dynamic map matching algorithms for matching a
 
 We present an algorithm to deduce the public transit vehicle (PTV) a mobile phone is travelling in real time. In a nutshell, this is based on analyzing the last few GPS points of the device and applying our spatio-temporal map matching algorithm, which uses static (non-realtime) PTV schedule information.
 
-This project aims to improve on Robin Wu's and my previous work [1-3], by improving accuracy and speed. We therefore re-design our previous spatio-temporal map-matching algorithm conceptually. We further improve query speed by implementing the reworked backend in C++.
+This project aims to improve on Robin Wu's and my previous work [1-3], by improving accuracy and speed. We therefore re-design our previous spatio-temporal map-matching algorithm conceptually. We further improve query time by implementing the reworked backend in C++.
 
 TODO Motivation
 
@@ -260,7 +260,7 @@ A Geocalendar Index (GCI) can be queried for a trip candidate that is both spati
 
 For the spatial part of the GCI, we implement a grid with a fixed width and height for each cell (e.g. 5 kilometers). Each cell contains a \\(\texttt{std::vector}\\) of \\(\texttt{std::set\<TripId\>}\\) for every trip passing the cell geographically.
 
-We choose a grid for the sake of implementation speed, even though a tree-like structure (e.g. an R-Tree, see PTS) would likely speed up the PTVM query process a lot, as it would reduce the amount of trips to check at the very beginning of the query pipeline [(recall Figure ???)](#fig-pts-ptvm-overview). However, as we will see in the [evaluation section](#evaluation), the proof of concept stands and PTVM drastically outperfomrs PTS in query speed already.
+We choose a grid for the sake of implementation speed, even though a tree-like structure (e.g. an R-Tree, see PTS) would likely speed up the PTVM query process a lot, as it would reduce the amount of trips to check at the very beginning of the query pipeline [(recall Figure ???)](#fig-pts-ptvm-overview). However, as we will see in the [evaluation section](#evaluation), the proof of concept stands and PTVM drastically outperforms PTS in query time already.
 
 As for the temporal part of the GCI, we chose a \\(\texttt{std::vector}\\) of time slots \\(\texttt{std::set\<TripTime\>}\\) of equal size (e.g. 24 hours), where each time slot contains all trips that are at least partially active within the time slot. We store \\(\texttt{TripTime}\\)s instead of \\(\texttt{TripId}\\)s, in order to allow for trips that have a duration longer than the length of the time slots. For example, for a slot size of 24h and a daily operating TripId \\(1\\) with a trip duration of 30 hours, a time slot would hold \\(\\{(1, 2026.01.01), (1, 2026.01.02)\\}\\).
 
@@ -288,14 +288,17 @@ The PTVM API serves the same endpoints as PTS, in order to communicate with the 
 
 As it would be very exhausting and expensive to develop on board of a bus or tram on a laptop to see if the dynamic map matching algorithm currently works, we simulate the movement of an event-emitting device by precalculating events along the shapes of a GTFS dataset.
 
+### Datasets
+
 For the following chapters on [parameter optimizaton](#settings-and-parameter-optimization) and [evaluation](#evaluation), we use the following GTFS datasets. They all have different sizes in terms of calendar range, shape length and number of trips:
 
 | Dataset | #Routes | #Trips | #Edges | #TripSegments |
 | --- | --- | --- | --- | --- |
 | Freiburg-Short | 45 | 33,573 | 19,184 | 2,939 |
 
+### User Emulation
 
-We consider all trips of the GTFS dataset VAGFR of Freiburg's PTV agency VAG on Wednesday 15th of October 2025. We precalculate simulated trajectories along each trip \\(t\\) as a list of events \\(ev_{(\texttt{t}, \delta)}\\). Here, \\(\delta \in (\texttt{min_delay},\ \texttt{max_delay})\\) describes noise on top of the time point of the event. For each event on a trip segment (between two stops), we linearly interpolate the timepoint \\(tp\\) based on the arrival/departure time at a trip's previous and next stop. We add a \\(\delta\\) to each \\(tp\\) to simulate some noise in the PTV network. Essentially, this either slows down or speeds up a simulated PTV along a trip segment.
+In order to simulate the movement of an event-emitting device, we precalculate simulated trajectories along each trip \\(t\\) as a list of events \\(ev_{(\texttt{t}, \delta)}\\). Here, \\(\delta \in (\texttt{min_delay},\ \texttt{max_delay})\\) describes noise on top of the time point of the event. For each event on a trip segment (between two stops), we linearly interpolate the timepoint \\(tp\\) based on the arrival/departure time at a trip's previous and next stop. We add a \\(\delta\\) to each \\(tp\\) to simulate some noise in the PTV network. Essentially, this either slows down or speeds up a simulated PTV along a trip segment.
 
 # Settings and Parameter Optimization
 
@@ -364,9 +367,9 @@ We compare the boot time of PTS and PTVM on different datasets in [Table 4](#tab
 | PTS | --- | --- | --- | --- | --- | --- |
 | PTVM | --- | --- | --- | --- | --- | --- |
 
-## Accuracy and query speed
+## Accuracy and Query Time
 
-In this chapter, we evaluate how well PTS and PTVM perform in terms of accuracy and query speed.
+In this chapter, we evaluate how well PTS and PTVM perform in terms of accuracy and query time.
 
 ### Method
 
