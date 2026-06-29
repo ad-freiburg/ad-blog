@@ -351,7 +351,7 @@ As for the results of the parameter optimization, we can see that giving PTVM a 
 
 {{< figure id="fig-0-0-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_0,_0.png" alt="Default vs Optimized Parameter PTVM Performances" width="800">}}
 {{< figure id="fig-3-3-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_3,_3.png" alt="PTS vs PTVM approaches" width="800">}}
-{{< figure id="fig-6-6-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_6,_6.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? compares two versions of PTVM. The orange version has unoptimized default parameters, the blue version optimized parameters ([as in table TODO](TODO)). While PTVM version with optimized parameters is minimalistically slower, the performance gain in accuracy is substantial. _Note: the query times can only be compared within the same delay plots, due to different temperatures in the server room at calculation times_ " >}}
+{{< figure id="fig-6-6-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_6,_6.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? compares two versions of PTVM. The orange version has unoptimized default parameters, the blue version optimized parameters ([as in table TODO](TODO)). While PTVM version with optimized parameters is minimalistically slower, the performance gain in accuracy is substantial." >}}
 
 <div id="fig-0-0-opt-ts-quantiles"></div>
 
@@ -409,49 +409,12 @@ TODO
 
 PTVM works with the same frontend as PTS and has not been changed relevantly for this project. See [Gerrit Freiwald's Bachelor Thesis](https://ad-publications.cs.uni-freiburg.de/theses/Bachelor_Gerrit_Freiwald_2022.pdf) for a more in-depth look.
 
-# Testing
-
-As it would be very exhausting and expensive to develop on board of a bus or tram on a laptop to see if the dynamic map matching algorithm currently works, we simulate the movement...
-
-## Using selenium to manipulate a devices GPS location
-In the chrome devtools, one can use the location sensor to manipulate one's position.\
-<img src="img/sensors_chrome.png" title="Sensors in Chrome Devtools" width="800"></img>
-These sensors are also accessible via [selenium](https://www.selenium.dev/documentation/webdriver/bidirectional/chrome_devtools/), 
-so we wrote a python script that takes in a list of GPS coordinates and updates the chrome sensor every other second.
-
-## Generating fake GPS data
-For every trip in the GTFS data, we know the exact shape it moves on. However, the GPS can be quite inaccurate. 
-So, in order to simulate a device moving along a shape, we need to 'noisify' the polyline from the shape.\
-First, we need to define an average public transit vehicle moving speed \\(v\\) in \\(\frac{m}{s}\\), 
-a GPS signal frequency \\(p\\) in \\(\frac{1}{s}\\) and an average GPS accuracy \\(acc\\) in meters.\
-Also, we can calculate the length \\(len\\) of the whole polyline and its parts \\(len_i\\) in meters by using the 
-great circle distance for the GPS coordinates.\
-Now, we can calculate the total time needed to travel along the polyline \\(t\\): $$t = \frac{len}{v}$$
-The total number of GPS signals needed to simulate the whole trip is: $$numSignals = t \cdot p$$
-And, as the simulated vehicle is moving with speed \\(v\\) and gets a signal every \\(\frac{1}{p}\\) seconds, 
-the average travelling distance between two signals is: $$s = \frac{v}{p}$$
-
-The next step is to generate points along the polyline.\
-We generate these points for every signal by going along the polyline, one average travelling distance step \\(s\\) at a time.
-
-As our Map Matching includes time, we need to annotate our test data with fitting timestamps.\
-Calculating an estimated timestamp \\(t_{est}\\) for a GPS point can be done very similarly to checking whether a trip is active (see [fast graph building](#fast-graph-building)). 
-We again match the stop coordinates to the edges of the selected shape. This splits the shape into segments. 
-With the timeframe \\((t_{start}, t_{end})\\) of each segment we can project the generated GPS point to the shape. This gives us the segment the point was originally on. 
-The length of the segment is \\(len_{segment}\\).
-Then, we only need to project the point onto this segment and calculate the distance \\(dist_{proj}\\) to the start of this segment.
-$$ t_{est} = t_{start} + (t_{end} - t_{start}) \cdot \frac{dist_{proj}}{len_{segment}} $$
-With this, we get good timestamp estimates for every GPS point.
-
-We can now 'noisify' the points along the line by adding a normally distributed deviation for each x and y with \\(\mu = 0\\) and \\(\sigma = acc\\).
-
-Now, we have generated timed GPS points which can be used by our selenium script to simulate every trip from the GTFS files. 
-
 # Installation
+
 You can try everything out on your own by cloning our [GitHub repository](https://github.com/TheRealTirreg/PublicTransitSnapper/) and following the instructions in the README.md.
 
-# TODO
+# Future Work
 
 Speedup: Replace grid with R-Tree, store (TripId, TS)-tuples in Grid/R-Tree, cache HMM layers for one event. Not needed because fast enough for our purposes. Replace Zipper by one datastructure in GCI.
 
-Both approaches have the downside that they rely on linear interpolation for estimating where the PTV is between two stops. This is not accurate for trip segments with varying speeds.
+Both approaches have the downside that they rely on linear interpolation for estimating where the PTV is between two stops. This is not accurate for trip segments with varying speeds. Could be learnt for each trip
