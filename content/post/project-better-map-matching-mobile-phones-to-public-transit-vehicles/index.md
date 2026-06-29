@@ -35,7 +35,7 @@ In this blog post, we compare two dynamic map matching algorithms for matching a
   - [Geocalendar Index](#geocalendar-index)
     - [HMM](#hmm)
     - [API](#api)
-  - [User Emulation and Datasets](#user-emulation-and-datasets)
+  - [Device Emulation and Datasets](#device-emulation-and-datasets)
 - [Settings and Parameter Optimization](#settings-and-parameter-optimization)
   - [Available Parameters](#available-parameters)
   - [Parameter Optimization](#parameter-optimization)
@@ -56,8 +56,6 @@ In this blog post, we compare two dynamic map matching algorithms for matching a
 We present an algorithm to deduce the public transit vehicle (PTV) a mobile phone is travelling in real time. In a nutshell, this is based on analyzing the last few GPS points of the device and applying our spatio-temporal map matching algorithm, which uses static (non-realtime) PTV schedule information.
 
 This project aims to improve on Robin Wu's and my previous work [1-3], by improving accuracy and speed. We therefore re-design our previous spatio-temporal map-matching algorithm conceptually. We further improve query time by implementing the reworked backend in C++.
-
-TODO Motivation
 
 # Background
 
@@ -132,7 +130,7 @@ On an incoming event from a user request, the older approach PTS starts by query
 
 Now, PTS adds these edges to a HMM. In PTS, HMM-candidates are edges. All edges that are close to the event locations [(see Figure 1)](#fig-g_network) are candidates in \\(G_\texttt{HMM}\\) (see [Figure 2](#fig-g_hmm)).
 
-{{< figure id="fig-g_network" src="img/PTS_G_network.png" alt="G_network" width="800" caption="> Figure 1: \\(G_{\text{network}}\\) contains all edges. The two colored points are events (timestamped locations) emitted by a user. In this example, all edges are close to an event, meaning they are within the event radius." >}}
+{{< figure id="fig-g_network" src="img/PTS_G_network.png" alt="G_network" width="800" caption="> Figure 1: \\(G_{\text{network}}\\) contains all edges. The two colored points are events (timestamped locations) emitted by a user device. In this example, all edges are close to an event, meaning they are within the event radius." >}}
 
 <div id="fig-g_hmm"></div>
 
@@ -155,7 +153,7 @@ PTVM starts by querying its Geocalendar Index (GCI) for crude spatial and tempor
 
 After querying a list of trips \\(\texttt{GCI}(ev) = \texttt{grid}(ev) \cap \texttt{calendar}(ev)\\), we loop over all trip segments \\(ts_{t_i}\\) for all of these trips \\(t_i\\). We first filter by radius \\(r\\), then by a \\((\texttt{earliness},\ \texttt{delay})\\)-relaxed time window to get both close and active trip segments. On these remaining trip segments, we calculate a spatio-temporal score, [visualized in Figure 4](#fig-emission). For all edges \\(e_j = e_{ts_{t_i}}\\) in the event radius, we determine the closest point \\(p_{e_j}\\) to \\(ev\\). Based on the stop times of the trip segment, we interpolate the expected time \\(tp_{p_{e_j}}\\) of the PTV at each \\(p_{e_j}\\).
 
-{{< figure id="fig-emission" src="img/PTVM_mixed_emission_score.png" alt="PTVM Mixed Emission Score" width="800" caption="> Figure 4: This Figure visualizes the calculation of the spatio-temporal emission score, that is calculated for each PTVM HMM candidate trip. The orange point shows a user emitted event location \\(ev\\), the orange circle around it the event radius \\(r\\). The alternating black and red lines represent edges of an active trip segment passing through the event radius. The arrow points to the interpolated position of the trip on no delay or earliness \\(p_\texttt{on\_time}\\). For all edges \\(e_i\\) in the event radius, we determine the closest point \\(p_{e_i}\\) to \\(ev\\), represented as turqouise points. Based on the stop times of the trip segment, we interpolate the expected time of the PTV at each \\(p_{e_i}\\). The final emission score for this trip is the best combination of time discrepancy and spatial distance." >}}
+{{< figure id="fig-emission" src="img/PTVM_mixed_emission_score.png" alt="PTVM Mixed Emission Score" width="800" caption="> Figure 4: This Figure visualizes the calculation of the spatio-temporal emission score, that is calculated for each PTVM HMM candidate trip. The orange point shows a user device emitted event location \\(ev\\), the orange circle around it the event radius \\(r\\). The alternating black and red lines represent edges of an active trip segment passing through the event radius. The arrow points to the interpolated position of the trip on no delay or earliness \\(p_\texttt{on\_time}\\). For all edges \\(e_i\\) in the event radius, we determine the closest point \\(p_{e_i}\\) to \\(ev\\), represented as turqouise points. Based on the stop times of the trip segment, we interpolate the expected time of the PTV at each \\(p_{e_i}\\). The final emission score for this trip is the best combination of time discrepancy and spatial distance." >}}
 
 <div id="eq-emission-equation"></div>
 
@@ -197,7 +195,7 @@ The emission score is already precomputed in the candidate selection step. It in
 
 #### Transition Score
 
-The transition score can be expressed [in the following way](#eq-transition), for layer \\(l\\) and the trip the user has been matched to the previous request \\(t_\texttt{prev}\\):
+The transition score can be expressed [in the following way](#eq-transition), for layer \\(l\\) and the trip the user device has been matched to the previous request \\(t_\texttt{prev}\\):
 
 \begin{align}
 \texttt{transition}(E, V, t_\texttt{prev}) &= \texttt{trip\_change\_hmm}(V) + \texttt{trip\_change\_prev}(E, t_\texttt{prev})\\\\[1em]
@@ -220,7 +218,7 @@ PTVM essentially consists of 4 parts:
 1. A GTFS Reader that reads the GTFS and writes it into datastructures
 2. A Geocalendar Index that is able to query spatially and temporally local trips
 3. A HMM that predicts the most likely trip candidate
-4. An API to communicate with the frontend or a user simulation
+4. An API to communicate with the frontend or a user device simulation
 
 ## GTFS Reader
 
@@ -284,7 +282,7 @@ Our implementation of a HMM cholds up to \\(\texttt{MAX\_HMM\_STATES}\\) layers 
 
 The PTVM API serves the same endpoints as PTS, in order to communicate with the old frontend, except for \\(\texttt{/chat}\\), which could be implemented on demand. \\(\texttt{/map-match}\\) has been renamed to \\(\texttt{/trip-match}\\) and still returns the most likely trip. \\(\texttt{/connections}\\) still fetches the transfer options at the next stop and \\(\texttt{/shapes}\\) still responds with the shape corresponding to a given trip id.
 
-## User Emulation and Datasets
+## User Device Emulation and Datasets
 
 As it would be very exhausting and expensive to develop on board of a bus or tram on a laptop to see if the dynamic map matching algorithm currently works, we simulate the movement of an event-emitting device by precalculating events along the shapes of a GTFS dataset.
 
@@ -296,9 +294,9 @@ For the following chapters on [parameter optimizaton](#settings-and-parameter-op
 | --- | --- | --- | --- | --- |
 | Freiburg-Short | 45 | 33,573 | 19,184 | 2,939 |
 
-### User Emulation
+### User Device Emulation
 
-In order to simulate the movement of an event-emitting device, we precalculate simulated trajectories along each trip \\(t\\) as a list of events \\(ev_{(\texttt{t}, \delta)}\\). Here, \\(\delta \in (\texttt{min_delay},\ \texttt{max_delay})\\) describes noise on top of the time point of the event. For each event on a trip segment (between two stops), we linearly interpolate the timepoint \\(tp\\) based on the arrival/departure time at a trip's previous and next stop. We add a \\(\delta\\) to each \\(tp\\) to simulate some noise in the PTV network. Essentially, this either slows down or speeds up a simulated PTV along a trip segment.
+In order to simulate the movement of an event-emitting device, we precalculate trajectories along each trip \\(t\\) as a list of events \\(ev_{(\texttt{t}, \delta_g, \delta)}\\). Here, \\(\delta_g \in \mathcal{N(0, \sigma^2)}\\) describes Gaussian noise on top of the geographical position, whereas \\(\delta_t \in (\texttt{min_delay},\ \texttt{max_delay})\\) describes noise on top of the time point of the event. For each event on a trip segment (between two stops), we linearly interpolate the timepoint \\(tp\\) based on the arrival/departure time at a trip's previous and next stop. We add a \\(\delta\\) to each \\(tp\\) to simulate some noise in the PTV network. Essentially, this either slows down or speeds up a simulated PTV along a trip segment.
 
 # Settings and Parameter Optimization
 
@@ -306,36 +304,46 @@ PTS and PTVM both have configurable parameters. We first show what parameters ex
 
 ## Available Parameters
 
-For both PTS and PTVM, we can choose the allowed earliness / delay in minutes, as well the GPS radius in meters and the maximum amout of HMM states. For both, we choose the following configuration:
+For both PTS and PTVM, we can choose the allowed earliness / delay in minutes, as well the GPS radius in meters and the maximum amout of HMM states. For both, we choose the following configuration. Post-optimization values are just for PTVM, as we do not optimize PTS parameters.
 
-| Parameter | Value | Description |
-| --- | --- | --- |
-| \\(\texttt{EARLINESS\_MINUTES}\\) | 5 | Maximum allowed earliness in minutes for temporal candidate query component |
-| \\(\texttt{DELAY\_MINUTES}\\) | 5 | Maximum allowed delay in minutes for temporal candidate query component |
-| \\(\texttt{GPS\_RADIUS\_M}\\) | 50 | Radius in meters for spatial query component |
-| \\(\texttt{MAX\_HMM\_STATES}\\) | 10 | Maximum number of HMM states to consider per event |
+| Parameter | Value Pre-<br>Optimization | Value Post-<br>Optimization | Description |
+| --- | --- | --- | --- |
+| \\(\texttt{EARLINESS\_MINUTES}\\) | 5 | 5 | Maximum allowed earliness in minutes<br>for temporal candidate query component |
+| \\(\texttt{DELAY\_MINUTES}\\) | 5 | 5 | Maximum allowed delay in minutes<br>for temporal candidate query component |
+| \\(\texttt{MAX\_HMM\_STATES}\\) | 10 | 10 | Maximum number of HMM states to consider per event |
+| \\(\texttt{GPS\_RADIUS\_M}\\) | 50 | <span style="background-color: #00ff3c;">80</span> | Radius in meters for spatial query component |
 
 For PTVM, we choose the following configurable parameters:
 
-| Parameter | Value | Description |
-| --- | --- | --- |
-| \\(\texttt{NO\_TRIP\_PENALTY}\\) | 1000 | Penalty if no trip is assigned (no matching found) |
-| \\(\texttt{TRIP\_CHANGE\_PENALTY}\\) | 1000 | Penalty for matching to a different trip than the matching from last request |
-| \\(\texttt{TRANSITION\_PENALTY}\\) | 100 | Penalty if trips are different between events of two HMM layers |
-| \\(\texttt{EMISSION\_PENALTY}\\) | 1000 | Maximum emission score |
-| \\(\texttt{TEMPORAL\_WEIGHT}\\) | 0.5 | Weighting factor for temporal and spatial component of emission score. 0.5 means equal weighting. 0.3 means 30% temporal, 70% spatial. |
-| \\(\texttt{CELL\_SIZE\_KM}\\) | 5 | Grid cell size in kilometers |
-| \\(\texttt{CALENDAR_TIME_INTERVAL_H}\\) | 24 | Slot size of each calendar time interval in hours |
+| Parameter | Value Pre-<br>Optimization | Value Post-<br>Optimization | Description |
+| --- | --- | --- | --- |
+| \\(\texttt{NO\_TRIP\_PENALTY}\\) | 1000 | <span style="background-color: #00ff3c;">1200</span> | Penalty if no trip is assigned<br>(no matching found) |
+| \\(\texttt{TRIP\_CHANGE\_PENALTY}\\) | 1000 | <span style="background-color: #00ff3c;">100</span> | Penalty for matching to a different trip than<br>the matching from last request |
+| \\(\texttt{TRANSITION\_PENALTY}\\) | 100 | 100 | Penalty if trips are different between events<br>of two HMM layers |
+| \\(\texttt{EMISSION\_PENALTY}\\) | 1000 | <span style="background-color: #00ff3c;">400</span> | Maximum emission score |
+| \\(\texttt{TEMPORAL\_WEIGHT}\\) | 0.5 | <span style="background-color: #00ff3c;">0.8</span> | Weighting factor for temporal and spatial<br>component of emission score.<br>0.5 means equal weighting.<br>0.3 means 30% temporal, 70% spatial. |
+| \\(\texttt{CELL\_SIZE\_KM}\\) | 5 | 5 | Grid cell size in kilometers |
+| \\(\texttt{CALENDAR_TIME_INTERVAL_H}\\) | 24 | 24 | Slot size of each calendar time interval in hours |
 
 PTS has no other configurable parameters.
 
 ## Parameter Optimization
 
-In order to optimize the parameters of PTVM, we try two setups. We optimize all parameters from the tables above, except for \\(\texttt{CELL\_SIZE\_KM}\\) and \\(\texttt{CALENDAR_TIME_INTERVAL_H}\\), as they don't have a huge impact on accuracy and query time, \\(\texttt{MAX\_HMM\_STATES}\\), \\(\texttt{EARLINESS\_MINUTES}\\) and \\(\texttt{DELAY\_MINUTES}\\), in order to stay comparable with PTS.
+We optimize all parameters from the tables above, except for the following: \\(\texttt{CELL\_SIZE\_KM}\\) and \\(\texttt{CALENDAR_TIME_INTERVAL_H}\\) depends more on the GTFS dataset size. For bigger datasets, hardware constraints lead to bigger cells and calendar intervals. \\(\texttt{MAX\_HMM\_STATES}\\), \\(\texttt{EARLINESS\_MINUTES}\\) and \\(\texttt{DELAY\_MINUTES}\\) stay the same, in order to stay comparable with PTS.
 
-For the first setup, we manually find a configuration that works well enough and outperforms PTS. The strategy is to tune one parameter at a time to find a good parameter configuration. As setup, we run \\(k\\) docker containers, each running a different modification of parameter \\(p\\). We then simulate 
+### Method
 
-We tried to automate this for the second setup, in order to try to get closer to a pareto-optimal parameter configuration. This is done by running a coordinate descent algorithm that tunes one parameter at a time and nudges them in the  
+Due to time constraints, we manually find a configuration that works well enough and outperforms PTS. The strategy is to tune one parameter at a time to find a good parameter configuration. As setup, we run \\(k\\) docker containers, each running a different modification of parameter \\(p_i\\). We then simulate trajectories [as described previously](#user-device-emulation) on \\(10\\%\\) of Freiburg-Short for different emulation delays \\(\delta_t \in (\texttt{min_delay},\ \texttt{max_delay})\\), then choose the best configuration for this parameter, and repeat for the next parameter \\(p_{i+1}\\).
+
+Of course, this [naive strategy](https://en.wiktionary.org/wiki/graduate_student_descent) only works well enough because the parameters have a low covariance. For a more optimal setting, we suggest to run a hyperparameter optimization algorithm in order to try to get closer to a pareto-optimal parameter configuration.
+
+### Results
+
+<div id="fig-3-3-opt-whole-trips-acc-qtime"></div>
+
+As for the results of the parameter optimization, we can see that giving PTVM a higher \\(\texttt{GPS\_RADIUS\_M}\\) leads to a better matching for trips with a small delay. This in combination with a more time-focussed \\(\texttt{TEMPORAL\_WEIGHT}\\) causes an improved calculation of the emission score ([recall Figure ???](#fig-emission)). As a consequence, the average accuracy on even very active trips remains high for small delays (see Figures [???](#fig-3-3-opt-whole-trips-acc-qtime) and [???]()).
+
+{{< figure id="fig-3-3-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_3,_3.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? presents an overview over the pipeline differences on a trip matching query for PTS and PTVM. One can see that PTVM filters more trips early on in the query pipeline due to the rough time window filter. Furthermore, PTVM filters more trips before the HMM insertion and makes use of a mixed score, which incorporates the temporal component of the dynamic map matching directly into the HMM." >}}
 
 # Evaluation
 
@@ -432,6 +440,6 @@ You can try everything out on your own by cloning our [GitHub repository](https:
 
 # TODO
 
-Speedup: Replace grid with R-Tree, cache HMM layers for one event. Not needed because fast enough for our purposes. Replace Zipper by one datastructure in GCI.
+Speedup: Replace grid with R-Tree, store (TripId, TS)-tuples in Grid/R-Tree, cache HMM layers for one event. Not needed because fast enough for our purposes. Replace Zipper by one datastructure in GCI.
 
 Both approaches have the downside that they rely on linear interpolation for estimating where the PTV is between two stops. This is not accurate for trip segments with varying speeds.
