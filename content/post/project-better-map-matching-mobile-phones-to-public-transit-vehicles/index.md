@@ -378,7 +378,7 @@ CH-*-Short are the same datasets as CH-CH and CH-Europe, but reduced to trips ac
 | GB | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-Europe | CH-CH-Short | CH-Europe-Short |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Disk use GTFS | 0.55 | 0.33 | 0.5 | 6.2 | 7 | 4.84 | --- | --- | --- |
-| RAM usage PTS | 0.58 | 4.3 | 6.9 | >54 | >54 | >54 | --- | --- | --- |
+| RAM usage PTS | 0.58 | 4.3 | 6.9 | >54 | 101.4GB | >54 | --- | --- | --- |
 | RAM usage PTVM | 0.28 | 0.55 | 1.91 | 19.63 | 20.27 | 15.33 | --- | --- | --- |
 
 <div id="table-speed-pts-ptvm"></div>
@@ -387,11 +387,11 @@ CH-*-Short are the same datasets as CH-CH and CH-Europe, but reduced to trips ac
 
 We compare the boot time of PTS and PTVM on different datasets in [Table 4](#table-speed-pts-ptvm). We define boot time as the time needed to read the GTFS files and create the data structures, from program launch until the API is live. We abbreviate _pre-generator_ with _PG_, as PTS pre-generates the datastructures needed by python with a C++ program. These datastructures are saved to disk as json files. PTS no PG just has to load these files, that have to be generated once for each new GTFS set. For now, PTVM does all the datastructure generation (e.g. trip segment generation) on each start.
 
-| Boot Time | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-Europe | CH-CH-Short | CH-Europe-Short |
+| --- | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-Europe | CH-CH-Short | CH-Europe-Short |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| PTS with PG | 18.78s | 117.37s | 222.91s | 58.8m | --- | --- | --- | --- | --- |
-| PTS no PG | 6.83s | 23.95s | 67.32s | --- | --- | --- | --- | --- | --- |
-| PTVM | 7.4s | 17.09s | 65.01s | 16.88m | --- | 1.47h | 1.47h | --- | --- |
+| Disk use GTFS | 53M | 313M | 481M | 5.8G | 6.6G | 4.9G | 5.5G | 4.8G | 5.3G |
+| PTS no PG | 6.83s | 23.95s | 67.32s | 15.85m | 17.6m | --- | --- | --- | --- |
+| PTVM | 7.4s | 17.09s | 65.01s | 16.88m | 18.09m | 1.47h | 1.47h | --- | --- |
 
 ## Accuracy and Query Time
 
