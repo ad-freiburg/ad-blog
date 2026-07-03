@@ -77,11 +77,11 @@ Every trip operates based on a service, which describes whether the trip is acti
 
 ## Trip Segments
 
-We can subdivide a trip into k segments, where each segment describes the part of the trip between two stops. [img?]
+We can subdivide a trip into k segments, where each segment describes the part of the trip between two stops.
 
 ## Close Trips
 
-A trip or a trip segment is considered as close (to a point \\(p\\)) if any of the edges of the trip's/trip segment's shape pass trough a radius of \\(p\\).
+A trip or a trip segment is considered as close (to a point \\(p\\)) if any of the edges of the trip's/trip segment's shape pass through a radius of \\(p\\).
 
 ## Active Trips
 
@@ -371,23 +371,27 @@ We compare the RAM usage of PTS and PTVM on different datasets in [Table 3](#tab
 
 Freiburg-Short is a [VAGFR](https://www.vag-freiburg.de/service-infos/downloads/gtfs-daten) dataset reduced to trips active on 2025/10/15.
 All DE-* datasets are from [gtfs.de](https://gtfs.de/de/feeds/).
-CH-full is the full dataset of [Swiss Opentransport](https://data.opentransportdata.swiss/dataset/timetable-2026-gtfs2020), excluding shapes that are not within swiss borders.
+CH-CH is the full dataset of [Swiss Opentransport](https://data.opentransportdata.swiss/dataset/timetable-2026-gtfs2020), excluding shapes that are not within swiss borders.
+CH-Europe is the same dataset, including all shapes within European borders.
+CH-*-Short are the same datasets as CH-CH and CH-Europe, but reduced to trips active on 2025/10/15.
 
-| GB | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-full |
-| --- | --- | --- | --- | --- | --- | --- |
-| Disk use GTFS | 0.55 | 0.33 | 0.5 | 6.2 | 7 | 4.84 |
-| RAM usage PTS | 0.58 | 4.3 | 6.9 | >54 | >54 | >54 |
-| RAM usage PTVM | 0.28 | 0.55 | 1.91 | 19.63 | 20.27 | 15.33 |
+| GB | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-Europe | CH-CH-Short | CH-Europe-Short |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Disk use GTFS | 0.55 | 0.33 | 0.5 | 6.2 | 7 | 4.84 | --- | --- | --- |
+| RAM usage PTS | 0.58 | 4.3 | 6.9 | >54 | >54 | >54 | --- | --- | --- |
+| RAM usage PTVM | 0.28 | 0.55 | 1.91 | 19.63 | 20.27 | 15.33 | --- | --- | --- |
+
 <div id="table-speed-pts-ptvm"></div>
 
 ## Boot Time
 
-We compare the boot time of PTS and PTVM on different datasets in [Table 4](#table-speed-pts-ptvm). We define boot time as the time needed to read the GTFS files and create the data structures, from program launch until the API is live.
+We compare the boot time of PTS and PTVM on different datasets in [Table 4](#table-speed-pts-ptvm). We define boot time as the time needed to read the GTFS files and create the data structures, from program launch until the API is live. We abbreviate _pre-generator_ with _PG_, as PTS pre-generates the datastructures needed by python with a C++ program. These datastructures are saved to disk as json files. PTS no PG just has to load these files, that have to be generated once for each new GTFS set. For now, PTVM does all the datastructure generation (e.g. trip segment generation) on each start.
 
-| Boot Time in GB | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | Switzerland |
-| --- | --- | --- | --- | --- | --- | --- |
-| PTS | --- | --- | --- | --- | --- | --- |
-| PTVM | --- | --- | --- | --- | --- | --- |
+| Boot Time | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-Europe | CH-CH-Short | CH-Europe-Short |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| PTS with PG | 18.78s | 117.37s | 222.91s | 58.8m | --- | --- | --- | --- | --- |
+| PTS no PG | 6.83s | 23.95s | 67.32s | --- | --- | --- | --- | --- | --- |
+| PTVM | 7.4s | 17.09s | 65.01s | 16.88m | --- | 1.47h | 1.47h | --- | --- |
 
 ## Accuracy and Query Time
 
@@ -395,7 +399,7 @@ In this chapter, we evaluate how well PTS and PTVM perform in terms of accuracy 
 
 ### Method
 
-We consider all trips of the GTFS dataset VAGFR of Freiburg's PTV agency VAG on Wednesday 15th of October 2025. We precalculate simulated trajectories along each trip \\(t\\) as a list of events \\(ev_{(\texttt{t}, \delta)}\\). Here, \\(\delta \in (\texttt{min_delay},\ \texttt{max_delay})\\) describes noise on top of the time point of the event. For each event on a trip segment (between two stops), we linearly interpolate the timepoint \\(tp\\) based on the arrival/departure time at a trip's previous and next stop. We add a \\(\delta\\) to each \\(tp\\) to simulate some noise in the PTV network. Essentially, this either slows down or speeds up a simulated PTV along a trip segment.
+We consider all trips of the GTFS dataset VAGFR of Freiburg's PTV agency VAG on Wednesday 15th of October 2025. We precalculate simulated trajectories along each trip \\(t\\) as described in the chapter on [user device emulation](#user-device-emulation).
 
 TODO img of simulated trajectory
 
@@ -403,7 +407,15 @@ Not only do we consider query time and accuracy on every single trip, we also ex
 
 VAGFR contains 3329 trips that start on Wednesday 2025.10.15 00:00:00 and serve two or more stops within 24 hours from then. We generate 912,434 events for all trips, or on average 274 events per trip. As one PTS query averages 0.482 seconds, we can expect a runtime of \\(\sim 122\\) hours on a single core to simulate all trips. As we want to speed up the simulation by parallelizing, we run several PTS backend instances with gunicorn. Only one backend instance does not suffice with one GIL-bound Flask API. With 8 processes, we get the simulation run time down to about 18 hours on a home machine with an AMD Ryzen 5 5600X.
 
+### Results
+
 TODO
+
+<div id="fig-0-0-eval-ts-quantiles"></div>
+
+{{< figure id="fig-0-0-eval-ts-quantiles" src="img/evaluation_ptvm_pts/0-0/comparison_trip_segments.png" alt="PTS vs PTVM TS" width="800">}}
+{{< figure id="fig-3-3-eval-ts-quantiles" src="img/evaluation_ptvm_pts/3-3/comparison_trip_segments.png" alt="PTS vs PTVM TS" width="800">}}
+{{< figure id="fig-6-6-eval-ts-quantiles" src="img/evaluation_ptvm_pts/6-6/comparison_trip_segments.png" alt="PTS vs PTVM TS" width="800" caption="> Figure ???" >}}
 
 # Frontend
 
@@ -411,10 +423,14 @@ PTVM works with the same frontend as PTS and has not been changed relevantly for
 
 # Installation
 
-You can try everything out on your own by cloning our [GitHub repository](https://github.com/TheRealTirreg/PublicTransitSnapper/) and following the instructions in the README.md.
+Checkout our [GitHub repository](https://github.com/TheRealTirreg/PublicTransitSnapper/) and follow the instructions in the README.md.
 
 # Future Work
 
-Speedup: Replace grid with R-Tree, store (TripId, TS)-tuples in Grid/R-Tree, cache HMM layers for one event. Not needed because fast enough for our purposes. Replace Zipper by one datastructure in GCI.
+Speedup: Replace grid with R-Tree, store (TripId, TS)-tuples in Grid/R-Tree, cache HMM layers for one event. Not needed because fast enough for our purposes. Replace Zipper by one datastructure in GCI. Pre-compute datastructures from GTFS to hard drive.
 
 Both approaches have the downside that they rely on linear interpolation for estimating where the PTV is between two stops. This is not accurate for trip segments with varying speeds. Could be learnt for each trip
+
+# Conclusion
+
+We have implemented PTVM, a dynamic map matching algorithm that outperforms PTS, an earlier version. PTVM outperforms PTS, because...
