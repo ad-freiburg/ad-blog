@@ -300,7 +300,7 @@ In order to simulate the movement of an event-emitting device, we precalculate t
 
 # Settings and Parameter Optimization
 
-PTS and PTVM both have configurable parameters. We first show what parameters exist. Then, we explain how we optimize the PTVM settings.  
+PTS and PTVM both have configurable parameters. We first show what parameters exist. Then, we explain how we optimize them for PTVM.  
 
 ## Available Parameters
 
@@ -329,13 +329,27 @@ PTS has no other configurable parameters.
 
 ## Parameter Optimization
 
-We optimize all parameters from the tables above, except for the following: \\(\texttt{CELL\_SIZE\_KM}\\) and \\(\texttt{CALENDAR_TIME_INTERVAL_H}\\) depends more on the GTFS dataset size. For bigger datasets, hardware constraints lead to bigger cells and calendar intervals. \\(\texttt{MAX\_HMM\_STATES}\\), \\(\texttt{EARLINESS\_MINUTES}\\) and \\(\texttt{DELAY\_MINUTES}\\) stay the same, in order to stay comparable with PTS.
+We optimize all parameters from the tables above, except for the following: \\(\texttt{CELL\_SIZE\_KM}\\) and \\(\texttt{CALENDAR_TIME_INTERVAL_H}\\) depend more on the GTFS dataset size. For bigger datasets, hardware constraints lead to bigger cells and calendar intervals. \\(\texttt{MAX\_HMM\_STATES}\\), \\(\texttt{EARLINESS\_MINUTES}\\) and \\(\texttt{DELAY\_MINUTES}\\) stay the same, in order to stay comparable with PTS.
 
 ### Method
 
-Due to time constraints, we manually find a configuration that works well enough and outperforms PTS. The strategy is to tune one parameter at a time to find a good parameter configuration. As setup, we run \\(k\\) docker containers, each running a different modification of parameter \\(p_i\\). We then simulate trajectories [as described previously](#user-device-emulation) on \\(10\\%\\) of Freiburg-Short for different emulation delays \\(\delta_t \in (\texttt{min_delay},\ \texttt{max_delay})\\), then choose the best configuration for this parameter, and repeat for the next parameter \\(p_{i+1}\\).
+In this chapter, we describe how we automate the parameter optimization. Furthermore, we introduce a metric on how to quantify the difficulty of a PTS/PTVM query.
 
-Of course, this [naive strategy](https://en.wiktionary.org/wiki/graduate_student_descent) only works well enough because the parameters have a low covariance. For a more optimal setting, we suggest to run a hyperparameter optimization algorithm in order to try to get closer to a pareto-optimal parameter configuration.
+#### Automated Hyperparameter Optimization
+
+We can treat the PTVM parameter optimization as a hyperparameter optimization (HPO) problem, where we want to maximize the accuracy for multiple delays \\((0, 0)\\) and \\((3, 3)\\) minutes.
+
+<div id="eq-hpo-score"></div>
+
+We use [optuna](https://optuna.org/) with a [TPE optimizer](https://optuna.readthedocs.io/en/stable/reference/samplers/generated/optuna.samplers.TPESampler.html) to automate the HPO task. We start \\(N = (|\texttt{num\_cores}| - 2)\\) containerized PTVM instances with a different hyperparameter configuration \\(c\\). We then simulate trajectories [as described previously](#user-device-emulation) on \\(p\\%\\) of Freiburg-Short for \\((0, 0)\\) and \\((3, 3)\\) minute delays. As we want to optimize for both delays, we give each configuration a [\\(\texttt{confic\_score}\\)](#eq-hpo-score). We prioritize \\(\texttt{acc}(c, (3, 3))\\) by weighting its accuracy higher: \\(w = 30\\%\\). We pick the best hyperparameter configuration \\(c_\texttt{best}\\) after two hpo phases.
+
+\\[\texttt{config\_score}(c) = w \cdot \texttt{acc}(c, (0, 0)) + (1 - w) \cdot \texttt{acc}(c, (3, 3))\\]
+
+In phase 1, the TPE explores the hpo config space in \\(T = 40\\) trials. Each trial starts \\(N\\) containerized PTVM instances with different hyperparameter configurations \\(c_{t, i}\\), for \\(0 \leq t < T\\) describing the trial and \\(0 \leq i < N\\) describing the PTVM instance. We simulate trajectories on \\(5\\%\\) of Freiburg-Short for feasible runtimes.
+
+In phase 2, we pick the \\(N\\) best configurations and run them on \\(33\\%\\) of Freiburg-Short, in order to find a good robust configuration.
+
+#### Activeness
 
 <div id="fig-activeness-freiburg-short"></div>
 
@@ -377,8 +391,8 @@ CH-*-Short are the same datasets as CH-CH and CH-Europe, but reduced to trips ac
 
 | GB | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-Europe | CH-CH-Short | CH-Europe-Short |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Disk use GTFS | 0.55 | 0.33 | 0.5 | 6.2 | 7 | 4.84 | --- | --- | --- |
-| RAM usage PTS | 0.58 | 4.3 | 6.9 | >54 | 101.4GB | >54 | --- | --- | --- |
+| Disk use GTFS | 53M | 313M | 481M | 5.8G | 6.6G | 4.9G | 5.5G | 4.8G | 5.3G |
+| RAM usage PTS | 0.58 | 4.3 | 6.9 | 97.05GB | 101.4GB | 57.23 | 46 | 56.45 | --- |
 | RAM usage PTVM | 0.28 | 0.55 | 1.91 | 19.63 | 20.27 | 15.33 | --- | --- | --- |
 
 <div id="table-speed-pts-ptvm"></div>
@@ -387,11 +401,11 @@ CH-*-Short are the same datasets as CH-CH and CH-Europe, but reduced to trips ac
 
 We compare the boot time of PTS and PTVM on different datasets in [Table 4](#table-speed-pts-ptvm). We define boot time as the time needed to read the GTFS files and create the data structures, from program launch until the API is live. We abbreviate _pre-generator_ with _PG_, as PTS pre-generates the datastructures needed by python with a C++ program. These datastructures are saved to disk as json files. PTS no PG just has to load these files, that have to be generated once for each new GTFS set. For now, PTVM does all the datastructure generation (e.g. trip segment generation) on each start.
 
-| --- | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-Europe | CH-CH-Short | CH-Europe-Short |
+| Boot Time | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-Europe | CH-CH-Short | CH-Europe-Short |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Disk use GTFS | 53M | 313M | 481M | 5.8G | 6.6G | 4.9G | 5.5G | 4.8G | 5.3G |
-| PTS no PG | 6.83s | 23.95s | 67.32s | 15.85m | 17.6m | --- | --- | --- | --- |
-| PTVM | 7.4s | 17.09s | 65.01s | 16.88m | 18.09m | 1.47h | 1.47h | --- | --- |
+| PTS with PG | 18.78s | 117.37s | 222.91s | 58.8m | 65.21m | 34.28m | 37.9m | 35.66m | --- |
+| PTS no PG | 6.83s | 23.95s | 67.32s | 15.85m | 17.6m | 10.51m | 11.61m | 11.43m | --- |
+| PTVM | 7.4s | 17.09s | 65.01s | 16.88m | 18.09m | 1.47h | 1.47h | 1.79h | --- |
 
 ## Accuracy and Query Time
 
