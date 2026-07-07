@@ -391,9 +391,9 @@ CH-*-Short are the same datasets as CH-CH and CH-Europe, but reduced to trips ac
 
 | GB | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-Europe | CH-CH-Short | CH-Europe-Short |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Disk use GTFS | 53M | 313M | 481M | 5.8G | 6.6G | 4.9G | 5.5G | 4.8G | 5.3G |
-| RAM usage PTS | 0.58 | 4.3 | 6.9 | 97.05GB | 101.4GB | 57.23 | 46 | 56.45 | --- |
-| RAM usage PTVM | 0.28 | 0.55 | 1.91 | 19.63 | 20.27 | 15.33 | --- | --- | --- |
+| Disk use GTFS | 53M | 313M | 481M | 5.8G | 6.6G | 4.9G | 5.5G | 4.8G | 5.4G |
+| RAM usage PTS | 0.58 | 4.61 | 7.43 | 87.96 | 99.42 | 52.16 | 62.11 | 51.31 | 61.25 |
+| RAM usage PTVM | 0.28 | 0.56 | 2.03 | 22.89 | 25.43 | 60.48 | 62.82 | 15.83 | 18.16 |
 
 <div id="table-speed-pts-ptvm"></div>
 
@@ -403,9 +403,9 @@ We compare the boot time of PTS and PTVM on different datasets in [Table 4](#tab
 
 | Boot Time | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-Europe | CH-CH-Short | CH-Europe-Short |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| PTS with PG | 18.78s | 117.37s | 222.91s | 58.8m | 65.21m | 34.28m | 37.9m | 35.66m | --- |
-| PTS no PG | 6.83s | 23.95s | 67.32s | 15.85m | 17.6m | 10.51m | 11.61m | 11.43m | --- |
-| PTVM | 7.4s | 17.09s | 65.01s | 16.88m | 18.09m | 1.47h | 1.47h | 1.79h | --- |
+| PTS with PG | 26.11s | 1.93m | 3.62m | 50.25m | 55.90m | 32.82m | 37.16m | 32.56m | 37.26m |
+| PTS no PG | 6.72s | 23.09s | 1.07m | 16.00m | 26.36m | 10.34m | 11.29m | 9.25m | 10.86m |
+| PTVM | 10.80s | 16.37s | 1.08m | 16.14m | 17.46m | 1.43h | 1.44h | 8.29m | 9.39m |
 
 ## Accuracy and Query Time
 
