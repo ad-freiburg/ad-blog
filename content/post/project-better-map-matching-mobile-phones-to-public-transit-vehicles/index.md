@@ -35,21 +35,26 @@ In this blog post, we compare two dynamic map matching algorithms for matching a
   - [Geocalendar Index](#geocalendar-index)
     - [HMM](#hmm)
     - [API](#api)
-  - [Device Emulation and Datasets](#device-emulation-and-datasets)
+  - [User Device Emulation and Datasets](#user-device-emulation-and-datasets)
+    - [Datasets](#datasets)
+    - [User Device Emulation](#user-device-emulation)
 - [Settings and Parameter Optimization](#settings-and-parameter-optimization)
   - [Available Parameters](#available-parameters)
   - [Parameter Optimization](#parameter-optimization)
+    - [Method](#method)
+      - [Automated Hyperparameter Optimization](#automated-hyperparameter-optimization)
+      - [Activeness](#activeness)
+    - [Results](#results)
 - [Evaluation](#evaluation)
   - [RAM Usage](#ram-usage)
   - [Boot Time](#boot-time)
   - [Accuracy and Query Time](#accuracy-and-query-time)
-    - [Method](#method)
+    - [Method](#method-1)
+    - [Results](#results-1)
 - [Frontend](#frontend)
-- [Testing](#testing)
-  - [Using selenium to manipulate a devices GPS location](#using-selenium-to-manipulate-a-devices-gps-location)
-  - [Generating fake GPS data](#generating-fake-gps-data)
 - [Installation](#installation)
-- [TODO](#todo)
+- [Future Work](#future-work)
+- [Conclusion](#conclusion)
 
 # Introduction
 
@@ -296,7 +301,11 @@ For the following chapters on [parameter optimizaton](#settings-and-parameter-op
 
 ### User Device Emulation
 
-In order to simulate the movement of an event-emitting device, we precalculate trajectories along each trip \\(t\\) as a list of events \\(ev_{(\texttt{t}, \delta_g, \delta)}\\). Here, \\(\delta_g \in \mathcal{N(0, \sigma^2)}\\) describes Gaussian noise on top of the geographical position, whereas \\(\delta_t \in (\texttt{min_delay},\ \texttt{max_delay})\\) describes noise on top of the time point of the event. For each event on a trip segment (between two stops), we linearly interpolate the timepoint \\(tp\\) based on the arrival/departure time at a trip's previous and next stop. We add a \\(\delta\\) to each \\(tp\\) to simulate some noise in the PTV network. Essentially, this either slows down or speeds up a simulated PTV along a trip segment.
+In order to simulate the movement of an event-emitting device, we precalculate trajectories along each trip \\(t\\) as a list of events \\(ev_{(t, \delta_g, \delta_t)}\\). We simulate events every \\(k=5\\) seconds, and their lat/lon position is linearly interpolated along \\(t\\)'s shape.
+
+Here, \\(\delta_g \in \mathcal{N(0, \sigma^2)}\\) describes Gaussian noise on top of the geographical position. We also add noise on top of the time component \\(\delta_t \in AR1(\texttt{min_delay},\ \texttt{max_delay})\\). AR1 is an [autoregressive modeling function](https://en.wikipedia.org/wiki/Autoregressive_model), which ensures that the randomized earliness/delay stays within \\((\texttt{min_delay},\ \texttt{max_delay})\\) boundaries, but tends to move back to a \\((0, 0)\\)-delay, while accounting for plausible jumps in earliness/delay times between two stops. This way, as an example, we do not draft three minutes earliness for stop 1 and three minutes delay for stop 2.
+
+For each event on a trip segment (between two stops), we linearly interpolate the timepoint \\(tp\\) based on the simulated position and the arrival/departure time at a trip's previous and next stop.
 
 # Settings and Parameter Optimization
 
@@ -386,10 +395,10 @@ We compare the RAM usage of PTS and PTVM on different datasets in [Table 3](#tab
 Freiburg-Short is a [VAGFR](https://www.vag-freiburg.de/service-infos/downloads/gtfs-daten) dataset reduced to trips active on 2025/10/15.
 All DE-* datasets are from [gtfs.de](https://gtfs.de/de/feeds/).
 CH-CH is the full dataset of [Swiss Opentransport](https://data.opentransportdata.swiss/dataset/timetable-2026-gtfs2020), excluding shapes that are not within swiss borders.
-CH-Europe is the same dataset, including all shapes within European borders.
+CH-EU is the same dataset, including all shapes within European borders, thus including more edges than CH-CH.
 CH-*-Short are the same datasets as CH-CH and CH-Europe, but reduced to trips active on 2025/10/15.
 
-| GB | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-Europe | CH-CH-Short | CH-Europe-Short |
+| GB | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-EU | CH-CH-Short | CH-EU-Short |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Disk use GTFS | 53M | 313M | 481M | 5.8G | 6.6G | 4.9G | 5.5G | 4.8G | 5.4G |
 | RAM usage PTS | 0.58 | 4.61 | 7.43 | 87.96 | 99.42 | 52.16 | 62.11 | 51.31 | 61.25 |
