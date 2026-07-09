@@ -395,6 +395,8 @@ CH-*-Short are the same datasets as CH-CH and CH-Europe, but reduced to trips ac
 | RAM usage PTS | 0.58 | 4.61 | 7.43 | 87.96 | 99.42 | 52.16 | 62.11 | 51.31 | 61.25 |
 | RAM usage PTVM | 0.28 | 0.56 | 2.03 | 22.89 | 25.43 | 60.48 | 62.82 | 15.83 | 18.16 |
 
+We can see that
+
 <div id="table-speed-pts-ptvm"></div>
 
 ## Boot Time
@@ -406,6 +408,8 @@ We compare the boot time of PTS and PTVM on different datasets in [Table 4](#tab
 | PTS with PG | 26.11s | 1.93m | 3.62m | 50.25m | 55.90m | 32.82m | 37.16m | 32.56m | 37.26m |
 | PTS no PG | 6.72s | 23.09s | 1.07m | 16.00m | 26.36m | 10.34m | 11.29m | 9.25m | 10.86m |
 | PTVM | 10.80s | 16.37s | 1.08m | 16.14m | 17.46m | 1.43h | 1.44h | 8.29m | 9.39m |
+
+On 
 
 ## Accuracy and Query Time
 
