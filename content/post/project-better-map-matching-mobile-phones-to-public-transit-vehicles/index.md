@@ -295,15 +295,25 @@ As it would be very exhausting and expensive to develop on board of a bus or tra
 
 For the following chapters on [parameter optimizaton](#settings-and-parameter-optimization) and [evaluation](#evaluation), we use the following GTFS datasets. They all have different sizes in terms of calendar range, shape length and number of trips:
 
-| Dataset | #Routes | #Trips | #Edges | #TripSegments |
-| --- | --- | --- | --- | --- |
-| Freiburg-Short | 45 | 33,573 | 19,184 | 2,939 |
+| Dataset | Days | Routes | Trips | Trip<br>segments | Edges<br>(dedup) | Raw edges | Dedup<br>reduction | Avg trips<br>per edge |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Freiburg-Short | 6 | 45 | 33,573 | 1,245 | 19,184 | 180,567 | 89.4% | 395.5 |
+| DE-Fern | 34 | 99 | 5,244 | 3,297 | 250,092 | 7,212,615 | 96.5% | 64.0 |
+| DE-Regio | 34 | 1,129 | 113,579 | 36,271 | 806,549 | 9,016,350 | 91.1% | 67.3 |
+| DE-Nah | 35 | 23,850 | 1,560,724 | 850,164 | 11,688,499 | 93,436,586 | 87.5% | 43.7 |
+| DE-full | 35 | 25,078 | 1,679,547 | 888,877 | 12,526,535 | 109,668,551 | 88.6% | 46.4 |
+| CH-CH | 367 | 5,125 | 1,889,884 | 126,642 | 1,591,966 | 64,243,970 | 97.5% | 273.0 |
+| CH-EU | 367 | 5,125 | 1,889,884 | 130,949 | 2,984,707 | 77,895,162 | 96.2% | 175.1 |
+| CH-CH-Short | 6 | 5,125 | 1,889,884 | 126,642 | 1,591,966 | 64,243,970 | 97.5% | 273.0 |
+| CH-EU-Short | 6 | 5,125 | 1,889,884 | 130,949 | 2,984,707 | 77,895,162 | 96.2% | 175.1 |
+
+We can observe that GTFS shapes share a lot of edges, in CH-CH even 97.5%. For this report, we mainly use Freiburg-Short for query-related questions. This is because it is smallest, which makes it easy for testing, but also because it has a high average trips per edge ratio, which makes testing for harder queries easier.
 
 ### User Device Emulation
 
 In order to simulate the movement of an event-emitting device, we precalculate trajectories along each trip \\(t\\) as a list of events \\(ev_{(t, \delta_g, \delta_t)}\\). We simulate events every \\(k=5\\) seconds, and their lat/lon position is linearly interpolated along \\(t\\)'s shape.
 
-Here, \\(\delta_g \in \mathcal{N(0, \sigma^2)}\\) describes Gaussian noise on top of the geographical position. We also add noise on top of the time component \\(\delta_t \in AR1(\texttt{min_delay},\ \texttt{max_delay})\\). AR1 is an [autoregressive modeling function](https://en.wikipedia.org/wiki/Autoregressive_model), which ensures that the randomized earliness/delay stays within \\((\texttt{min_delay},\ \texttt{max_delay})\\) boundaries, but tends to move back to a \\((0, 0)\\)-delay, while accounting for plausible jumps in earliness/delay times between two stops. This way, as an example, we do not draft three minutes earliness for stop 1 and three minutes delay for stop 2.
+Here, \\(\delta_g \in \mathcal{N(0, \sigma^2)}\\) describes Gaussian noise on top of the geographical position. We also add noise on top of the time component \\(\delta_t \in \texttt{AR1}(\texttt{min_delay},\ \texttt{max_delay})\\). \\(\texttt{AR1}\\) is an [autoregressive modeling function](https://en.wikipedia.org/wiki/Autoregressive_model), which ensures that the randomized earliness/delay stays within \\((\texttt{min_delay},\ \texttt{max_delay})\\) boundaries, but tends to move back to a \\((0, 0)\\)-delay, while accounting for plausible jumps in earliness/delay times between two stops. This way, as an example, we do not draft three minutes earliness for stop 1 and three minutes delay for stop 2 (which would make trips move unreasonably fast, especially on shorter trip segments).
 
 For each event on a trip segment (between two stops), we linearly interpolate the timepoint \\(tp\\) based on the simulated position and the arrival/departure time at a trip's previous and next stop.
 
@@ -320,17 +330,17 @@ For both PTS and PTVM, we can choose the allowed earliness / delay in minutes, a
 | \\(\texttt{EARLINESS\_MINUTES}\\) | 5 | 5 | Maximum allowed earliness in minutes<br>for temporal candidate query component |
 | \\(\texttt{DELAY\_MINUTES}\\) | 5 | 5 | Maximum allowed delay in minutes<br>for temporal candidate query component |
 | \\(\texttt{MAX\_HMM\_STATES}\\) | 10 | 10 | Maximum number of HMM states to consider per event |
-| \\(\texttt{GPS\_RADIUS\_M}\\) | 50 | <span style="background-color: #00ff3c;">80</span> | Radius in meters for spatial query component |
+| \\(\texttt{GPS\_RADIUS\_M}\\) | 50 | <span style="background-color: #00ff3c;">74</span> | Radius in meters for spatial query component |
 
 For PTVM, we choose the following configurable parameters:
 
 | Parameter | Value Pre-<br>Optimization | Value Post-<br>Optimization | Description |
 | --- | --- | --- | --- |
-| \\(\texttt{NO\_TRIP\_PENALTY}\\) | 1000 | <span style="background-color: #00ff3c;">1200</span> | Penalty if no trip is assigned<br>(no matching found) |
-| \\(\texttt{TRIP\_CHANGE\_PENALTY}\\) | 1000 | <span style="background-color: #00ff3c;">100</span> | Penalty for matching to a different trip than<br>the matching from last request |
-| \\(\texttt{TRANSITION\_PENALTY}\\) | 100 | 100 | Penalty if trips are different between events<br>of two HMM layers |
-| \\(\texttt{EMISSION\_PENALTY}\\) | 1000 | <span style="background-color: #00ff3c;">400</span> | Maximum emission score |
-| \\(\texttt{TEMPORAL\_WEIGHT}\\) | 0.5 | <span style="background-color: #00ff3c;">0.8</span> | Weighting factor for temporal and spatial<br>component of emission score.<br>0.5 means equal weighting.<br>0.3 means 30% temporal, 70% spatial. |
+| \\(\texttt{NO\_TRIP\_PENALTY}\\) | 1000 | <span style="background-color: #00ff3c;">1695.79</span> | Penalty if no trip is assigned<br>(no matching found) |
+| \\(\texttt{TRIP\_CHANGE\_PENALTY}\\) | 1000 | <span style="background-color: #00ff3c;">370.99</span> | Penalty for matching to a different trip than<br>the matching from last request |
+| \\(\texttt{TRANSITION\_PENALTY}\\) | 100 | <span style="background-color: #00ff3c;">194.93</span> | Penalty if trips are different between events<br>of two HMM layers |
+| \\(\texttt{EMISSION\_PENALTY}\\) | 1000 | <span style="background-color: #00ff3c;">22.72</span> | Maximum emission score.<br>All candidates above this threshold<br>are not included in the HMM |
+| \\(\texttt{TEMPORAL\_WEIGHT}\\) | 0.5 | <span style="background-color: #00ff3c;">0.38</span> | Weighting factor for temporal and spatial<br>component of emission score.<br>0.5 means equal weighting.<br>0.3 means 30% temporal, 70% spatial. |
 | \\(\texttt{CELL\_SIZE\_KM}\\) | 5 | 5 | Grid cell size in kilometers |
 | \\(\texttt{CALENDAR_TIME_INTERVAL_H}\\) | 24 | 24 | Slot size of each calendar time interval in hours |
 
@@ -366,15 +376,19 @@ In order to differentiate the difficulty of a query, we introduce _Activeness_. 
 
 {{< figure id="fig-activeness-freiburg-short" src="img/activeness_freiburg-short.png" alt="Activeness Freiburg Short" width="800" caption="> This Figure shows the activeness of Freiburg-Short dataset on Wednesday, 15th of October 2025. We can see that the mean edge activeness for whole trips is around 100, meaning that a user device emitting events on a random trip \\(t\\) can be expected to have 100 trips passing this edge on said Wednesday to choose from, for each edge that is within the event radius. For tripsegments, we can see that some surpass a per-tripsegment-average of 400 trips per edge. These tripsegments contain highly travelled edges. For Freiburg-Short, this would be the tram tracks above the main station, and the main station bus hub for example.">}}
 
+### Critisizm
+
+We ran the HPO on an older version of [user device emulation](#user-device-emulation), where unreasonably large earliness/delay jumps were possible between two stops. This lead to much worse predictions, as some (especially smaller) trip segments had very few events generated, making it hard to match to. For this reason, we might not have found a parameter composition that is close to optimal yet. However, we can still see an improvement, as we will see in the next section.
+
 ### Results
 
-<div id="fig-0-0-opt-whole-trips-acc-qtime"></div>
+<div id="fig-0-0-opt-ts-acc-qtime"></div>
 
-As for the results of the parameter optimization, we can see that giving PTVM a higher \\(\texttt{GPS\_RADIUS\_M}\\) leads to a better matching for trips with a small delay, especially in combination with a more time-focussed \\(\texttt{TEMPORAL\_WEIGHT}\\). This causes an improved calculation of the emission score ([recall Figure ???](#fig-emission)). As a consequence, the average accuracy on even very active trips remains high for small delays (see Figures [???](#fig-0-0-opt-whole-trips-acc-qtime) and [???](#fig-0-0-opt-ts-quantiles)). TODO 6-6.
+As for the results of the parameter optimization, we can see that giving PTVM a higher \\(\texttt{GPS\_RADIUS\_M}\\) leads to a better matching for trips with a small delay. This causes an improved calculation of the emission score ([recall Figure ???](#fig-emission)). As a consequence, the average accuracy on even very active trips remains high for small delays (see Figures [???](#fig-0-0-opt-ts-acc-qtime) and [???](#fig-0-0-opt-ts-quantiles)). TODO 6-6.
 
-{{< figure id="fig-0-0-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_0,_0.png" alt="Default vs Optimized Parameter PTVM Performances" width="800">}}
-{{< figure id="fig-3-3-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_3,_3.png" alt="PTS vs PTVM approaches" width="800">}}
-{{< figure id="fig-6-6-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_6,_6.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? compares two versions of PTVM. The orange version has unoptimized default parameters, the blue version optimized parameters ([as in table TODO](TODO)). While PTVM version with optimized parameters is minimalistically slower, the performance gain in accuracy is substantial. It has to be noted that the parameter optimization was performed on an earlier version of the event generator, which is why the accuracy measures might not perfectly match with the graphs in the later evaluation section." >}}
+{{< figure id="fig-0-0-opt-ts-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_0,_0.png" alt="Default vs Optimized Parameter PTVM Performances" width="800">}}
+{{< figure id="fig-3-3-opt-ts-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_3,_3.png" alt="PTS vs PTVM approaches" width="800">}}
+{{< figure id="fig-6-6-opt-ts-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_6,_6.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? compares two versions of PTVM. The orange version has unoptimized default parameters, the blue version optimized parameters ([as in table TODO](TODO)). While PTVM version with optimized parameters is minimalistically slower, the performance gain in accuracy is substantial. It has to be noted that the parameter optimization was performed on an earlier version of the event generator, which is why the accuracy measures might not perfectly match with the graphs in the later evaluation section." >}}
 
 <div id="fig-0-0-opt-ts-quantiles"></div>
 
