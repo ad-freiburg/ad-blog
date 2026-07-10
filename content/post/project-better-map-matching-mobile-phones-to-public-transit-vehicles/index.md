@@ -446,19 +446,39 @@ Not only do we consider query time and accuracy on every single trip, we also ex
 
 VAGFR contains 3329 trips that start on Wednesday 2025.10.15 00:00:00 and serve two or more stops within 24 hours from then. We generate 912,434 events for all trips, or on average 274 events per trip. As one PTS query averages 0.482 seconds, we can expect a runtime of \\(\sim 122\\) hours on a single core to simulate all trips. As we want to speed up the simulation by parallelizing, we run several PTS backend instances with gunicorn. Only one backend instance does not suffice with one GIL-bound Flask API. With 8 processes, we get the simulation run time down to about 18 hours on a home machine with an AMD Ryzen 5 5600X.
 
-We run this setup thrice for events with earliness/delay (0-0), (3-3) and (6-6). The higher the derivation from punctuality, the more trips we expect to miss. For example, if an edge has a very high activeness, with one trip every three minutes, a derivation window of three or even six minutes may lead to a matching to the trip before or after the target trip. 
+We run this setup thrice for events with earliness/delay (0-0), (3-3) and (6-6). The higher the derivation from punctuality, the more trips we _expect to miss_. For example, if an edge has a very high activeness, with one trip every three minutes, a derivation window of three or even six minutes may lead to a matching to the trip before or after the target trip.
 
 ### Results
 
-TODO
+PTVM outperforms PTS in every aspect of query time and in most aspects of accuracy, as we will elucidate in the following sections.
 
-We query 
+#### Query Time
+
+We observe that PTVM overwhelmingly outperforms PTS in terms of query speed. This is true for the median of the trips and trip segments (PTS around 6 times slower). The slowest 10% of all PTS queries are more than 10 times slower than the slowest 10% of PTVM, and the slowest 1% for PTS are around 20 times slower than for PTVM. See the right hand side of plots [???](#fig-0-0-eval-ts-quantiles) and [???+1](#fig-0-0-eval-trip-quantiles).
+
+Also, the higher the difficulty of a query, (measured by the [activeness](#activeness) of the current trip segment), the longer both PTS and PTVM need to respond. However, the increase in query time for more difficult queries is much faster for PTS than for PTVM. While the query time for PTS is only X times slower than PTVM for the least active trip segment quantile, PTS is Y times slower than PTVM on the most active quantiles. See the right hand side of plot [???+2](#fig-0-0-eval-ts-activeness).
+
+#### Accuracy
+
+bla.
 
 <div id="fig-0-0-eval-ts-quantiles"></div>
 
 {{< figure id="fig-0-0-eval-ts-quantiles" src="img/evaluation_ptvm_pts/0-0/comparison_trip_segments.png" alt="PTS vs PTVM TS" width="800">}}
 {{< figure id="fig-3-3-eval-ts-quantiles" src="img/evaluation_ptvm_pts/3-3/comparison_trip_segments.png" alt="PTS vs PTVM TS" width="800">}}
-{{< figure id="fig-6-6-eval-ts-quantiles" src="img/evaluation_ptvm_pts/6-6/comparison_trip_segments.png" alt="PTS vs PTVM TS" width="800" caption="> Figure ??? shows the differences in accuracy and query time for both PTS and PTVM on the full Freiburg-Short dataset. Generally, we can observe that PTS scores a higher accuracy than PTS for all sorts of delays, while serving dominantly faster query times. PTS query times are around six times slower than PTVM, but can be even significantly slower for especially hard requests. For earliness/delay (0-0), four fifths of Freiburg-Short's tripsegments are correctly classified by PTVM, while PTS barely surpasses fifty percent. Without any delay, PTVM fails to classify 1/6 trip segments for at least \\(70\\%\\) of requests on this trip segment. PTS fails between 1/5 and 1/4. For earliness/delay (3-3), both PTS and PTVM lose perfect rate and increase failure rate. PTS shows a little higher degradation than PTVM. As for earliness/delay (6-6), ">}}
+{{< figure id="fig-6-6-eval-ts-quantiles" src="img/evaluation_ptvm_pts/6-6/comparison_trip_segments.png" alt="PTS vs PTVM TS" width="800" caption="> Figure ??? shows the differences in accuracy and query time for both PTS and PTVM on the full Freiburg-Short dataset. Generally, we can observe that PTS scores a higher accuracy than PTS for all sorts of delays, while serving dominantly faster query times. PTS query times are around six times slower than PTVM, but can be even significantly slower for especially hard requests. For earliness/delay (0-0), four fifths of Freiburg-Short's tripsegments are correctly classified by PTVM, while PTS barely surpasses fifty percent. Without any delay, PTVM fails to classify 1/6 trip segments for at least \\(70\\%\\) of requests on this trip segment. PTS fails between 1/5 and 1/4. For earliness/delay (3-3), both PTS and PTVM lose perfect rate and increase failure rate. PTS shows a little higher degradation than PTVM. As for earliness/delay (6-6), the mean accuracy of PTS is even a bit better than PTVM, while having a similar failure rate.">}}
+
+<div id="fig-0-0-eval-trip-quantiles"></div>
+
+{{< figure id="fig-0-0-eval-trip-quantiles" src="img/evaluation_ptvm_pts/0-0/comparison_whole_trips.png" alt="PTS vs PTVM TS" width="800">}}
+{{< figure id="fig-3-3-eval-trip-quantiles" src="img/evaluation_ptvm_pts/3-3/comparison_whole_trips.png" alt="PTS vs PTVM TS" width="800">}}
+{{< figure id="fig-6-6-eval-trip-quantiles" src="img/evaluation_ptvm_pts/6-6/comparison_whole_trips.png" alt="PTS vs PTVM TS" width="800" caption="> Figure ??? shows the same metrics as [Figure ??? - 1](???), but this time for whole trips instead of trip segments. For delays (0-0) and (3-3), PTVM manages to perfectly classify over 50% of all trips of Freiburg-Short. PTS can be expected to fail at least a few queries per trip, even though its mean accuracy hovers around 3/4 to 4/5, being outperformed by PTVM every time. As for (6-6), the mean accuracy is higher for trips than for trip segments. This is due to Freiburg-Short being skewed with more trips with less activeness. This way, both PTS and PTVM score a higher mean accuracy, as most parts of trips are easier to match to than a few very active trip segments. As explained earlier, we can expect a high failure rate for such high delays on static datasets.">}}
+
+<div id="fig-0-0-eval-ts-activeness"></div>
+
+{{< figure id="fig-0-0-eval-ts-activeness" src="img/evaluation_ptvm_pts/0-0/quantiles_line_segments.png" alt="PTS vs PTVM TS" width="800">}}
+{{< figure id="fig-3-3-eval-ts-activeness" src="img/evaluation_ptvm_pts/3-3/quantiles_line_segments.png" alt="PTS vs PTVM TS" width="800">}}
+{{< figure id="fig-6-6-eval-ts-activeness" src="img/evaluation_ptvm_pts/6-6/quantiles_line_segments.png" alt="PTS vs PTVM TS" width="800" caption="> Figure ??? shows the average accuracy of PTS and PTVM depending on the difficulty of the query, measured by average trip segment activeness. We can observe that the accuracy of PTS drastically drops for more difficult queries, while PTVM's stays around 4/5 correct matches for (0-0) and 3/4 for (3-3). Only for (6-6) does the accuracy drop for trips from medium difficulty to hard, but even then stays around 50%. As for the query times, PTS needs considerably more time for a harder query than PTVM, even though we can also see a small increase in query time for PTVM.">}}
 
 # Frontend
 
