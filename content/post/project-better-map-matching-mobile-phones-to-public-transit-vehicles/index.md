@@ -362,9 +362,9 @@ In phase 2, we pick the \\(N\\) best configurations and run them on \\(33\\%\\) 
 
 <div id="fig-activeness-freiburg-short"></div>
 
-In order to differentiate the difficulty of a query, we introduce _Activeness_. Trips and trip segments have Activeness \\(a_t\\) or \\(a_{ts}\\). We calculate Activeness based on how many trips pass an edge \\(e_t\\) within our time window: Activeness \\(a_{e_t}\\) of edge \\(e_t\\). Then, for each trip segment \\(ts_t\\) of trip \\(t\\), \\(a_{ts_t} = \texttt{avg}(a_{e_t})\\) for all edges within the trip segment. Similarly, we calculate a trip's Activeness \\(a_t = \texttt{avg}(a_{e_t})\\) for all edges of the trip. Generally, we expect a query to be more difficult for a more active trip or trip segment, as there are more candidates to choose from.
+In order to differentiate the difficulty of a query, we introduce _Activeness_. Trips and trip segments have Activeness \\(a_t\\) or \\(a_{ts}\\). We calculate Activeness based on how many trips pass an edge \\(e_t\\) within our time window: Activeness \\(a_{e_t}\\) of edge \\(e_t\\). Then, for each trip segment \\(ts_t\\) of trip \\(t\\), \\(a_{ts_t} = \texttt{avg}(a_{e_t})\\) for all edges within the trip segment. Similarly, we calculate a trip's Activeness \\(a_t = \texttt{avg}(a_{e_t})\\) for all edges of the trip. Generally, we expect a query to be more difficult for a more active trip or trip segment, as there are more candidates to choose from. 
 
-{{< figure id="fig-activeness-freiburg-short" src="img/activeness_freiburg-short.png" alt="Activeness Freiburg Short" width="800" caption="> This Figure ">}}
+{{< figure id="fig-activeness-freiburg-short" src="img/activeness_freiburg-short.png" alt="Activeness Freiburg Short" width="800" caption="> This Figure shows the activeness of Freiburg-Short dataset on Wednesday, 15th of October 2025. We can see that the mean edge activeness for whole trips is around 100, meaning that a user device emitting events on a random trip \\(t\\) can be expected to have 100 trips passing this edge on said Wednesday to choose from, for each edge that is within the event radius. For tripsegments, we can see that some surpass a per-tripsegment-average of 400 trips per edge. These tripsegments contain highly travelled edges. For Freiburg-Short, this would be the tram tracks above the main station, and the main station bus hub for example.">}}
 
 ### Results
 
@@ -374,7 +374,7 @@ As for the results of the parameter optimization, we can see that giving PTVM a 
 
 {{< figure id="fig-0-0-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_0,_0.png" alt="Default vs Optimized Parameter PTVM Performances" width="800">}}
 {{< figure id="fig-3-3-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_3,_3.png" alt="PTS vs PTVM approaches" width="800">}}
-{{< figure id="fig-6-6-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_6,_6.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? compares two versions of PTVM. The orange version has unoptimized default parameters, the blue version optimized parameters ([as in table TODO](TODO)). While PTVM version with optimized parameters is minimalistically slower, the performance gain in accuracy is substantial." >}}
+{{< figure id="fig-6-6-opt-whole-trips-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_6,_6.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? compares two versions of PTVM. The orange version has unoptimized default parameters, the blue version optimized parameters ([as in table TODO](TODO)). While PTVM version with optimized parameters is minimalistically slower, the performance gain in accuracy is substantial. It has to be noted that the parameter optimization was performed on an earlier version of the event generator, which is why the accuracy measures might not perfectly match with the graphs in the later evaluation section." >}}
 
 <div id="fig-0-0-opt-ts-quantiles"></div>
 
@@ -412,7 +412,7 @@ We can see that
 
 We compare the boot time of PTS and PTVM on different datasets in [Table 4](#table-speed-pts-ptvm). We define boot time as the time needed to read the GTFS files and create the data structures, from program launch until the API is live. We abbreviate _pre-generator_ with _PG_, as PTS pre-generates the datastructures needed by python with a C++ program. These datastructures are saved to disk as json files. PTS no PG just has to load these files, that have to be generated once for each new GTFS set. For now, PTVM does all the datastructure generation (e.g. trip segment generation) on each start.
 
-| Boot Time | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-Europe | CH-CH-Short | CH-Europe-Short |
+| Boot Time | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-EU | CH-CH-Short | CH-EU-Short |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | PTS with PG | 26.11s | 1.93m | 3.62m | 50.25m | 55.90m | 32.82m | 37.16m | 32.56m | 37.26m |
 | PTS no PG | 6.72s | 23.09s | 1.07m | 16.00m | 26.36m | 10.34m | 11.29m | 9.25m | 10.86m |
@@ -428,21 +428,23 @@ In this chapter, we evaluate how well PTS and PTVM perform in terms of accuracy 
 
 We consider all trips of the GTFS dataset VAGFR of Freiburg's PTV agency VAG on Wednesday 15th of October 2025. We precalculate simulated trajectories along each trip \\(t\\) as described in the chapter on [user device emulation](#user-device-emulation).
 
-TODO img of simulated trajectory
-
 Not only do we consider query time and accuracy on every single trip, we also examine the same metrics for all trip segments along the way.
 
 VAGFR contains 3329 trips that start on Wednesday 2025.10.15 00:00:00 and serve two or more stops within 24 hours from then. We generate 912,434 events for all trips, or on average 274 events per trip. As one PTS query averages 0.482 seconds, we can expect a runtime of \\(\sim 122\\) hours on a single core to simulate all trips. As we want to speed up the simulation by parallelizing, we run several PTS backend instances with gunicorn. Only one backend instance does not suffice with one GIL-bound Flask API. With 8 processes, we get the simulation run time down to about 18 hours on a home machine with an AMD Ryzen 5 5600X.
+
+We run this setup thrice for events with earliness/delay (0-0), (3-3) and (6-6). The higher the derivation from punctuality, the more trips we expect to miss. For example, if an edge has a very high activeness, with one trip every three minutes, a derivation window of three or even six minutes may lead to a matching to the trip before or after the target trip. 
 
 ### Results
 
 TODO
 
+We query 
+
 <div id="fig-0-0-eval-ts-quantiles"></div>
 
 {{< figure id="fig-0-0-eval-ts-quantiles" src="img/evaluation_ptvm_pts/0-0/comparison_trip_segments.png" alt="PTS vs PTVM TS" width="800">}}
 {{< figure id="fig-3-3-eval-ts-quantiles" src="img/evaluation_ptvm_pts/3-3/comparison_trip_segments.png" alt="PTS vs PTVM TS" width="800">}}
-{{< figure id="fig-6-6-eval-ts-quantiles" src="img/evaluation_ptvm_pts/6-6/comparison_trip_segments.png" alt="PTS vs PTVM TS" width="800" caption="> Figure ???" >}}
+{{< figure id="fig-6-6-eval-ts-quantiles" src="img/evaluation_ptvm_pts/6-6/comparison_trip_segments.png" alt="PTS vs PTVM TS" width="800" caption="> Figure ??? shows the differences in accuracy and query time for both PTS and PTVM on the full Freiburg-Short dataset. Generally, we can observe that PTS scores a higher accuracy than PTS for all sorts of delays, while serving dominantly faster query times. PTS query times are around six times slower than PTVM, but can be even significantly slower for especially hard requests. For earliness/delay (0-0), four fifths of Freiburg-Short's tripsegments are correctly classified by PTVM, while PTS barely surpasses fifty percent. Without any delay, PTVM fails to classify 1/6 trip segments for at least \\(70\\%\\) of requests on this trip segment. PTS fails between 1/5 and 1/4. For earliness/delay (3-3), both PTS and PTVM lose perfect rate and increase failure rate. PTS shows a little higher degradation than PTVM. As for earliness/delay (6-6), ">}}
 
 # Frontend
 
@@ -454,9 +456,21 @@ Checkout our [GitHub repository](https://github.com/TheRealTirreg/PublicTransitS
 
 # Future Work
 
-Speedup: Replace grid with R-Tree, store (TripId, TS)-tuples in Grid/R-Tree, cache HMM layers for one event. Not needed because fast enough for our purposes. Replace Zipper by one datastructure in GCI. Pre-compute datastructures from GTFS to hard drive.
+The dynamic public transit vehicle matching of PTVMatcher can be potentially improved in multiple ways.
 
-Both approaches have the downside that they rely on linear interpolation for estimating where the PTV is between two stops. This is not accurate for trip segments with varying speeds. Could be learnt for each trip
+In order to upgrade query speed, one could replace the GCI grid with an R-Tree structure.
+
+Furthermore, one could store \\((\texttt{TripId}, \texttt{TripSegmentId})\\)-tuples in the GCI spatial component (Grid or R-Tree), which would raise RAM usage, but drastically reduce the amount of trip segments that need to be looped over for each query.
+
+Another possible query speed gain is to cache HMM layers for each user, as emissions do not need to be recalculated for each request.
+
+Speedup: Replace grid with R-Tree, store (TripId, TS)-tuples in Grid/R-Tree, cache HMM layers for one event. Not needed because fast enough for our purposes.
+
+TODO Replace Zipper by one datastructure in GCI. 
+
+In order to reduce boot times when multiple boot times are needed for the same dataset, one could pre-compute the needed datastructures (e.g. TripSegments, GCI, ...) in a similar manner to PTS. One could save the pre-computed datastructures to hard drive and then load them on boot request.
+
+TODO Both approaches have the downside that they rely on linear interpolation for estimating where the PTV is between two stops. This is not accurate for trip segments with varying speeds. Could be learnt for each trip.
 
 # Conclusion
 
