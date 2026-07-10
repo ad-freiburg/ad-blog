@@ -44,6 +44,7 @@ In this blog post, we compare two dynamic map matching algorithms for matching a
     - [Method](#method)
       - [Automated Hyperparameter Optimization](#automated-hyperparameter-optimization)
       - [Activeness](#activeness)
+    - [Critisizm](#critisizm)
     - [Results](#results)
 - [Evaluation](#evaluation)
   - [RAM Usage](#ram-usage)
@@ -51,6 +52,8 @@ In this blog post, we compare two dynamic map matching algorithms for matching a
   - [Accuracy and Query Time](#accuracy-and-query-time)
     - [Method](#method-1)
     - [Results](#results-1)
+      - [Query Time](#query-time)
+      - [Accuracy](#accuracy)
 - [Frontend](#frontend)
 - [Installation](#installation)
 - [Future Work](#future-work)
@@ -98,7 +101,7 @@ We can relax the definition of activeness by allowing for a slack \\((\texttt{ea
 
 ## Map Matching to a Dynamic Map
 
-Map Matching (MM) describes the process of fitting (often noisy) recorded points to the trajectory of a vehicle on a static map. [IMG?]
+Map Matching (MM) describes the process of fitting (often noisy) recorded points to the trajectory of a vehicle on a static map.
 A typical use of MM is a navigation systen, where the gps points of a car get matched to a street network graph.
 
 In Dynamic Map Matching (DMM), instead of matching to a static map, we match to moving targets on an underlying static graph. In our case, the GTFS shapes can be represented as a directed graph \\(G_\texttt{network}\\).
@@ -316,6 +319,12 @@ In order to simulate the movement of an event-emitting device, we precalculate t
 Here, \\(\delta_g \in \mathcal{N(0, \sigma^2)}\\) describes Gaussian noise on top of the geographical position. We also add noise on top of the time component \\(\delta_t \in \texttt{AR1}(\texttt{min_delay},\ \texttt{max_delay})\\). \\(\texttt{AR1}\\) is an [autoregressive modeling function](https://en.wikipedia.org/wiki/Autoregressive_model), which ensures that the randomized earliness/delay stays within \\((\texttt{min_delay},\ \texttt{max_delay})\\) boundaries, but tends to move back to a \\((0, 0)\\)-delay, while accounting for plausible jumps in earliness/delay times between two stops. This way, as an example, we do not draft three minutes earliness for stop 1 and three minutes delay for stop 2 (which would make trips move unreasonably fast, especially on shorter trip segments).
 
 For each event on a trip segment (between two stops), we linearly interpolate the timepoint \\(tp\\) based on the simulated position and the arrival/departure time at a trip's previous and next stop.
+
+<div id="fig-example-noisy-trajectory"></div>
+
+See [Figure ???](#fig-example-noisy-trajectory) for an example for the spatial part of the event generation.
+
+{{< figure id="fig-example-noisy-trajectory" src="img/noisified_shape.png" alt="Example noisy trajectory" width="800" caption="> Figure ??? shows a possible GPS trajectory of a person travelling along a PTV's shape. The red line represents a GTFS shape. The blue line shows noisy location data emmitted by a user's device. Each corner on the blue line symbolizes a user moving within 5 seconds. The green points show where the event generator passes a stop and thus moves on to the next trip segment." >}}
 
 # Settings and Parameter Optimization
 
