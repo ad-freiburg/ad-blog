@@ -277,7 +277,7 @@ In a prior version of the GCI, we tried merging the spatial and temporal compone
 \underbrace{\texttt{std::vector}}\_{\text{grid idx}} \texttt{<}\underbrace{\texttt{std::vector}}\_{\text{calendar idx}} \texttt{<}\underbrace{\texttt{std::set\<TripTime\>}}_{\text{spat. \& temp. relevant}} \texttt{>}\texttt{>}
 \end{equation}
 
-However, this lead to a disproportionate increase in building time and RAM usage for a minor increase in query time. TODO example on Germany GTFS set with building time, ram and query time O-Notation?
+However, this lead to a disproportionate increase in building time and RAM usage for a minor increase in query time.
 
 ### HMM
 
@@ -331,6 +331,8 @@ For both PTS and PTVM, we can choose the allowed earliness / delay in minutes, a
 | \\(\texttt{DELAY\_MINUTES}\\) | 5 | 5 | Maximum allowed delay in minutes<br>for temporal candidate query component |
 | \\(\texttt{MAX\_HMM\_STATES}\\) | 10 | 10 | Maximum number of HMM states to consider per event |
 | \\(\texttt{GPS\_RADIUS\_M}\\) | 50 | <span style="background-color: #00ff3c;">74</span> | Radius in meters for spatial query component |
+
+For the later evaluation, we leave \\(\texttt{GPS\_RADIUS\_M}\\) at 50 for PTS, but only increase it for PTVM.
 
 For PTVM, we choose the following configurable parameters:
 
@@ -460,7 +462,9 @@ Also, the higher the difficulty of a query, (measured by the [activeness](#activ
 
 #### Accuracy
 
-bla.
+As we can see in Figures [???](#fig-0-0-eval-ts-quantiles) and [???+1](#fig-0-0-eval-trip-quantiles), PTVM outperforms PTS in accuracy for (0-0) and (3-3) earliness/delay. For (6-6), PTS has a slightly higher mean accuracy than PTVM, but also a higher failure rate.
+
+As for the accuracy of PTS and PTVM on trip segments with different activeness levels, we can see that PTS slightly outperforms PTVM for low activeness and stays on par for medium activeness. However, for high activeness, PTVM outperforms PTS by a large margin. See the left hand side of plot [???+2](#fig-0-0-eval-ts-activeness).
 
 <div id="fig-0-0-eval-ts-quantiles"></div>
 
@@ -498,14 +502,14 @@ Furthermore, one could store \\((\texttt{TripId}, \texttt{TripSegmentId})\\)-tup
 
 Another possible query speed gain is to cache HMM layers for each user, as emissions do not need to be recalculated for each request.
 
-Speedup: Replace grid with R-Tree, store (TripId, TS)-tuples in Grid/R-Tree, cache HMM layers for one event. Not needed because fast enough for our purposes.
-
-TODO Replace Zipper by one datastructure in GCI. 
+As mentionned in [Equation ???](#eq-gci), one could merge the spatial and temporal components of the GCI into one data structure. This would reduce the amount of trips to check for each query, but would increase RAM usage and boot time.
 
 In order to reduce boot times when multiple boot times are needed for the same dataset, one could pre-compute the needed datastructures (e.g. TripSegments, GCI, ...) in a similar manner to PTS. One could save the pre-computed datastructures to hard drive and then load them on boot request.
 
-TODO Both approaches have the downside that they rely on linear interpolation for estimating where the PTV is between two stops. This is not accurate for trip segments with varying speeds. Could be learnt for each trip.
+Ath the moment, both approaches have the downside that they rely on linear interpolation for estimating where the PTV is between two stops. This is not accurate for trip segments with varying speeds. This could be learnt for each trip, or inferred from OSM data, in order to improve the emission score.
 
 # Conclusion
 
-We have implemented PTVM, a dynamic map matching algorithm that outperforms PTS, an earlier version. PTVM outperforms PTS, because...
+We present PTVM, a dynamic map matching algorithm that outperforms PTS, an earlier version. PTVM outperforms PTS, in terms of RAM usage and query time by a large margin. PTVM also outperforms in boot time, even though we have not yet implemented pre-computation of datastructures. As for accuracy, PTVM outperforms PTS for delays and early arrivals of up to 3 minutes, while being on par for delays of 6 minutes on the dataset of Freiburg-Short. PTVM is especially good at matching trips and trip segments with a high activeness, where PTS fails to match correctly in most cases.
+
+We also show how we optimize the parameters of PTVM, in order to achieve the best possible accuracy for a given dataset.
