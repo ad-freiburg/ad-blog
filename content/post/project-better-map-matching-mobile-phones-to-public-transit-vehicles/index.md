@@ -332,6 +332,8 @@ PTS and PTVM both have configurable parameters. We first show what parameters ex
 
 ## Available Parameters
 
+<div id="table-hpo-params-1"></div>
+
 For both PTS and PTVM, we can choose the allowed earliness / delay in minutes, as well the GPS radius in meters and the maximum amout of HMM states. For both, we choose the following configuration. Post-optimization values are just for PTVM, as we do not optimize PTS parameters.
 
 | Parameter | Value Pre-<br>Optimization | Value Post-<br>Optimization | Description |
@@ -342,6 +344,8 @@ For both PTS and PTVM, we can choose the allowed earliness / delay in minutes, a
 | \\(\texttt{GPS\_RADIUS\_M}\\) | 50 | <span style="background-color: #00ff3c;">74</span> | Radius in meters for spatial query component |
 
 For the later evaluation, we leave \\(\texttt{GPS\_RADIUS\_M}\\) at 50 for PTS, but only increase it for PTVM.
+
+<div id="table-hpo-params-2"></div>
 
 For PTVM, we choose the following configurable parameters:
 
@@ -391,21 +395,27 @@ In order to differentiate the difficulty of a query, we introduce _Activeness_. 
 
 We ran the HPO on an older version of [user device emulation](#user-device-emulation), where unreasonably large earliness/delay jumps were possible between two stops. This lead to much worse predictions, as some (especially smaller) trip segments had very few events generated, making it hard to match to. For this reason, we might not have found a parameter composition that is close to optimal yet. However, we can still see an improvement, as we will see in the next section.
 
+As the event generator does not simulate mock-trips, where the target is no trip, the HPO can choose to assign an arbitrarily high value to \\(\texttt{NO\_TRIP\_PENALTY}\\). In real life scenarios, it can often be more likely not to be matched to a trip. In that case, \\(\texttt{NO\_TRIP\_PENALTY}\\) should be much lower, possibly even negative.
+
 ### Results
 
 <div id="fig-0-0-opt-ts-acc-qtime"></div>
 
-As for the results of the parameter optimization, we can see that giving PTVM a higher \\(\texttt{GPS\_RADIUS\_M}\\) leads to a better matching for trips with a small delay. This causes an improved calculation of the emission score ([recall Figure ???](#fig-emission)). As a consequence, the average accuracy on even very active trips remains high for small delays (see Figures [???](#fig-0-0-opt-ts-acc-qtime) and [???](#fig-0-0-opt-ts-quantiles)). TODO 6-6.
+As for the results of the parameter optimization, we can see that giving PTVM a higher \\(\texttt{GPS\_RADIUS\_M}\\) leads to a better matching for trips with a small delay. This causes an improved calculation of the emission score (recall [Figure ???](#fig-emission)). As a consequence, the average accuracy on even very active trips remains high for small delays (see Figures [???](#fig-0-0-opt-ts-acc-qtime) and [???](#fig-0-0-opt-ts-quantiles)).
 
-{{< figure id="fig-0-0-opt-ts-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_0,_0.png" alt="Default vs Optimized Parameter PTVM Performances" width="800">}}
-{{< figure id="fig-3-3-opt-ts-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_3,_3.png" alt="PTS vs PTVM approaches" width="800">}}
-{{< figure id="fig-6-6-opt-ts-acc-qtime" src="img/parameter_optimization/comparison_trip_segments_6,_6.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? compares two versions of PTVM. The orange version has unoptimized default parameters, the blue version optimized parameters ([as in table TODO](TODO)). While PTVM version with optimized parameters is minimalistically slower, the performance gain in accuracy is substantial. It has to be noted that the parameter optimization was performed on an earlier version of the event generator, which is why the accuracy measures might not perfectly match with the graphs in the later evaluation section." >}}
+\\(\texttt{TRIP\_CHANGE\_PENALTY}\\)'s value is nearly a third of what it was before the optimization. This could be interpreted as the optimizer believing that it is more likely to change trip mid simulation. However, if we look at how drastically lower the maximum \\(\texttt{EMISSION\_PENALTY}\\) is, the \\(\texttt{TRIP\_CHANGE\_PENALTY}\\) is still quite high. As an example, for \\(\texttt{MAX\_HMM\_STATES} = 10\\), the maximum accumulated \\(\texttt{EMISSION\_PENALTY}\\) is \\(10 \cdot 22.72 = 227.2\\). We now assume the user got matched to the same trip \\(t_1\\) for the last 9 events (accumulated \\(\texttt{TRAMSITION\_PENALTY} = 0\\)). But now there is an option to change to a different trip \\(t_2\\) on the last layer of the HMM. The shortest path through the HMM would always choose \\(t_1\\), even with maximal \\(\texttt{EMISSION\_PENALTY} = 22.72\\), over \\(t_2\\) with an added \\(\texttt{TRIP\_CHANGE\_PENALTY}\\). So, realistically, \\(\texttt{TRIP\_CHANGE\_PENALTY}\\) is only relevant if the previously matched trip \\(t_1\\) was not a HMM candidate on the last layer, which would make the parameter \\(\texttt{TRIP\_CHANGE\_PENALTY}\\) useless, as every trip would get that penalty.
+
+We can reason similarly for \\(\texttt{TRANSITION\_PENALTY}\\). As \\(194.93\\) is nearly as high as \\(10 \cdot \texttt{EMISSION\_PENALTY} = 227.2\\), changing trip mid-way through the HMM is only an option if the currently most likely trip was not a HMM candidate for previous events. But if that is the case, why would PTVM need to drag along up to 10 HMM candidates, if it only allows for the same trip to be on the shortest HMM path? We tried using less than 10 HMM candidates briefly, but in order to stay comparable with PTS, we chose not to lower \\(\texttt{MAX\_HMM\_STATES}\\), allthough this could be worth looking into in more detail.
+
+After the HPO, the value for \\(\texttt{TRANSITION\_PENALTY}\\) nearly doubled, while \\(\texttt{EMISSION\_PENALTY}\\) is 44 times smaller. Given that the ratio of parameters changed this drastically, it is astonishing that the unoptimized PTVM version performs this well.
+
+{{< figure id="fig-0-0-opt-ts-acc-qtime" src="img/parameter_optimization/0-0/comparison_trip_segments.png" alt="Default vs Optimized Parameter PTVM Performances" width="800">}}
+{{< figure id="fig-3-3-opt-ts-acc-qtime" src="img/parameter_optimization/3-3/comparison_trip_segments.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? compares two versions of PTVM. The blue version has unoptimized default parameters, the orange version optimized parameters (see tables [???](#table-hpo-params-1) and [???](#table-hpo-params-2)). While PTVM version with optimized parameters is minimalistically slower, the performance gain in accuracy is substantial. It has to be noted that the parameter optimization was performed on an earlier version of the event generator. For that reason, the accuracy measures might not perfectly match with the graphs in the later evaluation section." >}}
 
 <div id="fig-0-0-opt-ts-quantiles"></div>
 
-{{< figure id="fig-0-0-opt-ts-quantiles" src="img/parameter_optimization/quantiles_line_segments_0,_0.png" alt="PTS vs PTVM approaches" width="800">}}
-{{< figure id="fig-3-3-opt-ts-quantiles" src="img/parameter_optimization/quantiles_line_segments_3,_3.png" alt="PTS vs PTVM approaches" width="800">}}
-{{< figure id="fig-6-6-opt-ts-quantiles" src="img/parameter_optimization/quantiles_line_segments_6,_6.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ???" >}}
+{{< figure id="fig-0-0-opt-ts-quantiles" src="img/parameter_optimization/0-0/quantiles_line_segments.png" alt="PTS vs PTVM approaches" width="800">}}
+{{< figure id="fig-3-3-opt-ts-quantiles" src="img/parameter_optimization/3-3/quantiles_line_segments.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure ??? describes how well the baseline performs vs the optimized PTVM version for two earliness/delay settings (0-0) and (3-3). For both, the optimized version shows improved accuracy while being only marginally slower. Both follow the same accuracy drop from quantile 50, but the accuracy of the optimized version increases again for the most difficult cases." >}}
 
 # Evaluation
 
