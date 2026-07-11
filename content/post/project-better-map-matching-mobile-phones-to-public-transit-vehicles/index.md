@@ -126,7 +126,7 @@ The aim of our dynamic map matching algorithms is to match a list of Events \\(E
 
 <div id="fig-pts-ptvm-overview"></div>
 
-In this chapter, we go through the query process of both PTS and PTVM, to highlight the differences in the queries. See [Figure1](#fig-pts-ptvm-overview) for an overview.
+In this chapter, we go through the query process of both PTS and PTVM, to highlight the differences in the queries. See [Figure 1](#fig-pts-ptvm-overview) for an overview.
 
 {{< figure id="fig-pts-ptvm-overview" src="img/PTS_vs_PTVM_approaches.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure 1 presents an overview over the pipeline differences on a trip matching query for PTS and PTVM. One can see that PTVM filters more trips early on in the query pipeline due to the rough time window filter. Furthermore, PTVM filters more trips before the HMM insertion and makes use of a mixed score, which incorporates the temporal component of the dynamic map matching directly into the HMM." >}}
 
@@ -178,7 +178,7 @@ The spatio-temporal score is then calulcated [as followed in Equation 1](#eq-emi
 \end{cases}
 \end{align}
 
-The spatial component linearly increases from \\(\texttt{dist}(p_{e_j}) \geq r \to 0\\) to \\(\texttt{dist}(p_{e_j}) = 0 \to \\)
+The spatial component linearly increases from \\(\texttt{dist}(p_{e_j}) \geq r \to 0\\) to \\(\texttt{dist}(p_{e_j}) = 0 \to (1 - \psi) \cdot \texttt{max\_emission\_weight}\\).
 The temporal component of the score is visualized [in Figure 6](#fig-temporal-emission).
 
 {{< figure id="fig-temporal-emission" src="img/PTVM_temporal_emission.png" alt="PTVM Temporal Emission Score" width="800" caption="> Figure 6: The temporal component of the emission score is \\(0\\) for punctual \\(tp_{p_{e_j}}\\) and linearly increases to its maximum on tunable earliness and delay threshold values." >}}
@@ -284,7 +284,7 @@ However, this lead to a disproportionate increase in building time and RAM usage
 
 ### HMM
 
-Our implementation of a HMM cholds up to \\(\texttt{MAX\_HMM\_STATES}\\) layers plus two single-node start/end layers. There is no preprocessing needed.
+Our implementation of a HMM cholds up to \\(\texttt{MAX\_HMM\_STATES}\\) layers plus two single-node start/end layers. There is no preprocessing needed, as it is built newly for each query.
 
 ### API
 
@@ -298,9 +298,9 @@ As it would be very exhausting and expensive to develop on board of a bus or tra
 
 <div id="table-datasets"></div>
 
-For the following chapters on [parameter optimizaton](#settings-and-parameter-optimization) and [evaluation](#evaluation), we use the following GTFS datasets. They all have different sizes in terms of calendar range, shape length and number of trips. See [Table 2](#table-datasets) for an overview.
+For the following chapters on [parameter optimizaton](#settings-and-parameter-optimization) and [evaluation](#evaluation), we use the GTFS datasets in [Table 2](#table-datasets). They all have different sizes in terms of calendar range, shape length and number of trips.
 
-| Dataset | Days | Routes | Trips | Trip<br>segments | Edges<br>(dedup) | Raw edges | Dedup<br>reduction | Avg trips<br>per edge |
+| Dataset | Days | Routes | Trips | Trip<br>segments | Edges<br>(dedupl.) | Raw edges | Dedupl.<br>reduction | Avg trips<br>per edge |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Freiburg-Short | 6 | 45 | 33,573 | 1,245 | 19,184 | 180,567 | 89.4% | 395.5 |
 | DE-Fern | 34 | 99 | 5,244 | 3,297 | 250,092 | 7,212,615 | 96.5% | 64.0 |
@@ -318,7 +318,7 @@ We can observe that GTFS shapes share a lot of edges, in CH-CH even 97.5%. For t
 
 In order to simulate the movement of an event-emitting device, we precalculate trajectories along each trip \\(t\\) as a list of events \\(ev_{(t, \delta_g, \delta_t)}\\). We simulate events every \\(k=5\\) seconds, and their lat/lon position is linearly interpolated along \\(t\\)'s shape.
 
-Here, \\(\delta_g \in \mathcal{N(0, \sigma^2)}\\) describes Gaussian noise on top of the geographical position. We also add noise on top of the time component \\(\delta_t \in \texttt{AR1}(\texttt{min_delay},\ \texttt{max_delay})\\). \\(\texttt{AR1}\\) is an [autoregressive modeling function](https://en.wikipedia.org/wiki/Autoregressive_model), which ensures that the randomized earliness/delay stays within \\((\texttt{min_delay},\ \texttt{max_delay})\\) boundaries, but tends to move back to a \\((0, 0)\\)-delay, while accounting for plausible jumps in earliness/delay times between two stops. This way, as an example, we do not draft three minutes earliness for stop 1 and three minutes delay for stop 2 (which would make trips move unreasonably fast, especially on shorter trip segments).
+Here, \\(\delta_g \in \mathcal{N(0, \sigma^2)}\\) describes Gaussian noise on top of the geographical position. We also add noise on top of the time component \\(\delta_t \in \texttt{AR1}(\texttt{min_delay},\ \texttt{max_delay})\\). \\(\texttt{AR1}\\) is an [autoregressive modeling function](https://en.wikipedia.org/wiki/Autoregressive_model), which ensures that the randomized earliness/delay stays within \\((\texttt{min_delay},\ \texttt{max_delay})\\) boundaries, but tends to move back to a \\((0, 0)\\)-delay, while accounting for plausible jumps in earliness/delay times between two stops. This way, as an example, we do not draft three minutes earliness for stop 1 and three minutes delay for stop 2 (which would make trips move unreasonably fast or slow, especially on shorter trip segments).
 
 For each event on a trip segment (between two stops), we linearly interpolate the timepoint \\(tp\\) based on the simulated position and the arrival/departure time at a trip's previous and next stop.
 
@@ -389,9 +389,9 @@ In phase 2, we pick the \\(N\\) best configurations and run them on \\(33\\%\\) 
 
 <div id="fig-activeness-freiburg-short"></div>
 
-In order to differentiate the difficulty of a query, we introduce _Activeness_. Trips and trip segments have Activeness \\(a_t\\) or \\(a_{ts}\\). We calculate Activeness based on how many trips pass an edge \\(e_t\\) within our time window: Activeness \\(a_{e_t}\\) of edge \\(e_t\\). Then, for each trip segment \\(ts_t\\) of trip \\(t\\), \\(a_{ts_t} = \texttt{avg}(a_{e_t})\\) for all edges within the trip segment. Similarly, we calculate a trip's Activeness \\(a_t = \texttt{avg}(a_{e_t})\\) for all edges of the trip. Generally, we expect a query to be more difficult for a more active trip or trip segment, as there are more candidates to choose from. See [Figure 9](#fig-activeness-freiburg-short) for an example of the activeness of Freiburg-Short (for Wednesday, 15th of October 2025).
+In order to differentiate the difficulty of a query, we introduce _Activeness_. Trips and trip segments have Activeness \\(a_t\\) or \\(a_{ts}\\). We calculate Activeness based on how many trips pass an edge \\(e_t\\) within our time window: Activeness \\(a_{e_t}\\) of edge \\(e_t\\). Then, for each trip segment \\(ts_t\\) of trip \\(t\\), \\(a_{ts_t} = \texttt{avg}(a_{e_t})\\) for all edges within the trip segment. Similarly, we calculate a trip's Activeness \\(a_t = \texttt{avg}(a_{e_t})\\) for all edges of the trip. Generally, we expect a query to be more difficult for a more active trip or trip segment, as there are more candidates to choose from. See [Figure 8](#fig-activeness-freiburg-short) for an example of the activeness of Freiburg-Short (for Wednesday, 15th of October 2025).
 
-{{< figure id="fig-activeness-freiburg-short" src="img/activeness_freiburg-short.png" alt="Activeness Freiburg Short" width="800" caption="> Figure 9 shows the activeness of Freiburg-Short dataset on Wednesday, 15th of October 2025. We can see that the mean edge activeness for whole trips is around 100, meaning that a user device emitting events on a random trip \\(t\\) can be expected to have 100 trips passing this edge on said Wednesday to choose from, for each edge that is within the event radius. For tripsegments, we can see that some surpass a per-tripsegment-average of 400 trips per edge. These tripsegments contain highly travelled edges. For Freiburg-Short, this would be the tram tracks above the main station, and the main station bus hub for example.">}}
+{{< figure id="fig-activeness-freiburg-short" src="img/activeness_freiburg-short.png" alt="Activeness Freiburg Short" width="800" caption="> Figure 8 shows the activeness of Freiburg-Short dataset on Wednesday, 15th of October 2025. We can see that the mean edge activeness for whole trips is around 100, meaning that a user device emitting events on a random trip \\(t\\) can be expected to have 100 trips passing this edge on said Wednesday to choose from, for each edge that is within the event radius. For tripsegments, we can see that some surpass a per-tripsegment-average of 400 trips per edge. These tripsegments contain highly travelled edges. For Freiburg-Short, this would be the tram tracks above the main station, and the main station bus hub for example.">}}
 
 ### Critisizm
 
@@ -403,7 +403,7 @@ As the event generator does not simulate mock-trips, where the target is no trip
 
 <div id="fig-0-0-opt-ts-acc-qtime"></div>
 
-As for the results of the parameter optimization, we can see that giving PTVM a higher \\(\texttt{GPS\_RADIUS\_M}\\) leads to a better matching for trips with a small delay. This causes an improved calculation of the emission score (recall [Figure ???](#fig-emission)). As a consequence, the average accuracy on even very active trips remains high for small delays (see Figures [10](#fig-0-0-opt-ts-acc-qtime) and [11](#fig-0-0-opt-ts-quantiles)).
+As for the results of the parameter optimization, we can see that giving PTVM a higher \\(\texttt{GPS\_RADIUS\_M}\\) leads to a better matching for trips with a small delay. This causes an improved calculation of the emission score (recall [Figure 5](#fig-emission)). As a consequence, the average accuracy on even very active trips remains high for small delays (see Figures [9](#fig-0-0-opt-ts-acc-qtime) and [10](#fig-0-0-opt-ts-quantiles)).
 
 \\(\texttt{TRIP\_CHANGE\_PENALTY}\\)'s value is nearly a third of what it was before the optimization. This could be interpreted as the optimizer believing that it is more likely to change trip mid simulation. However, if we look at how drastically lower the maximum \\(\texttt{EMISSION\_PENALTY}\\) is, the \\(\texttt{TRIP\_CHANGE\_PENALTY}\\) is still quite high. As an example, for \\(\texttt{MAX\_HMM\_STATES} = 10\\), the maximum accumulated \\(\texttt{EMISSION\_PENALTY}\\) is \\(10 \cdot 22.72 = 227.2\\). We now assume the user got matched to the same trip \\(t_1\\) for the last 9 events (accumulated \\(\texttt{TRAMSITION\_PENALTY} = 0\\)). But now there is an option to change to a different trip \\(t_2\\) on the last layer of the HMM. The shortest path through the HMM would always choose \\(t_1\\), even with maximal \\(\texttt{EMISSION\_PENALTY} = 22.72\\), over \\(t_2\\) with an added \\(\texttt{TRIP\_CHANGE\_PENALTY}\\). So, realistically, \\(\texttt{TRIP\_CHANGE\_PENALTY}\\) is only relevant if the previously matched trip \\(t_1\\) was not a HMM candidate on the last layer, which would make the parameter \\(\texttt{TRIP\_CHANGE\_PENALTY}\\) useless, as every trip would get that penalty.
 
@@ -412,16 +412,16 @@ We can reason similarly for \\(\texttt{TRANSITION\_PENALTY}\\). As \\(194.93\\) 
 After the HPO, the value for \\(\texttt{TRANSITION\_PENALTY}\\) nearly doubled, while \\(\texttt{EMISSION\_PENALTY}\\) is 44 times smaller. Given that the ratio of parameters changed this drastically, it is astonishing that the unoptimized PTVM version performs this well.
 
 {{< figure id="fig-0-0-opt-ts-acc-qtime" src="img/parameter_optimization/0-0/comparison_trip_segments.png" alt="Default vs Optimized Parameter PTVM Performances" width="800">}}
-{{< figure id="fig-3-3-opt-ts-acc-qtime" src="img/parameter_optimization/3-3/comparison_trip_segments.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure 10 compares two versions of PTVM. The blue version has unoptimized default parameters, the orange version optimized parameters (see tables [???](#table-hpo-params-1) and [???](#table-hpo-params-2)). While PTVM version with optimized parameters is minimalistically slower, the performance gain in accuracy is substantial. It has to be noted that the parameter optimization was performed on an earlier version of the event generator. For that reason, the accuracy measures might not perfectly match with the graphs in the later evaluation section." >}}
+{{< figure id="fig-3-3-opt-ts-acc-qtime" src="img/parameter_optimization/3-3/comparison_trip_segments.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure 9 compares two versions of PTVM. The blue version has unoptimized default parameters, the orange version optimized parameters (see Tables [3](#table-hpo-params-1) and [4](#table-hpo-params-2)). While PTVM version with optimized parameters is minimalistically slower, the performance gain in accuracy is substantial. It has to be noted that the parameter optimization was performed on an earlier version of the event generator. For that reason, the accuracy measures might not perfectly match with the graphs in the later evaluation section." >}}
 
 <div id="fig-0-0-opt-ts-quantiles"></div>
 
 {{< figure id="fig-0-0-opt-ts-quantiles" src="img/parameter_optimization/0-0/quantiles_line_segments.png" alt="PTS vs PTVM approaches" width="800">}}
-{{< figure id="fig-3-3-opt-ts-quantiles" src="img/parameter_optimization/3-3/quantiles_line_segments.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure 11 describes how well the baseline performs vs the optimized PTVM version for two earliness/delay settings (0-0) and (3-3). For both, the optimized version shows improved accuracy while being only marginally slower. Both follow the same accuracy drop from quantile 50, but the accuracy of the optimized version increases again for the most difficult cases." >}}
+{{< figure id="fig-3-3-opt-ts-quantiles" src="img/parameter_optimization/3-3/quantiles_line_segments.png" alt="PTS vs PTVM approaches" width="800" caption="> Figure 10 describes how well the baseline performs vs the optimized PTVM version for two earliness/delay settings (0-0) and (3-3). For both, the optimized version shows improved accuracy while being only marginally slower. Both follow the same accuracy drop from quantile 50, but the accuracy of the optimized version increases again for the most difficult cases." >}}
 
 # Evaluation
 
-In this chapter, we compare PTS and PTVM with regard to RAM usage, boot time, query time and accuracy.
+In this chapter, we compare PTS and PTVM with regard to RAM usage, boot time, query time and accuracy. We only use datasets described in [Table 2](#table-datasets).
 
 ## RAM Usage
 
@@ -435,13 +435,13 @@ CH-CH is the full dataset of [Swiss Opentransport](https://data.opentransportdat
 CH-EU is the same dataset, including all shapes within European borders, thus including more edges than CH-CH.
 CH-*-Short are the same datasets as CH-CH and CH-Europe, but reduced to trips active on 2025/10/15.
 
-| GB | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-EU | CH-CH-Short | CH-EU-Short |
+| GB | Freiburg<br>-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-EU | CH-CH<br>-Short | CH-EU<br>-Short |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Disk use GTFS | 53M | 313M | 481M | 5.8G | 6.6G | 4.9G | 5.5G | 4.8G | 5.4G |
 | RAM usage PTS | 0.58 | 4.61 | 7.43 | 87.96 | 99.42 | 52.16 | 62.11 | 51.31 | 61.25 |
 | RAM usage PTVM | 0.28 | 0.56 | 2.03 | 22.89 | 25.43 | 60.48 | 62.82 | 15.83 | 18.16 |
 
-We can see that
+We can observe that PTVM generally uses a lot less RAM than PTS, only for CH-CH and CH-EU it is inverted. The reason is are the 364 days that Swiss Opentransport support for every trip in their GTFS dataset, which all land in the PTVM calendar. Interestingly, even though CH-EU(-Short) has double the amount of (deduplicated) edges to CH-CH(-Short), the used RAM is only 2.5GB more. See right plots of Figure [11](#fig-disk-size).
 
 <div id="table-speed-pts-ptvm"></div>
 
@@ -449,13 +449,18 @@ We can see that
 
 We compare the boot time of PTS and PTVM on different datasets in [Table 6](#table-speed-pts-ptvm). We define boot time as the time needed to read the GTFS files and create the data structures, from program launch until the API is live. We abbreviate _pre-generator_ with _PG_, as PTS pre-generates the datastructures needed by python with a C++ program. These datastructures are saved to disk as json files. PTS no PG just has to load these files, that have to be generated once for each new GTFS set. For now, PTVM does all the datastructure generation (e.g. trip segment generation) on each start.
 
-| Boot Time | Freiburg-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-EU | CH-CH-Short | CH-EU-Short |
+| Boot Time | Freiburg<br>-Short | DE-Fern | DE-Regio | DE-Nah | DE-full | CH-CH | CH-EU | CH-CH<br>-Short | CH-EU<br>-Short |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | PTS with PG | 26.11s | 1.93m | 3.62m | 50.25m | 55.90m | 32.82m | 37.16m | 32.56m | 37.26m |
 | PTS no PG | 6.72s | 23.09s | 1.07m | 16.00m | 26.36m | 10.34m | 11.29m | 9.25m | 10.86m |
 | PTVM | 10.80s | 16.37s | 1.08m | 16.14m | 17.46m | 1.43h | 1.44h | 8.29m | 9.39m |
 
-On 
+<div id="fig-disk-size"></div>
+
+For the same reasons concerning the amount of days, as described in [the previous chapter](#ram-usage), the boot time for CH-CH and CH-EU is a lot slower. The amount of edges does not make a big impact in boot time, if we compare CH-CH(-Short) and CH-EU(-Short). See left plots of Figure [11](#fig-disk-size).
+
+{{< figure id="fig-disk-size-overview" src="img/boot_ram_vs_disk_size_overview.png" alt="ram and boot time plot overview" width="800">}}
+{{< figure id="fig-disk-size" src="img/boot_ram_vs_disk_size_zoom.png" alt="ram and boot time plot zoom" width="800" caption="> Figure 11 shows the boot time and RAM usage of PTS and PTVM on different datasets against the disk size of the GTFS dataset. The lower two plots are a zoomed-in view of the clustered larger datasets in the upper plots. For most datasets, PTS uses more RAM than PTVM and is slower to boot. However, for the CH-CH and CH-EU datasets, PTVM uses more RAM than PTS and is a lot slower to boot. This is because of the calendar generation, which takes a long time for the 364 days of CH-CH and CH-EU. PTS does not do any calendar generation at all. This is why we create *-Short datasets, which only contain trips active on a few days.">}}
 
 ## Accuracy and Query Time
 
@@ -477,9 +482,9 @@ PTVM outperforms PTS in every aspect of query time and in most aspects of accura
 
 #### Query Time
 
-We observe that PTVM overwhelmingly outperforms PTS in terms of query speed. This is true for the median of the trips and trip segments (PTS around 6 times slower). The slowest 10% of all PTS queries are more than 10 times slower than the slowest 10% of PTVM, and the slowest 1% for PTS are around 20 times slower than for PTVM. See the right hand side of plots [???](#fig-0-0-eval-ts-quantiles) and [???+1](#fig-0-0-eval-trip-quantiles).
+We observe that PTVM overwhelmingly outperforms PTS in terms of query speed. This is true for the median of the trips and trip segments (PTS around 6 times slower). The slowest 10% of all PTS queries are more than 10 times slower than the slowest 10% of PTVM, and the slowest 1% for PTS are around 20 times slower than for PTVM. See the right hand side of plots [12](#fig-0-0-eval-ts-quantiles) and [13](#fig-0-0-eval-trip-quantiles).
 
-Also, the higher the difficulty of a query, (measured by the [activeness](#activeness) of the current trip segment), the longer both PTS and PTVM need to respond. However, the increase in query time for more difficult queries is much faster for PTS than for PTVM. While the query time for PTS is only X times slower than PTVM for the least active trip segment quantile, PTS is Y times slower than PTVM on the most active quantiles. See the right hand side of plot [???+2](#fig-0-0-eval-ts-activeness).
+Also, the higher the difficulty of a query, (measured by the [activeness](#activeness) of the current trip segment), the longer both PTS and PTVM need to respond. However, the increase in query time for more difficult queries is much faster for PTS than for PTVM. While the query time for PTS is only X times slower than PTVM for the least active trip segment quantile, PTS is Y times slower than PTVM on the most active quantiles. See the right hand side of plot [14](#fig-0-0-eval-ts-activeness).
 
 #### Accuracy
 
@@ -524,6 +529,8 @@ Furthermore, one could store \\((\texttt{TripId}, \texttt{TripSegmentId})\\)-tup
 Another possible query speed gain is to cache HMM layers for each user, as emissions do not need to be recalculated for each request.
 
 As mentioned in [Equation 3](#eq-gci), one could merge the spatial and temporal components of the GCI into one data structure. This would reduce the amount of trips to check for each query, but would increase RAM usage and boot time.
+
+Instead of the linear emission functions in the spatio-temporal-score (recall [Figure 5](#fig-emission)), we could try using a Gaussian distribution, as Newson and Krumm did in [Hidden Markov Map Matching Through Noise and Sparseness](https://dl.acm.org/doi/10.1145/1653771.1653818). This might improve the candidate selection at least for the geographical part of the spatio-temporal score, as GPS error can be modelled as a Gaussian.
 
 In order to reduce boot times when multiple boot times are needed for the same dataset, one could pre-compute the needed datastructures (e.g. TripSegments, GCI, ...) in a similar manner to PTS. One could save the pre-computed datastructures to hard drive and then load them on boot request.
 
