@@ -193,7 +193,7 @@ The number of transition edges \\(V_{l \to l+1}\\) increases quadratically for a
 
 In our HMM calculations, we minimize \\(\texttt{score} \in [0, \infty)\\) instead of maximizing Markov probabilities \\(p \in [0, 1]\\). This is equivalent to a HMM, as \\(\texttt{score}\\) is derived from the negative log-likelihood of the Markov probabilities.
 
-TODO discuss similarity to Viterbi? Is this Viterbi?
+<!-- TODO discuss similarity to Viterbi? Is this Viterbi? -->
 
 <div id="eq-transition"></div>
 
@@ -264,13 +264,13 @@ In the following table, we explain choices for some datastructures we had to mak
 
 A Geocalendar Index (GCI) can be queried for a trip candidate that is both spatially and temporally close to a given Event. Its purpose is reduce the amout of HMM trip candidates to check from the potentially large GTFS dataset.
 
-For the spatial part of the GCI, we implement a grid with a fixed width and height for each cell (e.g. 5 kilometers). Each cell contains a \\(\texttt{std::vector}\\) of \\(\texttt{std::set\<TripId\>}\\) for every trip passing the cell geographically.
+For the spatial part of the GCI, we implement a grid with a fixed width and height for each cell (e.g. 5 kilometers). Each cell contains a \\(\texttt{std::vector}\\) of \\(\texttt{std::set\<TripId\>}\\) for every trip passing the cell geographically. The vector is sorted by \\(\texttt{TripId}\\).
 
 We choose a grid for the sake of implementation speed, even though a tree-like structure (e.g. an R-Tree, see PTS) would likely speed up the PTVM query process a lot, as it would reduce the amount of trips to check at the very beginning of the query pipeline [(recall Figure ???)](#fig-pts-ptvm-overview). However, as we will see in the [evaluation section](#evaluation), the proof of concept stands and PTVM drastically outperforms PTS in query time already.
 
-As for the temporal part of the GCI, we chose a \\(\texttt{std::vector}\\) of time slots \\(\texttt{std::set\<TripTime\>}\\) of equal size (e.g. 24 hours), where each time slot contains all trips that are at least partially active within the time slot. We store \\(\texttt{TripTime}\\)s instead of \\(\texttt{TripId}\\)s, in order to allow for trips that have a duration longer than the length of the time slots. For example, for a slot size of 24h and a daily operating TripId \\(1\\) with a trip duration of 30 hours, a time slot would hold \\(\\{(1, 2026.01.01), (1, 2026.01.02)\\}\\).
+As for the temporal part of the GCI, we chose a \\(\texttt{std::vector}\\) of time slots \\(\texttt{std::set\<TripTime\>}\\) of equal size (e.g. 24 hours), where each time slot contains all trips that are at least partially active within the time slot. We store \\(\texttt{TripTime}\\)s instead of \\(\texttt{TripId}\\)s, in order to allow for trips that have a duration longer than the length of the time slots. For example, for a slot size of 24h and a daily operating TripId \\(1\\) with a trip duration of 30 hours, a time slot would hold \\(\\{(1, 2026.01.01), (1, 2026.01.02)\\}\\). \\(\texttt{std::set\<TripTime\>}\\) contents is sorted first by \\(\texttt{TripId}\\) and then by \\(\texttt{date}\\).
 
-Hence, in order to query the GCI for \\(\texttt{TripTime}\\)s that are both in the right cell and in the right time slot, we apply a zipper algorithm on the sorted cell and time slot contents during query runtime. TODO elaborate zipper?
+Hence, in order to query the GCI for \\(\texttt{TripTime}\\)s that are both in the right cell and in the right time slot, we apply a zipper algorithm. It zips the sorted geographic vector and time slot set in \\(\mathcal{O}(n + m)\\) during query runtime.
 
 <div id="eq-gci"></div>
 
