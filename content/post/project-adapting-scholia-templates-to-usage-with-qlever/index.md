@@ -304,7 +304,7 @@ However, in Scholia, this code doesn't have to be typed each time, because a mac
 
 ### Conclusion of the Blog post
 The migration of Scholia was successful, and all the query templates that previously ran on WQS now run on Qlever. Most of them perform significantly better. It was possible to replace most of the services previously used by Scholia with SPARQL code. 
-However, in general, the services offered a higher level of control, better performance, or just more functionality. Therefore, the services are not redundan, t and the next goal could be an instance of WQS powered by Qlever running on the unified dataset while also exposing all the services.
+However, in general, the services offered a higher level of control, better performance, or just more functionality. Therefore, the services are not redundant, and the next goal could be an instance of WQS powered by Qlever running on the unified dataset while also exposing all the services.
 
 
 [^1]: wikidata.org; Wikidata:SPARQL query service/WDQS graph split
