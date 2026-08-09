@@ -16,6 +16,7 @@ This blog post discusses the migration of Scholia from the Wikidata Query Servic
 
 1. <a href="#vocabulary">Vocabulary</a>
 1. <a href="#problem">Migration of Scholia - Problem Introduction</a>
+1. <a href="#disclaimer">Disclaimer</a>
 1. <a href="#gas">GAS - Gather, Apply, Scatter</a>
 1. <a href="#mediawiki">Mediawiki API</a>
 1. <a href="#sampling">Random Sampling</a>
@@ -54,7 +55,7 @@ These services are not available when querying Wikidata with QLever. Therefore, 
 The services discussed in this work will be discussed from the context of their usage in scholia. Therefore, only parts of their functionality will be touched on.
 The short paper Willighagen et al. (2026)[^4] describes Scholia's migration process from a more general perspective. It touches also on a lot of the topics discussed in this blog post, but in little detail.
 
-Disclaimer:
+## <a id="disclaimer"></a> Disclaimer:
 The research described in the blog post was effected by me in correspondence with other Scholia developers as well as generative AI models. No generative AI was involved in the writing of this blog post.
 My contributions can also be traced by my commits and participation in discussions with other Scholia developers below issues. However, these discussions also extend to internal chats that are private.
 A big part of my work was testing templates, finding faulty queries, and directly comparing results. 
