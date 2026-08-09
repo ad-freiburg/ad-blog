@@ -57,8 +57,9 @@ The short paper Willighagen et al. (2026)[^4] describes Scholia's migration proc
 
 ## <a id="disclaimer"></a> Disclaimer:
 The research described in the blog post was effected by me in correspondence with other Scholia developers as well as generative AI models. No generative AI was involved in the writing of this blog post.
-My contributions can also be traced by my commits and participation in discussions with other Scholia developers below issues. However, these discussions also extend to internal chats that are private.
-A big part of my work was testing templates, finding faulty queries, and directly comparing results. 
+
+My contributions can also be traced by my commits and participation in discussions with other Scholia developers below issues in the [ad-freiburg/scholia](https://github.com/ad-freiburg/scholia/) repository. In small parts, these discussions also extend to internal chats that are private.
+I also did work that is not part of this blogpost but took up the majority of my time. It consisted of testing template queries, finding faulty ones, and directly comparing results.
 See [here](https://github.com/KonradLinden/scholia/tree/template_testing/scholia/app/templates/testing) the Python testing scripts that I developed and used to create test queries and check the answers for errors. Further, I developed them to compare results and performance of test queries across different endpoints (QLever and WQS).
 
 ## <a id="gas"></a> GAS - Gather, Apply, Scatter
