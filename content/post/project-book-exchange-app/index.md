@@ -1,6 +1,6 @@
 ---
 title: "Comprehensive Online Catalog and Web App for Public Bookshelves"
-date: 2026-08-21T12:00:00+02:00
+date: 2026-08-28T12:00:00+02:00
 author: "Julian Gabriel Ruf"
 authorAvatar: "img/ada.jpg"
 tags: ["web-app", "public-bookshelves", "isbn-scanning", "osm", "react", "full-stack"]
