@@ -57,16 +57,16 @@ There are two parts to the implementation. The first part is adding the entity l
 
     * **indices**
         - Additional inputs: `start_idx: int`, `end_idx: int`
-        - The input text for the LLM is enriched with word indices according to very simple rules. A new index is given to every sequence of characters that are not broken up by one of {'"', ' ', ',', '.', ';', ':', "'"}. If a sequence of number characters contain "." or "," they are not split up, since adding indices inside of numbers regularly confused the LLM. The indices are then used to specify the words to be annotated.
+        - The input text for the LLM is enriched with word indices according to very simple rules. A new index is given to every sequence of characters that are not broken up by one of `{" ", ".", ",", "-", ":", ";", "[", "]", "(", ")", "{", "}", "\n", "'", "\"", "’", "‘", "?", "="}`. If a sequence of number characters contain "." or "," they are not split up, since adding indices inside of numbers regularly confused the LLM. The indices are then used to specify the words to be annotated.
         This method is not very universal since languages like Japanese do not use spaces to denote breaks between words. Also weird formating could lead to mistakes. Another negative example would be the german possessive "s": The words "Gödels Beweis" would be indexed "Gödels(1) Beweis(2)" and a correct annotation of just "Gödel" is therefore impossible. So this method is not as universal as the other methods because of this indexing induced bias that limits the expressivity of the annotation. (Note that this problem is not necessarily reflected in the benchmark results where most of the errors stem from other issues, but could still be relevant if used for actual annotation work.)
         - Example:
         <img src="img/Screenshot_Indices.png" width="700">
 
     * **markdown**
         - Additional inputs: `annotated_text: string`,
-        - The LLM inputs the annotations by giving the original text with the annotations added in markdown format: Text with \[words to be annotated](annotation). The parsing works by finding the pattern \[...](...) in the text.
-        The first iteration of this method matched the original text to the text input from the LLM however the length of the text negatively influences the correctness and it would lead to a lot of errors where little mistakes were made. So this second iteration only uses absolute positions for the annotation so in theory the LLM could input just random characters for the rest of the text as long as the positions of the annotations and the annotations are correct.
-        - Example (the LLM forgot the word "as" in "as the second.." and the method corrected it):
+        - The LLM inputs the annotations by giving the original text with the annotations added in slightly modified markdown format: Text with ⟦words to be annotated⟧(annotation). The parsing works by finding the pattern ⟦...⟧(...) in the text.
+        The first iteration of this method matched the original text to the text input from the LLM however the length of the text negatively influences the correctness and it would lead to a lot of errors where little mistakes were made. So this second iteration only uses absolute positions for the annotation so in theory the LLM could input just random characters for the rest of the text as long as the positions of the annotations and the annotations are correct. At annotations the method tries to match the annotated words in the original text and correct up to ten characters to the left or right. This proved to be very helpful as can be seen in the example.
+        - Example (the LLM forgot the word "as" in "Habsburg dynasty as the second university..." and the method corrected it):
         <img src="img/Screenshot_Markdown.png" width="700">
 
     * **matching**
@@ -114,7 +114,7 @@ For evaluation the benchmarks were chosen according to the 5 benchmarks used in 
 4. **MSNBC (updated):** 
     This benchmark consists of 20 News articles from MSNBC.
 
-5. **AIDA CoNLL:** 
+5. **AIDA CoNLL (test):** 
     This benchmark has 3 different datasets — train, test and dev. Only the test dataset is used for the benchmark. It contains 231 texts that are usually very sports related. It is very entity mention dense. It contains a lot of names and sport results.
 
 
@@ -127,6 +127,10 @@ This is the overall F1-score (%) taking into account entity recognition and disa
 
 <div style="position: relative;">
 <img src="img/Overall_F1.png" width="850">
+</div>
+
+<div style="position: relative;">
+<img src="img/Table_F1.png" width="850">
 </div>
 
 ### Recognition F1-Score
@@ -144,13 +148,10 @@ These are the results of only the subtask of disambiguation given a correctly re
 <img src="img/Disambiguation_Accuracy.png" width="850">
 </div>
 
-### Average results without the AIDA-CoNLL benchmark
+### Problems with the AIDA-CoNLL benchmark
 
-The AIDA-CoNLL benchmark is very biased. About half of the texts are sport results related and contain a lot of demonyms and metonyms which the LLM was not instructed to annotate with the implied meaning (e.g. Scotland national football team for "SCOTLAND" in the phrase "AUSTRIA DOMINATE SCOTLAND IN WORLD CUP QUALIFIER" instead of the country of Scotland). But even for the metonyms the ground truth is chosen rather arbitrarily. Sometimes it is the literal meaning of the word instead of the implied one (e.g. the suburb of headingley is annotated in the phrase "played at headingley" instead of the headingley stadium). With training or fine-tuning on the benchmark a linker can overfit very easily on these specifics and achieve very good results. Since we did not do any training or even special instructions the results are not really comparable to the other linkers. The problems with this benchmark were known before the evaluation and it was only included to have more interesting results. So it is valid to also give the average performance excluding AIDA-CoNLL. This performance is probably a truer evaluation of the real performance. 
+The AIDA-CoNLL benchmark is very biased. About half of the texts are sport results related and contain a lot of demonyms and metonyms which the LLM was not instructed to annotate according to the way the creators of the benchmark decided to do (e.g. Scotland national football team for "SCOTLAND" in the phrase "AUSTRIA DOMINATE SCOTLAND IN WORLD CUP QUALIFIER" instead of the country of Scotland). But even for the metonyms the ground truth is chosen rather arbitrarily. Sometimes it is the literal meaning of the word instead of the implied one (e.g. the suburb of headingley is annotated in the phrase "played at headingley" instead of the headingley stadium). With training or fine-tuning on the benchmark a linker can overfit very easily on these specifics and achieve very good results. Since we did not do any training or even special instructions the results are not really comparable to the other linkers. The problems with this benchmark were known before the evaluation and it was only included to have more interesting results.
 
-<div style="position: relative;">
-<img src="img/Results_Without_AIDA-CoNLL.png" width="850">
-</div>
 
 
 ### Comparison of different Annotation Methods on Wiki-Fair v2.0 (no coref) with Qwen3.5-27B
@@ -171,7 +172,7 @@ There is a difference in the quality of the results depending on the LLM used. T
 
 
 #### Cost and Time
-The evaluation took between one and ten hours per benchmark. The Wiki-Fair benchmark for example took five hours with three instances running in parallel with a self hosted Qwen3.5-27B LLM. In theory, there could be much more parallelism, but it was limited to three instances in order not to overload the knowledge graph server and the LLM server. 
+The evaluation took between one and ten hours per benchmark. The Wiki-Fair benchmark for example took five hours while sending up to three requests in parallel with a self hosted Qwen3.5-27B LLM. In theory, there could be much more parallelism, but it was limited to three instances in order not to overload the knowledge graph server and the LLM server. 
 Using the OpenAI API the evaluation of Wiki-Fair with gpt5 mini resulted in 4.5M output tokens and a cost of \$4.50.  
 
 ## Discussion
@@ -183,7 +184,7 @@ Here are a couple of comments on the results of the benchmarks and other observa
 
 **MSNBC:** This benchmark has a very vague definition of which entities to annotate. There are also many inconsistencies in the choice of entities to annotate. This could explain why there is not as much improvement as with other benchmarks.
 
-**AIDA-CoNLL:** As discussed before in the results section, this benchmark has a lot of problems. Mainly the arbitrarily decided ground truth on demonyms and metonyms. These two categories can explain a big part of the gap to the other linkers. To get better results benchmark specific instructions would be needed.
+**AIDA-CoNLL:** As discussed before in the results section, this benchmark has a lot of problems. Mainly the arbitrarily decided ground truth on demonyms and metonyms. These two categories can explain a big part of the gap to the other linkers. To get better results benchmark specific instructions would be needed. During development the dev dataset of the benchmark was used, for the final evaluation the test dataset.
 
 **Wiki-Fair:** This and the News-Fair benchmark are the most meaningful results, since the ground truth quality and task definition of both of the Fair benchmarks is substantially better than those of the other benchmarks. Therefore, the results can be taken more seriously.
 
