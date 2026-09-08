@@ -49,6 +49,9 @@ Accordingly, the project's central questions are:
 1. Are agentic LLMs in general a promising approach for OM?
 2. To what extent can GRASP help an agentic LLM perform the OM task faster and/or more accurately?
 
+## GRASP in Kürze
+GRASP works with RAG by equipping a freely chosen LLM with elaborate search functions over the knowledge graphs involved. It further implements an agentic loop in which the LLM receives an input instruction and then works out a solution to the given task over several rounds <a href="#walter-bast2025">[4]</a>. Besonders an GRASP ist, dass es dem agentichen LLM dazu verhilft, diverse Aufgaben in einem "Zero Shot Setting" zu meistern. Das heißt: Das Modell soll Aufgaben ohne Vorbereitung lösen [KI: bitte diese Erklärung zu Zero Shot verbessern...]. Dementsprechend ein zentraler Bestandteil der GRASP-Philosophie, dass die unterschiedlichen Aufgaben möglichst offen gehalten werden und nicht nur spezielle Typen der Aufgaben gelöst werden. Im Falle dieses Projekts heißt es: Es sollen unterschiedliche Representationsformate unterstützt werden und nicht nur etwa OWL-Ontologien, obwohl die üblichen Benchmarks meistens mit OWL-Ontologien arbeiten.
+
 
 ## The Test Track
 As a point of reference for the first prototype, the OAEI's "Conference track" was chosen. As mentioned above, the OAEI's tracks are "the" standard benchmarks for OM. The Conference track in particular was chosen because it involves setting simple 1:1 equivalences between small ontologies (roughly 80–200 entities per ontology). With a few minor and negligible exceptions, these ontologies contain only classes and properties, no instances or literals (so-called "T-Box matching"). In doing so, the OAEI deliberately separates pure schema matching from instance matching (A-Box), which is more concerned with attribute similarity, duplicate detection, and scaling to large volumes of data, and instead focuses on the core question of ontology matching: whether two independently created concept hierarchies model the same concepts. This suits a first GRASP prototype well, because it keeps both the search space (80–200 rather than potentially millions of entities) and the number of tool calls needed per chat loop manageable, while the signals that LLM's strengths rely on, i.e. lexical context in diverse forms, are at the center of the task. 
@@ -59,14 +62,14 @@ Overall, the Conference track is therefore a good test baseline for a first prot
 
 
 ## Implementation
-The prototype aimed to stay within the GRASP framework as much as possible, initially forgoing other external modules or task-specific extensions, in order to have a baseline for further development. GRASP works with RAG by equipping a freely chosen LLM with elaborate search functions over the knowledge graphs involved. It further implements an agentic loop in which the LLM receives an input instruction and then works out a solution to the given task over several rounds <a href="#walter-bast2025">[4]</a>. Accordingly, implementing the OM task within the GRASP framework involved:
+The prototype aimed to stay within the GRASP framework as much as possible, initially forgoing other external modules or task-specific extensions, in order to have a baseline for further development. Accordingly, implementing the OM task within the GRASP framework involved:
 1. formulating a suitable prompt for the LLM.
 2. writing dedicated tools for the LLM to set and remove correspondences.
 3. implementing injectivity enforcement when setting equivalences.
 4. integrating the remaining GRASP components, namely the GRASP tools and `Shapes`, an index that provides a quick overview of a class's graph context for each class (see below in the example agentic loop).
 
 
-## Beispiel eine Chat-Loops mit dem LLM innerhalb eines OM-Laufs mithilfe von GRASP
+## Beispiel eines Chat-Loops mit dem LLM innerhalb eines OM-Laufs mithilfe von GRASP
 [KI: Wie kann man das so gestalten, dass die Zeilen in der Endansicht so umgebrochen werden, dass man nicht nach rechts scrollen muss, weil Zeilen zu lang sind?]
 ```text
 USER
@@ -129,106 +132,7 @@ Got 1 row and 4 columns in 0.03s:
 | -------------------- | -------------------- | --------------- | -------------------- |
 | Person (edas:Person) | Author (edas:Author) | rdfs:subClassOf | Person (edas:Person) |
 
-Step 3
-MODEL
-The target is explicitly a subclass of `edas:Person`. I’ll now verify the source class’s direct schema context and compare it against the available EDAS chair alternatives.
-
-execute({
-  "kg": "cmt",
-  "sparql": "SELECT ?super ?p ?o WHERE { { cmt:Chairman rdfs:subClassOf ?super . FILTER(isIRI(?super)) BIND(rdfs:subClassOf AS ?p) BIND(?super AS ?o) } UNION { cmt:Chairman ?p ?o . FILTER(?p != rdfs:subClassOf) } } ORDER BY ?p"
-}):
-Got 3 rows and 3 columns in 0.04s:
-| super               | p                   | o                   |
-| ------------------- | ------------------- | ------------------- |
-|                     | rdf:type            | owl:Class           |
-| Person (cmt:Person) | rdfs:subClassOf     | Person (cmt:Person) |
-|                     | owl:equivalentClass | _:bn11              |
-
-Step 4
-MODEL
-Reasoning summary:
-**Identifying related entities**
-
-Content:
-CMT also places `Chairman` directly under `Person`; its conflict-of-interest link is shared workflow context rather than a distinguishing specialization. I’ll inspect its equivalent-class definition to ensure it does not encode a role closer to EDAS `SessionChair`.
-
-list({
-  "kg": "cmt",
-  "subject": "_:bn11",
-  "property": null,
-  "object": null,
-  "page": 1,
-  "unclipped": false
-}):
-Call to function list returned an error:
-Value "_:bn11" is a blank node. Blank nodes cannot be used as constraints because they behave like variables in SPARQL and do not refer to a specific node.
-
-Step 5
-MODEL
-Reasoning summary:
-**Considering query with known blank nodes**
-
-Content:
-The triple browser cannot address blank nodes directly, so I’ll query the anonymous definition in one pattern and compare EDAS’s two chair labels.
-
-execute({
-  "kg": "cmt",
-  "sparql": "SELECT ?kind ?component ?onProperty ?some ?all WHERE { cmt:Chairman owl:equivalentClass ?x . OPTIONAL { ?x owl:intersectionOf/rdf:rest*/rdf:first ?component } OPTIONAL { ?x rdf:type ?kind } OPTIONAL { ?component owl:onProperty ?onProperty } OPTIONAL { ?component owl:someValuesFrom ?some } OPTIONAL { ?component owl:allValuesFrom ?all } }"
-}):
-Got 8 rows and 5 columns in 0.04s:
-| kind      | component | onProperty                                      | some | all |
-| --------- | --------- | ----------------------------------------------- | ---- | --- |
-| owl:Class | _:bn0     | assigned By Reviewer (cmt:assignedByReviewer)   |      |     |
-| owl:Class | _:bn1     | name (cmt:name)                                 |      |     |
-| owl:Class | _:bn2     | date (cmt:date)                                 |      |     |
-| owl:Class | _:bn3     | reviews Per Paper (cmt:reviewsPerPaper)         |      |     |
-| owl:Class | _:bn15    | has Decision (cmt:hasDecision)                  |      |     |
-| owl:Class | _:bn16    | read By Reviewer (cmt:readByReviewer)           |      |     |
-| owl:Class | _:bn17    | has Decision (cmt:hasDecision)                  |      |     |
-| owl:Class | _:bn18    | read By Meta Reviewer (cmt:readByMeta-Reviewer) |      |     |
-
-Step 6
-MODEL
-Reasoning summary:
-**Analyzing query property path issues**
-
-Content:
-That broad path traversed unrelated ontology list structures and is not reliable for this class definition. The decisive evidence remains the direct `Person` subclass and generic “Chairman” name; I’ll verify whether EDAS declares a generic `Chairman` class distinct from its conference-specific role.
-
-search({
-  "kg": "edas",
-  "index": "entities",
-  "sparql": "SELECT ?e WHERE { ?e a owl:Class }",
-  "query": "Chairman",
-  "page": 1
-}):
-Results (page 1 of 2):
-1. SessionChair (edas:SessionChair, matched via "Session Chair"), also known as "Session Chair":
-  - is a Class
-  - subclass of Person
-2. ConferenceChair (edas:ConferenceChair, matched via "Conference Chair"), also known as "Conference Chair":
-  - is a Class
-  - subclass of Person
-3. Presenter (edas:Presenter):
-  - is a Class
-  - subclass of Author
-4. Author (edas:Author):
-  - is a Class
-5. TPCMember (edas:TPCMember):
-  - is a Class
-  - subclass of Person
-6. Reviewer (edas:Reviewer):
-  - is a Class
-7. CoffeeBreak (edas:CoffeeBreak, matched via "Coffee Break"), also known as "Coffee Break":
-  - is a Class
-  - subclass of BreakEvent
-8. Person (edas:Person):
-  - is a Class
-9. Organization (edas:Organization):
-  - is a Class
-10. GovernmentOrganization (edas:GovernmentOrganization, matched via "Government Organization"), also known as "Government Organization":
-  - is a Class
-  - subclass of Organization
+[...]
 
 Step 7
 MODEL
@@ -243,6 +147,7 @@ set_correspondence({
   "target_entity": "http://edas#ConferenceChair",
   "overwrite": false
 }):
+
 Mapping Conflict detected: The entity 'http://edas#ConferenceChair' has already been mapped to 'cmt:ConferenceChair', but you proposed a new mapping to 'http://cmt#Chairman'.
 
 Do not default to keeping the existing mapping. Treat both candidates as hypotheses and evaluate them from scratch:
@@ -300,7 +205,6 @@ TRACE (task=om, elapsed=19.19s)
 ```
 
 
-
 ## Tests
 To evaluate matchers, the OAEI implements the [MELT](https://dwslab.github.io/melt/) framework. All tests described below were evaluated using this evaluation environment, in order to compare results with current state-of-the-art matchers that have taken part in the OAEI in recent years. The full evaluation comprises 7 ontologies to be aligned pairwise (out of 16 ontologies in the track in total), yielding 21 test pairs. I carried out the following tests:
 
@@ -322,10 +226,16 @@ Auf dem zweiten Schaubild ist erkennbar, dass die Ergebnisse von agentischen LLM
 
 Auch ist auffällig, dass die Ergebnisse von agentichen LLMs im Gegensatz zu den aktuellen Matchern stark in die "Recall"-Hälfte im Schaubild rücken. Das deckt sich mit bisherigen Beobachtungen, dass LLMs bei OM zu hohem Recall und schwacher Precision tendieren (__ZITAT__ https://ceur-ws.org/Vol-3632/ISWC2023_paper_427.pdf, https://arxiv.org/html/2404.10329v1, http://arxiv.org/html/2507.14032v1). Dabei wurde der Prompt an das LLM im akutellen Projekt in jedem Testfall absichtlich 'streng' formuliert, mit mehreren eingebetetten "Precision over Recall"-Hinweisen und Erklärungen, wie das LLM zu großzügige Äquivalenzsetzungen vermeiden soll, da mir das Problem aus der Literatur bereits bekannt war.
 
-Als zweiter Punkt fällt auf, dass die Ergebnisse vom einfachen GPT-5.6 Terra-Lauf ohne GRASP ähnlich stark wie die Testläufe mit GRASP sind. In diesem Kontrolllauf konnte das LLM nur übliche bash-Tools nutzen, aber keine Netzwerkaufrufe starten und hatte im Gegensatz zum Testlauf in der GRASP-Umgebung keine Möglichkeit, SPARQL-Queries auf die Ontologien aufzurufen. Eine Analyse des Chatverlaufs zeigt, dass das LLM in diesem Setting hauptsächlich über die Python-Bibliothek RDFLib gearbeitet hat und sich so relevante Informationen zur Gesamtontologie und zu Einzelentitäten beschaffen konnte. Dagegen arbietet dasselbe LLM mit denselben Einstellungen im GRASP-Kontext neben den GRASP-eigenen Suchfunktiionen viel mit SPARQL-Aufrufen. Die ähnlichen F1-Ergebnisse zwischen GPT-5.6 mit und ohne GRASP waren für mich und das GRASP-Team eine große Überraschung, denn die Bearbeitung anderer Aufgaben mit GRASP, etwa Cell Entity Annotation, hat gezeigt, dass das LLM diese Aufteilung in einzelne Elemente braucht, um gut zu performen. Die Tests mit kleinen Ontologien ergeben aber für OM, dass solch kleinteiliges Batching eine Fehlkonfiguration darstellt. Denn während die F1-Scores mit und ohne Batching ähnlich ausfallen, zeigen sich große Unterschiede in Laufzeit und Tokenverbrauch: Während das LLM ohne GRASP knapp 650.000 Tokens für alle 6 Ontologiepaare benöntigte, betrug der Tokenverbrauch beim ungebatchten GRASP-Testlauf mehr als 3,5 Mio für dieselbe Aufgabe. Beim gebatchten GRASP-Testlauf (eine Eintity pro Chat-Loop) brauchte es sogar über 22 Mio Tokens. Der Unterschied zwischen GRASP und no GRASP, beides ohne Batching, lässt sich folgendermaßen erklären: Eine genauere Durchsicht des Chatverlaufs zeigt, dass der Tokenoverhead bei GRASP vor allem am GRASP-internen Chat-Loop-Design liegt. Bei jeder Runde wird dem LLM die gesamte Chathistorie gesendet und jeder Tool-Call erzwingt bei GRASP eine neue Runde. In diesem konkreten Fall bewirkt es, dass das LLM bei jeder Korrespondenzsetzung (davon gab es 99) den gesamten Chatverlauf nochmals als Input geschickt bekommen hat. Diese 1-Toolcall-pro-Runde-Erzwingung wurde beibehalten, damit jede Äquivalenzsetzung auf Injektivitätsverletzungen überprüft werden kann, sollte aber in der Zukunft nochmal ausführlich überprüft werden. Der Tokenoverhead beim Single-Entity-per-Loop-Lauf entsteht, weil das LLM bei jeder Quellentität den Quell- und Zielgraphen neu exploriert (über 3000 SPARQL-, Suchfunktions und Graphverbalisierungsaufrufe gegenüber 55 solche Aufrufe beim ungebatchten GRASP-Testlauf). Während diese Fokussierung auf ein oder wenige Elemente pro Chat-Loop bei anderen Aufgabentypen hilfreich ist, scheint sie hier pure Verschwendung zu sein.
+Als zweiter Punkt fällt auf, dass die Ergebnisse vom einfachen GPT-5.6 Terra-Lauf ohne GRASP ähnlich stark wie die Testläufe mit GRASP sind. In diesem minimalen Kontrolllauf konnte das LLM nur übliche bash-Tools nutzen, aber keine Netzwerkaufrufe starten und hatte im Gegensatz zum Testlauf in der GRASP-Umgebung keine Möglichkeit, SPARQL-Queries auf die Ontologien aufzurufen. Eine Analyse des Chatverlaufs zeigt, dass das LLM in diesem Setting hauptsächlich über die Python-Bibliothek RDFLib gearbeitet hat und sich so relevante Informationen zur Gesamtontologie und zu Einzelentitäten beschaffen konnte. Dagegen arbeitet dasselbe LLM mit denselben Einstellungen im GRASP-Kontext neben den GRASP-eigenen Suchfunktiionen viel mit SPARQL-Aufrufen. Die ähnlichen F1-Ergebnisse zwischen GPT-5.6 mit und ohne GRASP waren für mich und das GRASP-Team eine große Überraschung, denn die Bearbeitung anderer Aufgaben mit GRASP, etwa Cell Entity Annotation, hat gezeigt, dass das LLM diese Aufteilung in einzelne Elemente braucht, um gut zu performen. Die Tests mit kleinen Ontologien ergeben aber für OM, dass solch kleinteiliges Batching eine Fehlkonfiguration darstellt. Denn während die F1-Scores mit und ohne Batching ähnlich ausfallen, zeigen sich große Unterschiede in Laufzeit und Tokenverbrauch: Während das LLM ohne GRASP knapp 650.000 Tokens für alle 6 Ontologiepaare benöntigte, betrug der Tokenverbrauch beim ungebatchten GRASP-Testlauf mehr als 3,5 Mio für dieselbe Aufgabe. Beim gebatchten GRASP-Testlauf (eine Eintity pro Chat-Loop) brauchte es sogar über 22 Mio Tokens. Der Unterschied zwischen GRASP und no GRASP, beides ohne Batching, lässt sich folgendermaßen erklären: Eine genauere Durchsicht des Chatverlaufs zeigt, dass der Tokenoverhead bei GRASP vor allem am GRASP-internen Chat-Loop-Design liegt. Bei jeder Runde wird dem LLM die gesamte Chathistorie gesendet und jeder Tool-Call erzwingt bei GRASP eine neue Runde. In diesem konkreten Fall bewirkt es, dass das LLM bei jeder Korrespondenzsetzung (davon gab es 99) den gesamten Chatverlauf nochmals als Input geschickt bekommen hat. Diese 1-Toolcall-pro-Runde-Erzwingung wurde beibehalten, damit jede Äquivalenzsetzung auf Injektivitätsverletzungen überprüft werden kann, sollte aber in der Zukunft nochmal ausführlich überprüft werden. Der Token-Overhead beim Single-Entity-per-Loop-Lauf entsteht, weil das LLM bei jeder Quellentität den Quell- und Zielgraphen neu exploriert (über 3000 SPARQL-, Suchfunktions und Graphverbalisierungsaufrufe über die gesamte Aufgabe verteilt gegenüber 55 solche Aufrufe beim ungebatchten GRASP-Testlauf). Während diese Fokussierung auf ein oder wenige Elemente pro Chat-Loop bei anderen Aufgabentypen hilfreich ist, scheint sie hier pure Verschwendung zu sein.
 
 ## Fazit und Ausblick
-Das Projekt hat sich auf ein erstes Prototyp für OM mithilfe von GRASP fokussiert. Im Zentrum stand ein 'puristisches' GRASP-Artifakt, das diese Aufgabe möglichst mit GRASP-eigenen Mitteln und nach dem Vorbild anderer Aufgabenlösungen von GRASP (vor allem Cell Entity Annotation) zu lösen versucht. 
+Das Projekt hat sich auf ein erstes Prototyp für OM mithilfe von GRASP fokussiert. Im Zentrum stand ein 'puristisches' GRASP-Artifakt, das diese Aufgabe möglichst mit GRASP-eigenen Mitteln und nach dem Vorbild anderer Aufgabenlösungen von GRASP (vor allem Cell Entity Annotation) zu lösen versucht. Eine Literaturrecherche und die Sichtung der Matcher, die in den letzten Jahren bei der OAEI teilgenommen haben, ergibt, dass ein Matcher, der auf agentisches LLM basiert, bisher eine Lücke darstellt. Ferner ergeben die in diesem Projekt geführten Tests, dass  LLM-Agenten aus dem Alltag bereits beachtliche Ergebnisse im OM erzielen. Gleichzeitig zeigt sich aber auch, dass GRASP bei kleinen Ontologien noch keinen Mehrwert gegenüber einfachen Multi-Purpose-Umgebungen für agentische LLMs bietet. 
+
+Zentrale Fragen, die aus dem Projekt resultieren sind: 
+1. Lassen sich die Ergebnisse für kleine Ontologien noch deutlich verbessern?
+2. Wie lassen sich solche OM-LLM-Agenten auf große Ontologien skalieren?
+
+GRASP besitzt Potenzial, bei beiden Problemen weiterzuhelfen. Hierzu sollten Prompts an das LLM noch systematisch entwickelt und verbessert werden sowie mögliche Settings für das Zusammenspiel mit traditionellen Methoden untersucht werden.
 
 
 <footer>
