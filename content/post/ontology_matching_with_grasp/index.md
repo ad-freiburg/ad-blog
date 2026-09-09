@@ -12,6 +12,12 @@ Ontology matching, i.e., identifying that two independently built knowledge grap
 
 <!--more-->
 
+## Disclaimer
+
+I used Claude (Anthropic) as a writing assistant for this blog post: resolving and formatting citations, translating parts of this post from German to English, and drafting suggestions for phrasing, the introduction, and the summary, all of which I reviewed, edited, and approved myself. All technical content, results, and analysis are my own.
+
+---
+
 ## Introduction
 Imagine merging two conference-management systems: one calls a submitted paper a Paper, tracks its Reviewers and their Reviews; the other uses Document, TPCMember, and Feedback for exactly the same things. Before the merged system can work correctly, someone — or something — has to figure out that these differently named concepts actually mean the same thing. This is the task of ontology matching, and despite three decades of research it remains far from solved.
 
