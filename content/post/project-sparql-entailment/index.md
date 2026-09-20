@@ -23,12 +23,12 @@ I used Open WebUI and ChatGPT to improve wording and to identify grammatical and
   - [Reification of Literals](#reification-of-literals)
 - [RDFS Entailment Regime](#rdfs-entailment-regime)
   - [Hierarchies](#hierarchies)
-  - [Domain and range condition](#domain-and-range-condition)
+  - [Domain and Range](#domain-and-range)
   - [Datatypes](#datatypes)
   - [Additional axiomatic triples](#additional-axiomatic-triples)
 - [OWL 2 RL Entailment Regime](#owl-2-rl-entailment-regime)
   - [Equality](#equality)
-  - [Domain and range condition](#domain-and-range-condition-1)
+  - [Domain and Range](#domain-and-range-1)
   - [Classes](#classes)
     - [Equivalent classes](#equivalent-classes)
     - [Intersections, unions and owl:oneOf](#intersections-unions-and-owloneof)
@@ -38,6 +38,7 @@ I used Open WebUI and ChatGPT to improve wording and to identify grammatical and
   - [Properties](#properties-1)
   - [Datatypes](#datatypes-1)
 - [Implementation](#implementation)
+- [Materialization Performance and Triple Counts](#materialization-performance-and-triple-counts)
 - [Conclusion](#conclusion)
 
 ## Introduction
@@ -121,7 +122,7 @@ Both `rdfs:subClassOf` and `rdfs:subPropertyOf` are transitive: If `a` is a subc
 
 
 `rdfs:Resource` represents the class of all RDF resources. Every class is a subclass of `rdfs:Resource` and every term that occurs at least once in a subject or object position is of type `rdfs:Resource`.
-### Domain and range condition
+### Domain and Range
 The domain condition introduces a rule that applies for all subjects that occur in triples with a certain property. 
 If a property `p` has a domain `x`, then every subject of a triple using `p` as its predicate is inferred to be an instance of `x`. For instance, `:hasDaughter rdfs:domain :Parent` says that everything that has a child is a parent. The triple `:Anakin :hasDaughter :Leia` entails `:Anakin rdf:type :Parent`.
 
@@ -193,7 +194,7 @@ OWL introduces `owl:sameAs`, a property used to describe equality of terms. If a
 `owl:sameAs` is a symmetric, transitive and reflexive relation. Thus, a triple `x owl:sameAs y` entails `y owl:sameAs x`. If `x owl:sameAs y` and `y owl:sameAs z`, it will be entailed `x owl:sameAs z`. Also, for every resource `x` occurring in the graph `x owl:sameAs x` is entailed. Note that `x owl:sameAs x` is not materialized for literals, such as strings or integers. This is because RDF currently does not allow literals to occur in the subject position of a triple.
 
 
-### Domain and range condition
+### Domain and Range
 `rdfs:domain` and `rdfs:range` work in the same way as in the RDFS Entailment Regime. OWL 2 RL adds rules that pass domain and range information along subclass and subproperty hierarchies. Consider a graph containing:
 
 ```
@@ -488,11 +489,175 @@ WHERE {
   ?s rdf:type ?c.
 }
 ```
-Other entailment rules are more complex and require multiple update queries. For example, the rules involving `owl:unionOf` and `owl:intersectionOf` require processing all elements of an RDF list. 
+
+To implement the rule that `a rdfs:subClassOf b`, `b rdfs:subClassOf c` entails `a rdfs:subClassOf c`, the following update query can be used: 
+
+```
+INSERT {
+  ?a rdfs:subClassOf ?c.
+}
+WHERE {
+  ?a rdfs:subClassOf ?b.
+  ?b rdfs:subClassOf ?c.
+}
+```
+Note that this query does not materialize all triples one might expect at first. Consider a graph containing the following triples:
+```
+ex:LeopardCat rdfs:subClassOf ex:Cat.
+ex:Cat rdfs:subClassOf ex:Mammal.
+ex:Mammal rdfs:subClassOf ex:Animal.
+```
+
+Running the update query will result in the triples `ex:LeopardCat rdfs:subClassOf ex:Mammal` and `ex:Cat rdfs:subClassOf ex:Animal`. `ex:LeopardCat rdfs:subClassOf ex:Animal` will not be materialized yet. This is because there is no `c` in the graph for which both `ex:LeopardCat rdfs:subClassOf c` and `c rdfs:subClassOf ex:Animal` exist when the query is executed.
+Running the same update query a second time will then materialize `ex:LeopardCat rdfs:subClassOf Animal`. This illustrates why some entailment rules require running an update query repeatedly. After each execution, we check if the update query has added triples. Once a run does not add triples, applying the rule again will not compute new triples, and all by the rule entailed triples are materialized.
+
+Some entailment rules are more complex. For example, the rule regarding `owl:intersectionOf` requires processing all elements of an RDF list. In the implementation, multiple different SPARQL queries have to be executed. Recall that `c owl:intersectionOf h` and `LIST[h, c1, c2, ..., cn]` will together entail `c rdfs:subClassOf ci` for every `ci` contained in the list. To implement this, we first use a query to find all classes `c` for which `c owl:intersectionOf h`. The query also returns the first element of the list `c1` and the remainder of the list, `lst`, which contains the remaining classes `c2, c3, ..., cn`:
+
+```
+SELECT ?c ?c1 ?lst1
+WHERE {
+  ?c owl:intersectionOf ?h.
+  ?h rdf:first ?c1.
+  ?h rdf:rest ?lst1.
+}
+```
+For every class `c`, all classes `ci` contained in its intersection list have to be found. Starting with `c1` and the remainder of the list `lst1`, we iteratively retrieve the next class and the new remainder of the list using a query of the following form:
+
+```
+SELECT c(i+1) ?lst(i+1)
+WHERE {
+  ?lsti rdf:first ?c(i+1).
+  ?lsti rdf:rest ?lst(i+1).
+}
+```
+
+Recall that an RDF list ends with `rdf:nil` as the value of the `rdf:rest` property of the last list node. Before each iteration, we therefore check whether the current remainder of the list is `rdf:nil`. Once this is the case, all classes `c1, ..., cn` belonging to the intersection of `c` have been found.
+For every class `c` and the classes in its intersection `c1, ..., cn`, we then apply an update query that is supposed to find all individuals `y` that are type of the class `c`. For every of these individuals `y` and every `ci`, we materialize `y rdf:type ci`. Additionally, we want to find all individuals `y` that are type of all classes `ci` of the intersection in order to entail `y rdf:type c`:
+
+```
+INSERT {
+  ?y rdf:type c1.
+  ?y rdf:type c2.
+  ...
+  ?y rdf:type cn.
+}
+WHERE {
+  ?y rdf:type c.
+};
+
+INSERT {
+  ?y rdf:type c.
+}
+WHERE {
+  ?y rdf:type c1.
+  ?y rdf:type c2.
+  ...
+  ?y rdf:type cn.
+}
+```
+In another update query, we will entail `c rdfs:subClassOf ci` for every `ci` in the list:
+
+```
+INSERT DATA {
+  ?c rdf:subClassOf c1.
+  ?c rdf:subClassOf c2.
+  ...
+  ?c rdfs:subClassOf cn.
+}
+```
+Other entailment rules which also require processing elements of a list can be implemented in a similar way. Examples for these are the previously discussed rules involving `owl:unionOf`, `owl:hasKey`, `owl:oneOf`, and `owl:propertyChainAxiom`.
+
+Another more complex rule is the one concerning the reification of resources in RDF Entailment. As discussed previously, for every literal occuring in the graph, a blank node is introduced. If a literal occurs multiple times, it is represented by the same blank node. For example:
+
+```
+:Jack :age "42"^^xsd:integer.
+:Rita :favoriteNumber "42"^^xsd:integer.
+```
+will add one new blank node `_:b`, resulting in:
+
+```
+:Jack :age _:b.
+:Rita :favoriteNumber _:b.
+_:b rdf:type xsd:integer.
+```
+
+To implement this, we first use a query to find all literals occurring in the graph. For each literal, we find all triples with that literal in its object position. The update query for adding the new triples to the graph will look schematically as follows:
 
 
-An important aspect is that newly entailed triples can themselves be premises for other entailment rules. Therefore, applying every rule only once is not sufficient to compute all entailed triples. Instead, all rules have to be applied repeatedly. As soon as an iteration ends without adding new triples, applying any of the entailment rules again will not compute any new triples.
+```
+INSERT {
+  ?b1 rdf:type d1.
+  s1a p1a ?b1.
+  s1b p1b ?b1.
+  ...
+  ?b2 rdf:type d2.
+  s2a p2a ?b1
+  s2b p2b ?b2
+  ...
+}
+WHERE {
+  BIND(BNODE() AS ?b1)
+  BIND(BNODE() AS ?b1)
+  ...
+}
+```
+`d1`, `s1a`, `p1a`, etc. represent the concrete values obtained from the graph. A separate blank node is generated for each distinct literal.
 
+For large graphs, this can add a large number of triples. Therefore, instead of processing all literals in one query, we process them in small batches of 40 blank nodes per batch.
+
+One aspect that hast to be kept in mind is that, in RDF, literals are not allowed to occur in subject position. For example, a graph must not contain the triple `"42"^^xsd:integer :answerTo :Universe`. Consider the following query, which implements the `owl:allValuesFrom` functionality:
+```
+INSERT {
+  ?v rdf:type ?y.
+}
+WHERE {
+  ?x owl:allValuesFrom ?y.
+  ?x owl:onProperty ?p.
+  ?u rdf:type ?x.
+  ?u ?p ?v.
+}
+```
+
+Now consider a graph containing:
+
+```
+:Student owl:allValuesFrom :Program.
+:Student owl:onProperty :studies.
+
+:Anika rdf:type :Student.
+:Anika :studies "SustainableSystems"^^xsd:string.
+```
+The update query would entail `"SustainableSystems"^^xsd:string rdf:type :Program`. However, this triple is not allowed in an RDF graph because its subject is a literal. Therefore, in update queries that add a triple with term `v` in subject position without guaranteeing that `v` is not a literal, a filter 
+```FILTER(!isLiteral(?v))```
+needs to be added to the `WHERE` clause. If we already know that `v` occurs in the subject position of a triple in the graph, the filter is not necessary, since we then know it cannot be a literal.
+
+
+An important aspect is that newly entailed triples can themselves be premises for other entailment rules. Therefore, applying every rule once is not sufficient to compute all entailed triples. Instead, all rules have to be applied repeatedly. After each iteration, we will count the triples in the graph and compare that number to the number of the last iteration. As soon as an iteration ends without adding new triples, applying any of the entailment rules again will not compute any new triples. We then know that all entailed triples were added.
+
+
+Note that when applying all discussed entailment rules to a graph, some rules or parts of rules can be redundant. For example, consider again the previously discussed rule regarding `owl:interSectionOf` and the following graph: 
+```
+c owl:intersectionOf h.
+LIST[h, c1, c2, ..., cn].
+y type c.
+
+```
+The discussed implementation materializes both `y rdf:type c1` and `c rdfs:subClassOf c1`. If it materialized only the latter triple, the former would still be entailed by the rule regarding subclasses: `y rdf:type c` and `c rdfs:subClassOf c1` together entail `y rdf:type c1`. Thus, the update query adding `y rdf:type ci` for every `ci` in the intersection could be omitted. The drawback of this approach, however, would be that this specific `owl:intersectionOf` entailment rule could no longer be used independently. To obtain `y rdf:type c1`, the rules for subclass entailment would also have to be applied.
+
+## Materialization Performance and Triple Counts
+
+The implementation of each of the entailment rules was tested in a unit test. Additionally, all entailment rules were applied to graphs consisting of different numbers of triples to find the number of triples entailed and to measure the time required to materialize them in QLever. All measurements were performed on an AMD Ryzen 7 3700X.
+
+
+The dataset [Olympics RDF](https://github.com/wallscope/olympics-rdf), published by Wallscope, is an RDF graph containing roughly 1.8 million triples. It contains information about the Olympic games, athletes, sport disciplines, results and medals, and more. One rule that requires a significant amount of computation and produces a large number of triples is the reification of the RDF Entailment Regime previously discussed. Running only the reification rule takes roughly seven minutes and adds about 700,000 triples. Running all other rules from RDF, RDFS, and OWL 2 RL takes another five minutes and adds 1.2 million triples. The fully entailed graph consists of 3.7 million triples.
+
+[WikiPathways](https://sandbox.wikipathways.org/rdf.html) is a dataset containing information about genes, proteins, metabolites and other biological entities and how they interact with each other. The graph used for testing consists of roughly 11.3 million triples.
+Running the reification rule introduces 700,000 new blank nodes and 7.8 million triples that use these blank nodes. Materializing these triples takes roughly 3.5 hours. Applying all other rules takes roughly 1.5 hours and adds 16 million triples. The fully entailed graph consists of 35 million triples.
+
+[IMDb](https://www.imdb.com/) is a dataset containing information about movies, actors, directors, release information and more. The graph used for testing contains 41.8 million triples.
+Running the reification rule would introduce 18.5 million new blank nodes and 60.4 million triples that use these blank nodes. Materializing these triples would take an impractically long time, making it no longer reasonable to perform the reification for this dataset. Materializing all entailment rules except the reification takes about 2.5 hours. It adds 25.6 million triples. The entailed graph consists of 67.4 million triples.
+
+For larger datasets, materialization would theoretically still be feasible. However, the materialization process will take an impractically long time. Another limitation when applying the rules to larger datasets is the amount of RAM used by QLever. When materializing new triples, QLever initially stores them in RAM. When entailing IMDb, the largest graph discussed, QLever uses 40 GB of RAM after applying all entailment rules except reification. For larger datasets, the process may therefore run out of available memory. This problem can be addressed by periodically rebuilding the index using QLever's `rebuild-index` command during the materialization process. Rebuilding the index moves the newly added triples from RAM to disk storage, freeing up RAM for further materialization.
 
 ## Conclusion
 
