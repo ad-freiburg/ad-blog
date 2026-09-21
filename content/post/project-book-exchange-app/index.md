@@ -1,6 +1,6 @@
 ---
 title: "Comprehensive Online Catalog and Web App for Public Bookshelves"
-date: 2026-08-28T12:00:00+02:00
+date: 2026-09-21T14:00:00+02:00
 author: "Julian Gabriel Ruf"
 authorAvatar: "img/ada.jpg"
 tags: ["web-app", "public-bookshelves", "isbn-scanning", "osm", "react", "full-stack"]
@@ -30,6 +30,10 @@ The full-stack web app uses OpenStreetMap data to find nearby bookshelves and th
         - [OpenStreetMap](#openstreetmap)
         - [Deutsche Nationalbibliothek](#deutsche-nationalbibliothek)
     - [Fuzzy Search](#fuzzy-search)
+        - [Edit Distance and Q-Grams](#edit-distance-and-q-grams)
+        - [Fuzzy Search Tables](#the-fuzzy-search-tables)
+        - [What Happens During a Search](#what-happens-during-a-search)
+    - [Barcode Scanning](#barcode-scanning)
     - [Miscellaneous Details](#miscellaneous-details)
     - [Dockerization](#dockerization)
     - [Testing](#testing)
@@ -206,8 +210,54 @@ Book metadata is only fetched from DNB whenever an ISBN is unknown to our backen
 
 ### Fuzzy Search
 
-For an efficient and error-tolerant fuzzy catalog search, the backend uses the q-gram approach described in the [Information Retrieval lecture](https://daphne.tf.uni-freiburg.de/ws2324/InformationRetrieval/svn/public/slides/lecture-07.pdf). We stored the inverted indexes as tables in our SQLite3 database alongside the book and bookshelf metadata tables. The computation of fuzzy scores was implemented in Python.
-More information can be found in the [project repository](https://github.com/JRuf02/bookfinder/blob/main/documentation/database-and-api-testing.md) and [source code](https://github.com/JRuf02/bookfinder/tree/main/backend/app/db).
+For an efficient and error-tolerant catalog search, the backend uses the q-gram approach described in the [Information Retrieval lecture](https://daphne.tf.uni-freiburg.de/ws2324/InformationRetrieval/svn/public/slides/lecture-07.pdf). We stored the inverted indexes as tables in our SQLite3 database alongside the book and bookshelf metadata tables. The computation of fuzzy scores was implemented in Python.
+
+The following, more detailed explanation of our fuzzy search approach and edit distances has been generated using Claude Sonnet 5 on the project repository. It has been proof-read, shortened and modified where necessary.
+
+Searching the catalog for "Stephan Kong" should still find books by "Stephen King". The simple approach of fetching all books from the catalog and comparing the search input with every book's title and author is not sufficient, as database access would be too slow for the large number of books expected in our catalog. Instead, the backend uses the q-gram approach from the [Information Retrieval lecture](https://daphne.tf.uni-freiburg.de/ws2324/InformationRetrieval/svn/public/slides/lecture-07.pdf) and works on single words ("tokens"): a q-gram index finds similar words in the database, and the books containing these words are looked up afterwards.
+
+#### Edit Distance and Q-Grams
+
+The **edit distance** ED(x, y) is the minimum number of character insertions, deletions and replacements needed to turn x into y, e.g. ED("stephan", "stephen") = 1. Computing it for every database word on every search would be wasteful. Therefore, words are first padded with `$$` on both sides and split into **three-grams** (q = 3): "stephen" → `$$s`, `$st`, `ste`, `tep`, `eph`, `phe`, `hen`, `en$`, `n$$`. One edit changes at most q three-grams, so two words with ED ≤ δ share at least max(|Q(x)|, |Q(y)|) − q · δ three-grams, where Q(w) is the multiset of three-grams of w. Words sharing fewer can be discarded without computing their edit distance; only the remaining candidates are verified.
+
+#### The Fuzzy Search Tables
+
+We use four SQLite tables for our fuzzy search (Table 1). The q-gram index finds similar *words* (tokens), and an ordinary inverted index then finds the *books* containing them.
+
+| **Table** | **Columns** | **One row for** | **Purpose** |
+|---|---|---|---|
+| `tokens` | `token_id` (primary key), `token` (unique) | each distinct word in any title or author name | Dictionary of all words, shared by titles and authors |
+| `threegrams` | `threegram`, `token_id` | each three-gram of each distinct word | Q-gram index: maps a three-gram to the words containing it |
+| `book_title_tokens` | `token_id`, `isbn` | each occurrence of a word in a title | Inverted index: word → books whose *title* contains it |
+| `author_name_tokens` | `token_id`, `isbn` | each occurrence of a word in an author name | Inverted index: word → books whose *author name* contains it |
+
+<center style="margin-top:-35px;margin-bottom:55px;">Table 1: Tables of the fuzzy search index</center>
+
+To speed up lookups, database indexes were created on the lookup columns `threegram`, `token_id` and `token_id` (from the author and title tables). When an unknown book is saved, its title and author are lowercased and split into words. Each word is added to `tokens` if new, and linked to the book in the matching token table. Three-grams are only generated for new words, so a common word like "der" is split just once.
+
+#### What Happens During a Search
+
+Take a search for the author "Stephan Kong". The frontend calls `/api/catalog/search` with the parameter `author` (and the user's coordinates, if known). A title search works the same way with `book_title_tokens`.
+
+1. **Tokenization.** After validating the input, the backend splits it into the query words "stephan" and "kong", which are processed independently.
+2. **Finding similar words.** For each query word, one SQL query joins its three-grams with `threegrams`, groups by `token_id` and counts the rows. This count is the number of shared three-grams per database word. Candidates are then filtered: Words whose length differs by more than δ = 4 are dropped, as are words below the three-gram bound described [above](#edit-distance-and-q-grams). For the rest, the edit distance is computed, and a word matches if its edit distance is at most min(δ, ⌊length / 2⌋).
+3. **Scoring books.** For each matching word, the ISBNs are read from `author_name_tokens`. Every hit adds 1 / (1 + edit distance) to the book's score, and the scores of all query words add up. A book by Stephen King scores 0.5 + 0.5 = 1.0, as "Stephan" matches "Stephen" with ED=1 and "Kong" matches "King" with ED=1.
+4. **Restriction to available books.** The fuzzy search tables store tokens, isbn and threegrams for every book ever entered but contain no further metadata and no information on whether a book is still on any shelf. To add book and shelf metadata to our search results and to exclude unavailable books, we join the ISBNs having a non-zero score with our data tables `current_catalog`, `books` and `bookshelves`. Only books currently on a shelf remain, with full metadata and with their distance to the user if coordinates were given.
+5. **Merging and sorting.** If title and author were given, both result lists are merged and the scores of entries found by both are summed. Results are sorted by score, with the shorter distance as tie-breaker, and returned as JSON.
+
+Unlike the lecture, we pad both sides of a word, as recommended for standard fuzzy search. Search-as-you-type would require using the  prefix edit distance with left-only padding. Our implementation can be found in [`backend/app/db/database_fuzzy_utils.py`](https://github.com/JRuf02/bookfinder/blob/main/backend/app/db/database_fuzzy_utils.py).
+
+
+### Barcode Scanning
+
+Users can scan book barcodes on the application's [scan page](#scan-page).
+Barcode detection and decoding happens within the TypeScript frontend, using the [zxing-js/browser](https://github.com/zxing-js/browser) library.
+[ZXing](https://github.com/zxing/zxing) is a "multi-format 1D/2D barcode image processing library"([source](https://github.com/zxing-js/browser/blob/master/README.md)). It is implemented in Java and open-source.
+
+When tested on mobile phones, the scanner consistently detected and decoded barcodes in under a second, with some outliers when there were reflections on the barcode or lighting conditions were otherwise very bad. Scanning via laptop cameras posed a problem, as the scanner often failed to detect the barcode without the user moving the book around, even in good lighting conditions. We don't know the reason for this noticeable difference in scanning speed and quality yet, but suspect the lower resolution and camera feed quality of laptop cameras to play a role.
+
+As the application is expected to be primarily used on mobile and the scanner issues appeared only with laptop cameras, providing a manual input field for ISBN on the [scan page](#scan-page) was seen as a sufficient solution.
+
 
 ### Miscellaneous Details
 
@@ -246,7 +296,7 @@ While working on the project, the following features stood out as potentially us
 - Book borrowing history
 - Statistics dashboard
 - Recommendation engine like [bibtip](https://www.bibtip.de/en)
-- Shelf moderation
+- Shelf moderation and vandalism protection
 - Offline support
 - Reverse geocoding for shelf addresses
 - International availability (would require replacing the DNB API)
@@ -262,7 +312,7 @@ Generative AI has also been used for brainstorming, code completion, formatting 
 | **Tool** | **Purpose** |
 |---|---|
 | ChatGPT | Learning React, React best practices, code snippets |
-| Claude (Sonnet 5) | Debugging, Docker, formatting, suggestions for documentation, code snippets |
+| Claude (Sonnet 5) | Debugging, Docker, formatting, suggestions for documentation, code snippets, Fuzzy Search section of this blog post |
 | GitHub Copilot | Code autocompletion, docstring autocompletion, debugging, React coding |
 
-<center style="margin-top:-35px;margin-bottom:55px;">Table 1: Summary of AI tools used</center>
+<center style="margin-top:-35px;margin-bottom:55px;">Table 2: Summary of used AI tools</center>
