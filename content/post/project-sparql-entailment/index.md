@@ -42,7 +42,7 @@ I used Open WebUI and ChatGPT to improve wording and to identify grammatical and
 - [Conclusion](#conclusion)
 
 ## Introduction
-Suppose we have an RDF graph containing information about German cities, such as `:Berlin :type :CityState`. A query to find all city states (autonomous states consisting of only a city) could be 
+Suppose we have an RDF graph containing information about German cities, such as `:Berlin rdf:type :CityState`. A query to find all city states (autonomous states consisting of only a city) could be 
 ```sparql
 
 SELECT ?city 
@@ -55,22 +55,22 @@ and return `:Berlin` as a result. A query to find all cities could be written as
 ```sparql
 SELECT ?city 
 WHERE {
-    ?city :type :City.
+    ?city rdf:type :City.
 }
 ```
 
-One problem that occurs with such queries is that the latter query will not return `:Berlin` if `:Berlin :type :City` is not explicitly contained in the graph, but only `:Berlin :type :CityState`.
-The fact that Berlin is a city state implies that Berlin is a city, we say that the triple `:Berlin :type :CityState` entails `:Berlin :type :City`. There are two approaches to how to implement entailment rules. One is to alter the query, for example:
+One problem that occurs with such queries is that the latter query will not return `:Berlin` if `:Berlin rdf:type :City` is not explicitly contained in the graph, but only `:Berlin rdf:type :CityState`.
+The fact that Berlin is a city state implies that Berlin is a city, we say that the triple `:Berlin rdf:type :CityState` entails `:Berlin rdf:type :City`. There are two approaches to how to implement entailment rules. One is to alter the query, for example:
 ```sparql
 SELECT ?city 
 WHERE {
-    { ?city :type :City. } 
+    { ?city rdf:type :City. } 
     UNION 
-    { ?city :type :CityState. }
+    { ?city rdf:type :CityState. }
 }
 ```
 
-The other approach is to materialize entailed triples by adding them to the graph, that is to add `:Berlin :type :City` in advance and then run the original query. This blog post focuses on the second approach, namely materialization.
+The other approach is to materialize entailed triples by adding them to the graph, that is to add `:Berlin rdf:type :City` in advance and then run the original query. This blog post focuses on the second approach, namely materialization.
 The World Wide Web Consortium (W3C) specifies several standards for SPARQL entailment, the so-called Entailment Regimes. This blog post will discuss three Entailment Regimes: RDF, RDFS, and OWL 2 RL.
 
 ## RDF Entailment Regime
@@ -78,7 +78,7 @@ The World Wide Web Consortium (W3C) specifies several standards for SPARQL entai
 
 
 ### Properties
-Every term that occurs in predicate position in a graph is an RDF property. Thus, for every predicate `p`, `p rdf:type rdf:Property` is entailed. For example, `:Berlin :country :Germany` entails the triple `:country rdf:type rdf:Property`. 
+Every term that occurs in predicate position in a graph is an RDF property. Thus, for every predicate `?p`, `?p rdf:type rdf:Property` is entailed. For example, `:Berlin :country :Germany` entails the triple `:country rdf:type rdf:Property`. 
 
 ### Axiomatic Triples
 RDF defines a set of axiomatic triples that are entailed by any graph. The axiomatic triples describe some of the standard RDF vocabulary terms:
@@ -112,25 +112,25 @@ RDF Schema ([RDFS](https://www.w3.org/TR/rdf11-mt/)) introduces a number of new 
 RDFS extends the RDF vocabulary with terms for describing relationships between classes and properties as well as the domains and ranges of properties. It also introduces vocabulary for describing datatypes and additional vocabulary for datatypes and containers.
 
 ### Hierarchies
-`rdfs:subClassOf` and `rdfs:subPropertyOf` are used for describing hierarchies such as the one in the introductory example. The triple `:CityState rdfs:subClassOf :City` states that every city state is also a city. If a graph contains that triple and `x rdf:type :CityState`, then `x rdf:type :City` will be entailed. `:Berlin rdf:type :CityState` will entail `:Berlin rdf:type :City`.
+`rdfs:subClassOf` and `rdfs:subPropertyOf` are used for describing hierarchies such as the one in the introductory example. The triple `:CityState rdfs:subClassOf :City` states that every city state is also a city. If a graph contains that triple and `?x rdf:type :CityState`, then `?x rdf:type :City` will be entailed. `:Berlin rdf:type :CityState` will entail `:Berlin rdf:type :City`.
 
 `rdfs:subPropertyOf` works similarly but is used for properties. For example, if a person has a sister, they also have a sibling. From `:hasSister rdfs:subPropertyOf :hasSibling` and `:Luke :hasSister :Leia`, it will be entailed `:Luke :hasSibling :Leia`.
 
 
-Both `rdfs:subClassOf` and `rdfs:subPropertyOf` are reflexive relations. Therefore, the RDFS Entailment Regime also states that every class is a subclass of itself, and every property is a subproperty of itself. `:hasSibling rdfs:subPropertyOf :hasSibling` is being entailed, for example.
+Both `rdfs:subClassOf` and `rdfs:subPropertyOf` are reflexive relations. Therefore, the RDFS Entailment Regime also states that every class is a subclass of itself, and every property is a subproperty of itself. `:hasSibling rdfs:subPropertyOf :hasSibling` is entailed, for example.
 
-Both `rdfs:subClassOf` and `rdfs:subPropertyOf` are transitive: If `a` is a subclass of `b` and `b` is a subclass of `c`, then it follows that `a` is a subclass of `c`. The same applies to `rdfs:subPropertyOf`. For example, from `:hasTwinSister rdfs:subPropertyOf :hasSister`, and `:hasSister rdfs:subPropertyOf :hasSibling` it will be entailed `:hasTwinSister rdfs:subPropertyOf :hasSibling`. With this, `:Luke :hasTwinSister :Leia` entails `:Luke :hasSibling :Leia`.
+Both `rdfs:subClassOf` and `rdfs:subPropertyOf` are transitive: `?a rdfs:subClassOf ?b` and `?b rdfs:subClassOf ?c` together entail `?a rdfs:subClassOf ?c`. The same applies to `rdfs:subPropertyOf`. For example, from `:hasTwinSister rdfs:subPropertyOf :hasSister`, and `:hasSister rdfs:subPropertyOf :hasSibling` it will be entailed `:hasTwinSister rdfs:subPropertyOf :hasSibling`. With this, `:Luke :hasTwinSister :Leia` entails `:Luke :hasSibling :Leia`.
 
 
 `rdfs:Resource` represents the class of all RDF resources. Every class is a subclass of `rdfs:Resource` and every term that occurs at least once in a subject or object position is of type `rdfs:Resource`.
 ### Domain and Range
 The domain condition introduces a rule that applies for all subjects that occur in triples with a certain property. 
-If a property `p` has a domain `x`, then every subject of a triple using `p` as its predicate is inferred to be an instance of `x`. For instance, `:hasDaughter rdfs:domain :Parent` says that everything that has a child is a parent. The triple `:Anakin :hasDaughter :Leia` entails `:Anakin rdf:type :Parent`.
+If `?p rdfs:domain ?x`, then every subject of a triple using `?p` as its predicate is inferred to be an instance of `?x`. For instance, `:hasDaughter rdfs:domain :Parent` says that everything that has a daughter is a parent. The triple `:Anakin :hasDaughter :Leia` entails `:Anakin rdf:type :Parent`.
 
 The range condition works similarly but applies to the object rather than the subject of the triple that contains the range property.
 This allows us to make a statement about the object, such as `:hasDaughter rdfs:range :FemalePerson` (If a person has a daughter, that daughter is a female person). With this range condition, `:Anakin :hasDaughter :Leia` entails `:Leia rdf:type :FemalePerson`.
 ### Datatypes
-A graph can make use of any number of datatypes. They are used to determine the type of literals, such as `:Anakin :favoriteColor "black"^^xsd:string`. Every datatype that occurs in the graph is of type `rdfs:Datatype`, and a subclass of `rdfs:Literal`. In a graph that contains the latter triple, it is entailed `xsd:string rdf:type rdfs:Datatype` and `xsd:string rdf:subClassOf rdfs:Literal`.
+A graph can make use of any number of datatypes. They are used to determine the type of literals, such as `:Anakin :favoriteColor "black"^^xsd:string`. Every datatype that occurs in the graph is of type `rdfs:Datatype`, and a subclass of `rdfs:Literal`. In a graph that contains the latter triple, it is entailed `xsd:string rdf:type rdfs:Datatype` and `xsd:string rdfs:subClassOf rdfs:Literal`.
 
 ### Additional axiomatic triples
 
@@ -188,83 +188,83 @@ rdf:_i rdfs:domain rdfs:Resource.
 Again, these triples are only materialized if `rdf:_i` occurs in the graph.
 ## OWL 2 RL Entailment Regime
 In the following, we will discuss a subset of the Web Ontology Language (OWL 2), the so-called OWL 2 Rule Language ([OWL 2 RL](https://www.w3.org/TR/owl2-profiles/)). It is designed so that its entailments can be computed using a set of rules, making it suitable for materialization.
-OWL 2 RL does not only define rules that result in new triples. It also defines rules that state if a graph is inconsistent. For example, a graph containing `"Some String" rdf:type xsd:integer` is considered inconsistent. The inconsistency rules are not discussed in this blog post, since that would go beyond the scope.
+OWL 2 RL does not only define rules that result in new triples. It also defines rules that state if a graph is inconsistent. For example, a graph containing `"Some String" rdf:type xsd:integer` is considered inconsistent. The inconsistency rules are not discussed in this blog post, since that would go beyond the scope of this blog post.
 ### Equality
-OWL introduces `owl:sameAs`, a property used to describe equality of terms. If a graph contains `x owl:sameAs y`, then the resources `x` and `y` can be treated as identical resources in every triple, in subject, predicate and object position. For example, if a graph contains `:Anakin owl:sameAs :DarthVader` and `:Anakin :hasSon :Luke`, it will be entailed `:DarthVader :hasSon :Luke`.
+OWL introduces `owl:sameAs`, a property used to describe equality of terms. If a graph contains `?x owl:sameAs ?y`, then the resources `?x` and `?y` can be treated as identical resources in every triple, in subject, predicate and object position. For example, if a graph contains `:Anakin owl:sameAs :DarthVader` and `:Anakin :hasSon :Luke`, it will be entailed `:DarthVader :hasSon :Luke`.
 
-`owl:sameAs` is a symmetric, transitive and reflexive relation. Thus, a triple `x owl:sameAs y` entails `y owl:sameAs x`. If `x owl:sameAs y` and `y owl:sameAs z`, it will be entailed `x owl:sameAs z`. Also, for every resource `x` occurring in the graph `x owl:sameAs x` is entailed. Note that `x owl:sameAs x` is not materialized for literals, such as strings or integers. This is because RDF currently does not allow literals to occur in the subject position of a triple.
+`owl:sameAs` is a symmetric, transitive and reflexive relation. Thus, a triple `?x owl:sameAs ?y` entails `?y owl:sameAs ?x`. If `?x owl:sameAs ?y` and `?y owl:sameAs ?z`, it will be entailed `?x owl:sameAs ?z`. Also, for every resource `?x` occurring in the graph `?x owl:sameAs ?x` is entailed. Note that `?x owl:sameAs ?x` is not materialized for literals, such as strings or integers. This is because RDF currently does not allow literals to occur in the subject position of a triple.
 
 
 ### Domain and Range
 `rdfs:domain` and `rdfs:range` work in the same way as in the RDFS Entailment Regime. OWL 2 RL adds rules that pass domain and range information along subclass and subproperty hierarchies. Consider a graph containing:
 
 ```sparql
-p rdfs:domain c1
-c1 rdfs:subClassOf c2.
+:hasDaughter rdfs:domain :Parent.
+:Parent rdfs:subClassOf :Person.
 ```
-Recall that the domain condition means that the triple `x p y` will entail `x rdf:type c1`. Together with `c1 rdfs:subClassOf c2`, it will be entailed `x rdf:type c2`. Therefore, in OWL it will be entailed `p rdfs:domain c2`. Similarly, in a graph containing:
+Recall that the domain condition means that the triple `:Anakin :hasDaughter :Leia` entails `:Anakin rdf:type :Parent`. Together with `:Parent rdfs:subClassOf :Person`, it will be entailed `:Anakin rdf:type :Person`. This holds for every subject of `:hasDaughter`, therefore in OWL it will be entailed `:hasDaughter rdfs:domain :Person`. Similarly, in a graph containing:
 
 ```sparql
-p2 rdfs:domain c.
-p1 rdfs:subPropertyOf p2.
+:hasChild rdfs:domain :Parent.
+:hasDaughter rdfs:subPropertyOf :hasChild.
 ```
-It will be entailed `p1 rdfs:domain c`. If we replace `rdfs:domain` with `rdfs:range`, the latter rules will work in the exact same way.
+it will be entailed `:hasDaughter rdfs:domain :Parent`: everyone who has a daughter also has a child and is therefore a parent. If we replace `rdfs:domain` with `rdfs:range`, the latter rules will work in the exact same way.
 
 
 ### Classes
 
-OWL introduces `owl:Thing` and `owl:Nothing` as the opposite ends of the class hierarchy. `owl:Thing` represents the class of all individuals, which means that `c rdfs:subClassOf owl:Thing` is entailed for every class `c`. `owl:Nothing` represents the empty class, there is no resource `x` for which `x rdfs:subPropertyOf owl:Nothing` is in a graph. `owl:Nothing owl:subClassOf c` is entailed for every class `c`. Since both `owl:Thing` and `owl:Nothing` are classes, `owl:Thing rdf:type owl:Class` and `owl:Nothing rdf:type owl:Class` are entailed for every graph.
+OWL introduces `owl:Thing` and `owl:Nothing` as the opposite ends of the class hierarchy. `owl:Thing` represents the class of all individuals, which means that `?c rdfs:subClassOf owl:Thing` is entailed for every class `?c`. `owl:Nothing` represents the empty class, there is no resource `?x` for which `?x rdf:type owl:Nothing` is in a graph. `owl:Nothing rdfs:subClassOf ?c` is entailed for every class `?c`. Since both `owl:Thing` and `owl:Nothing` are classes, `owl:Thing rdf:type owl:Class` and `owl:Nothing rdf:type owl:Class` are entailed for every graph.
 
 #### Equivalent classes
-In OWL, the same rules for subclasses are applied. Therefore, if `x rdf:type c1` and `c1 rdfs:subClassOf c2`, `x rdf:type c2` will be entailed. Reflexivity and transitivity are applied in the same way as in RDFS.
-Additionally, OWL introduces equivalent classes. Two classes are equivalent if they are subclasses of each other. `c1 owl:equivalentClass c2` entails `c1 rdfs:subClassOf c2` and `c2 rdfs:subClassOf c1`, and vice versa: `c1 rdfs:subClassOf c2` and `c2 rdfs:subClassOf c1` together entail `c1 owl:equivalentClass c2`. Therefore, if `x` is type of one of `c1` or `c2`, it will also be type of the equivalent class, respectively.
-`owl:equivalentClass` is a symmetric, transitive and reflexive relation. Therefore, `c1 owl:equivalentClass c2` entails `c2 owl:equivalentClass c1`. The two triples `c1 owl:equivalentClass c2` and `c2 owl:equivalentClass c3` entail the triple `c1 owl:equivalentClass c3`. From reflexivity follows that for every class `c`, `c owl:equivalentClass c`.
+In OWL, the same rules for subclasses are applied. Therefore, if `?x rdf:type ?c1` and `?c1 rdfs:subClassOf ?c2`, `?x rdf:type ?c2` will be entailed. Reflexivity and transitivity are applied in the same way as in RDFS.
+Additionally, OWL introduces equivalent classes. Two classes are equivalent if they are subclasses of each other. `?c1 owl:equivalentClass ?c2` entails `?c1 rdfs:subClassOf ?c2` and `?c2 rdfs:subClassOf ?c1`, and vice versa: `?c1 rdfs:subClassOf ?c2` and `?c2 rdfs:subClassOf ?c1` together entail `?c1 owl:equivalentClass ?c2`. Therefore, if `?x` is of type `?c1` or `?c2`, it will also be type of the equivalent class, respectively.
+`owl:equivalentClass` is a symmetric, transitive and reflexive relation. Therefore, `?c1 owl:equivalentClass ?c2` entails `?c2 owl:equivalentClass ?c1`. The two triples `?c1 owl:equivalentClass ?c2` and `?c2 owl:equivalentClass ?c3` entail the triple `?c1 owl:equivalentClass ?c3`. From reflexivity it follows that for every class `?c`, `?c owl:equivalentClass ?c`.
 
 #### Intersections, unions and owl:oneOf
-`owl:oneOf`, `owl:intersectionOf`, `owl:unionOf` are all properties used to assign a list of terms to a class. A list containing elements `element1`, `element2`, ..., `elementN` in RDF is formatted as follows:
+`owl:oneOf`, `owl:intersectionOf`, `owl:unionOf` are all properties used to assign a list of terms to a class. A list containing elements `?element1`, `?element2`, ..., `?elementN` in RDF is formatted as follows:
 ```sparql
-head rdf:first element1.
-head rdf:rest list2.
+?head rdf:first ?element1.
+?head rdf:rest ?list2.
 
-list2 rdf:first element2.
-list2 rdf:rest list3.
+?list2 rdf:first ?element2.
+?list2 rdf:rest ?list3.
 
 ...
 
-listN rdf:first elementN.
-listN rdf:rest rdf:nil.
+?listN rdf:first ?elementN.
+?listN rdf:rest rdf:nil.
 ```
-In the following, we will write `LIST[head, element1, element2, ..., elementN]` instead.
+In the following, we will write `LIST[?head, ?element1, ?element2, ..., ?elementN]` instead.
 
 
-`owl:oneOf` assigns to a class a list of individuals which are all instances of that class. That means, from
+`owl:oneOf` assigns to a class a list of individuals which are all instances of that class. For example, from
 ```sparql
-c owl:oneOf h.
-LIST[h, y1, y2, ..., yn].
+:PrimaryColor owl:oneOf :h.
+LIST[:h, :Red, :Green, :Blue].
 ```
-it will be entailed `y rdf:type c` for every `y` that is an element of the list.
+it will be entailed `:Red rdf:type :PrimaryColor`, `:Green rdf:type :PrimaryColor` and `:Blue rdf:type :PrimaryColor`. In general, every element of the list is an instance of the class.
 
 
-A class can be the intersection of a set of other classes:
+A class can be the intersection of a set of other classes. For example, a mother is a parent who is a female person:
 ```sparql
-c owl:intersectionOf h.
-LIST[h, c1, c2, ..., cn].
+:Mother owl:intersectionOf :h.
+LIST[:h, :Parent, :FemalePerson].
 ```
 
-For every `ci` contained in the list, `c rdfs:subClassOf ci` will be entailed. `y rdf:type c` will entail `y rdf:type ci` for every class `ci`.
-If `y rdf:type ci` for every `ci` contained in the list, it will be entailed `y rdf:type c`.
+Every class contained in the list is a superclass of the intersection class, so `:Mother rdfs:subClassOf :Parent` and `:Mother rdfs:subClassOf :FemalePerson` will be entailed. Thus, `:Leia rdf:type :Mother` will entail `:Leia rdf:type :Parent` and `:Leia rdf:type :FemalePerson`.
+Conversely, a resource that is an instance of every class contained in the list is an instance of the intersection class: `:Padme rdf:type :Parent` and `:Padme rdf:type :FemalePerson` together entail `:Padme rdf:type :Mother`.
 
 
-Similarly, a class can be the union of a set of other classes:
+Similarly, a class can be the union of a set of other classes. For example, a parent is a mother or a father:
 ```sparql
-c owl:unionOf h.
-LIST[h, c1, c2, ..., cn].
+:Parent owl:unionOf :h.
+LIST[:h, :Mother, :Father].
 ```
 
-It will be entailed `ci rdf:subClassOf c` for every class `ci` contained in the list. If `y rdf:type ci` for any `ci`, it will be entailed `y rdf:type c`.
+Every class contained in the list is a subclass of the union class, so `:Mother rdfs:subClassOf :Parent` and `:Father rdfs:subClassOf :Parent` will be entailed. A resource that is an instance of any class contained in the list is an instance of the union class: `:Anakin rdf:type :Father` entails `:Anakin rdf:type :Parent`.
 
 #### owl:someValuesFrom, owl:allValuesFrom and owl:hasValue
-`owl:someValuesFrom` and `owl:onProperty` are properties used in combination to describe features of a class. For a class `x` and another class `y` and a property `p`, if `x owl:someValuesFrom y` and `x owl:onProperty p`, then a resource `u` will be of type `x` if `u p v` and `v rdf:type y`. Consider the following triples that make a statement about the class `:Student` and one example person `:Rosa`:
+`owl:someValuesFrom` and `owl:onProperty` are properties used in combination to describe features of a class. For a class `?x`, another class `?y` and a property `?p`, if `?x owl:someValuesFrom ?y` and `?x owl:onProperty ?p`, then `?u ?p ?v` and `?v rdf:type ?y` together entail `?u rdf:type ?x`. Consider the following triples that make a statement about the class `:Student` and one example person `:Rosa`:
 ```sparql
 :Student owl:someValuesFrom :BachelorProgram.
 :Student owl:onProperty :studies.
@@ -273,7 +273,7 @@ It will be entailed `ci rdf:subClassOf c` for every class `ci` contained in the 
 :BScMaths rdf:type :BachelorProgram.
 ```
 
-The first two triples describe the rule that "every person that studies in a bachelor's program is a student." It will be entailed `:Rosa rdf:type :Student`, since `:Rosa` fulfills these requirements. An interesting case occurs, if the `owl:someValuesFrom`-class is `owl:Thing`. Recall that every class is a subclass of `owl:Thing`. Thus, the type of the object of the triple with the `owl:onProperty`-property is now extraneous. If we changed the example to:
+The first two triples describe the rule that "every person that studies in a bachelor's program is a student." It will be entailed `:Rosa rdf:type :Student`, since `:Rosa` fulfills these requirements. An interesting case occurs if the `owl:someValuesFrom`-class is `owl:Thing`. Recall that every class is a subclass of `owl:Thing`. Thus, the type of the object of the triple with the `owl:onProperty`-property is now extraneous. If we changed the example to:
 
 ```sparql
 :Student owl:someValuesFrom owl:Thing.
@@ -288,7 +288,7 @@ Going back to the original example with `:Student owl:someValuesFrom :BachelorPr
 :Anika rdf:type :Student.
 :Anika :studies :SustainableSystems.
 ```
-It will not be entailed `:SustainableSystems rdf:type :BachelorProgram` - not all students study in a bachelor's program. This behaviour can be altered by replacing `owl:someValuesFrom` with `owl:allValuesFrom`. Consider the following class `:Program` and the student `:Anika`: 
+It will not be entailed `:SustainableSystems rdf:type :BachelorProgram` - not all students study in a bachelor's program. This behavior can be altered by replacing `owl:someValuesFrom` with `owl:allValuesFrom`. Consider the following class `:Program` and the student `:Anika`: 
 ```sparql
 :Student owl:allValuesFrom :Program.
 :Student owl:onProperty :studies.
@@ -299,13 +299,13 @@ It will not be entailed `:SustainableSystems rdf:type :BachelorProgram` - not al
 In a graph containing the latter four triples, it will be entailed `:SustainableSystems rdf:type :Program` - every student studies in a program. Note that in the latter example with `owl:allValuesFrom`, the inference in the original direction will not work anymore. `:Geography rdf:type :Program` and `:Felix :studies :Geography` will not entail `:Felix rdf:type :Student`. If the inference is to work in both directions, both triples `:Student owl:allValuesFrom :Program` and `:Student owl:someValuesFrom :Program` must be added to the graph.
 
 
-`owl:hasValue` works similarly. For the class `x`, a value `y` and a property `p`, if
+`owl:hasValue` works similarly. For the class `?x`, a value `?y` and a property `?p`, if
 ```sparql
-x owl:hasValue y.
-x owl:onProperty p.
+?x owl:hasValue ?y.
+?x owl:onProperty ?p.
 ```
 
-then for any resource `u`, `u p y` entails `u rdf:type x`, and vice versa: `u rdf:type x` entails `u p y`. The difference from `owl:someValuesFrom` and `owl:allValuesFrom` is that the object of the triple with the property `p` has to be the `owl:hasValue`-value `y`, whilst in the other cases it had to be of the type specified by `owl:someValuesFrom`/`owl:allValuesFrom`. With the `owl:hasValue` term, it is possible to state similar rules but specify one certain object. For example:
+then for any resource `?u`, `?u ?p ?y` entails `?u rdf:type ?x`, and vice versa: `?u rdf:type ?x` entails `?u ?p ?y`. The difference from `owl:someValuesFrom` and `owl:allValuesFrom` is that the object of the triple with the property `?p` has to be the `owl:hasValue`-value `?y`, whilst in the other cases it had to be of the type specified by `owl:someValuesFrom`/`owl:allValuesFrom`. With the `owl:hasValue` term, it is possible to state similar rules but specify one certain object. For example:
 
 ```sparql
 :MathStudent owl:hasValue :Maths.
@@ -313,34 +313,34 @@ then for any resource `u`, `u p y` entails `u rdf:type x`, and vice versa: `u rd
 ```
 With this, `:Rosa :studies :Maths` entails `:Rosa rdf:type :MathStudent`, and vice versa.
 
-Consider two classes both using the `owl:onProperty`-property `p` and having `owl:someValuesFrom`-classes that are subclasses of each other:
+Consider two classes both using the `owl:onProperty`-property `?p` and having `owl:someValuesFrom`-classes that are subclasses of each other:
 ```sparql
-c1 owl:someValuesFrom y1.
-c1 owl:onProperty p.
-c2 owl:someValuesFrom y2.
-c2 owl:onProperty p.
+?c1 owl:someValuesFrom ?y1.
+?c1 owl:onProperty ?p.
+?c2 owl:someValuesFrom ?y2.
+?c2 owl:onProperty ?p.
 
-y1 rdfs:subClassOf y2.
+?y1 rdfs:subClassOf ?y2.
 ```
 
-We can entail `c1 rdfs:subClassOf c2`. The same thing applies to two classes using the same `owl:someValuesFrom`-class and `owl:onProperty`-properties that are subproperties of each other:
+We can entail `?c1 rdfs:subClassOf ?c2`. The same thing applies to two classes using the same `owl:someValuesFrom`-class and `owl:onProperty`-properties that are subproperties of each other:
 
 ```sparql
-c1 owl:someValuesFrom y.
-c1 owl:onProperty p1.
-c2 owl:someValuesFrom y.
-c2 owl:onProperty p2.
+?c1 owl:someValuesFrom ?y.
+?c1 owl:onProperty ?p1.
+?c2 owl:someValuesFrom ?y.
+?c2 owl:onProperty ?p2.
 
-p1 rdfs:subPropertyOf p2.
+?p1 rdfs:subPropertyOf ?p2.
 ```
-Again, it will be entailed `c1 rdfs:subClassOf c2`. The latter two entailment rules work in the same way for `owl:allValuesFrom` instead of `owl:someValuesFrom`. The latter rule regarding subproperties also works for classes using the same `owl:hasValue`-value. The following triples will entail `c1 rdfs:subClassOf c2` as well:
+Again, it will be entailed `?c1 rdfs:subClassOf ?c2`. The latter two entailment rules work in the same way for `owl:allValuesFrom` instead of `owl:someValuesFrom`. The latter rule regarding subproperties also works for classes using the same `owl:hasValue`-value. The following triples will entail `?c1 rdfs:subClassOf ?c2` as well:
 ```sparql
-c1 owl:hasValue i.
-c1 owl:onProperty p1.
-c2 owl:hasValue i.
-c2 owl:onProperty p2.
+?c1 owl:hasValue ?i.
+?c1 owl:onProperty ?p1.
+?c2 owl:hasValue ?i.
+?c2 owl:onProperty ?p2.
 
-p1 rdfs:subPropertyOf p2.
+?p1 rdfs:subPropertyOf ?p2.
 ```
 
 #### owl:hasKey
@@ -355,11 +355,11 @@ If two students study at the same university and have the same matriculation num
 :Student1 rdf:type :Student.
 :Student2 rdf:type :Student.
 
-:Student1 owl:matriculation "571234"^^xsd:string.
-:Student1 owl:university :AlbertLudwigsUniversity.
+:Student1 :matriculation "571234"^^xsd:string.
+:Student1 :university :AlbertLudwigsUniversity.
 
-:Student2 owl:matriculation "571234"^^xsd:string.
-:Student2 owl:university :AlbertLudwigsUniversity.
+:Student2 :matriculation "571234"^^xsd:string.
+:Student2 :university :AlbertLudwigsUniversity.
 ```
 
 #### Cardinality restrictions
@@ -369,11 +369,11 @@ Additional properties used to describe features of a class are `owl:maxQualified
 `owl:maxQualifiedCardinality`, together with `owl:onProperty` and `owl:onClass`,
 can be used to specify a maximum number of distinct values of a property for instances of a particular class:
 ```sparql
-c owl:maxQualifiedCardinality :xsd:nonNegativeInteger.
-c owl:onProperty p.
-c owl:onClass d.
+?c owl:maxQualifiedCardinality ?n.
+?c owl:onProperty ?p.
+?c owl:onClass ?d.
 ```
-This means that for every individual `v` with `v rdf:type c`, there can be at most `n` distinct resources `u` such that `v p u` and `u rdf:type d`. If `n = 1`, the restriction can lead to new entailments. For example:
+Here, `?n` is a literal with an integer value, for example `"1"^^xsd:nonNegativeInteger`. For every individual `?v` with `?v rdf:type ?c`, there can be at most the value of `?n` distinct resources `?u` such that `?v ?p ?u` and `?u rdf:type ?d`. If `?n` is `"1"^^xsd:nonNegativeInteger`, the restriction can lead to new entailments. For example:
 
 ```sparql
 :Person owl:maxQualifiedCardinality "1"^^xsd:nonNegativeInteger.
@@ -390,7 +390,7 @@ This states that every person has at most one tax identification number. If ther
 :ID1 rdf:type :TaxIdentificationNumber.
 :ID2 rdf:type :TaxIdentificationNumber.
 ```
-it will be entailed `:ID1 owl:sameAs :ID2`. An interesting case is again the case with `c owl:onClass owl:Thing`. Since every individual is of type `owl:Thing`, the objects of the triples with the `owl:onProperty`-property as predicate do not have to be of a certain type:
+it will be entailed `:ID1 owl:sameAs :ID2`. An interesting case is again the case with `?c owl:onClass owl:Thing`. Since every individual is of type `owl:Thing`, the objects of the triples with the `owl:onProperty`-property as predicate do not have to be of a certain type:
 ```sparql
 :Person owl:maxQualifiedCardinality "1"^^xsd:nonNegativeInteger.
 :Person owl:onProperty :hasTaxNumber.
@@ -405,10 +405,10 @@ In both cases, `:Jack :hasTaxNumber :ID1` and `:Jack :hasTaxNumber :ID2` will to
 Note that the entailment described above relies on a maximum cardinality of 1. For larger cardinalities, no such entailment is possible.
 
 ### Properties
-The rules for `rdfs:subPropertyOf` from the RDFS Entailment Regime also apply to OWL 2 RL. Additionally, OWL introduces `owl:equivalentProperty`, which works similarly to `owl:equivalentClass`. If two properties are subproperties of each other, they are equivalent to each other. The reverse is also true: `p1 owl:equivalentProperty p2` entails `p1 owl:subPropertyOf p2` and `p2 owl:subPropertyOf p1`.
-Similarly to `owl:equivalentClass`, `owl:equivalentProperty` is a symmetric, transitive and reflexive relation: `p1 owl:equivalentProperty p2` entails `p2 owl:equivalentProperty p1`. `p1 owl:equivalentProperty p2` and `p2 owl:equivalentProperty p3` together entail `p1 owl:equivalentProperty p3`. For every property `p`, `p owl:equivalentProperty p`.
+The rules for `rdfs:subPropertyOf` from the RDFS Entailment Regime also apply to OWL 2 RL. Additionally, OWL introduces `owl:equivalentProperty`, which works similarly to `owl:equivalentClass`. If two properties are subproperties of each other, they are equivalent to each other. The reverse is also true: `?p1 owl:equivalentProperty ?p2` entails `?p1 rdfs:subPropertyOf ?p2` and `?p2 rdfs:subPropertyOf ?p1`.
+Similarly to `owl:equivalentClass`, `owl:equivalentProperty` is a symmetric, transitive and reflexive relation: `?p1 owl:equivalentProperty ?p2` entails `?p2 owl:equivalentProperty ?p1`. `?p1 owl:equivalentProperty ?p2` and `?p2 owl:equivalentProperty ?p3` together entail `?p1 owl:equivalentProperty ?p3`. For every property `?p`, `?p owl:equivalentProperty ?p` is entailed.
 
-OWL distinguishes between `owl:DatatypeProperty` and `owl:ObjectProperty`. A datatype property `dtp` with `dtp rdf:type owl:DatatypeProperty` is a property that is intended to have literals as its objects. Similarly, an object property `op` with `op rdf:type owl:ObjectProperty` is a property that is intended to have individuals as its objects. For every datatype property and ever object property, it will be entailed `p rdfs:subPropertyOf p` and `p owl:equivalentProperty p`. The following triples are an example for the use of these properties:
+OWL distinguishes between `owl:DatatypeProperty` and `owl:ObjectProperty`. A datatype property `?dtp` with `?dtp rdf:type owl:DatatypeProperty` is a property that is intended to have literals as its objects. Similarly, an object property `?op` with `?op rdf:type owl:ObjectProperty` is a property that is intended to have individuals as its objects. For every such property `?p`, it will be entailed `?p rdfs:subPropertyOf ?p` and `?p owl:equivalentProperty ?p`. The following triples are an example for the use of these properties:
 ```sparql
 :age rdf:type owl:DatatypeProperty.
 :hasFriend rdf:type owl:ObjectProperty.
@@ -417,7 +417,7 @@ OWL distinguishes between `owl:DatatypeProperty` and `owl:ObjectProperty`. A dat
 :Jack :hasFriend :Rita.
 ```
 
-An `owl:FunctionalProperty` is a property for which each subject can have at most one object. For a functional property `fp`, `x fp y1` and `x fp y2` will together entail `y1 owl:sameAs y2`. For example,
+An `owl:FunctionalProperty` is a property for which each subject can have at most one object. For a functional property `?fp`, `?x ?fp ?y1` and `?x ?fp ?y2` will together entail `?y1 owl:sameAs ?y2`. For example,
 
 ```sparql
 :hasTaxNumber rdf:type owl:FunctionalProperty.
@@ -425,11 +425,11 @@ An `owl:FunctionalProperty` is a property for which each subject can have at mos
 :Jack :hasTaxNumber :ID2.
 ```
 entails `:ID1 owl:sameAs :ID2`.
-`owl:InverseFunctionalProperty` works similarly but constrains the subjects instead of the objects. For an inverse functional property `ifp`, `x1 ifp y` and `x2 ifp y` together entail `x1 owl:sameAs x2`. For example, `:phoneNumber rdf:type owl:InverseFunctionalProperty` states that every phone number belongs to at most one person. If two persons have the same phone number, they are the same person.
+`owl:InverseFunctionalProperty` works similarly but constrains the subjects instead of the objects. For an inverse functional property `?ifp`, `?x1 ?ifp ?y` and `?x2 ?ifp ?y` together entail `?x1 owl:sameAs ?x2`. For example, `:phoneNumber rdf:type owl:InverseFunctionalProperty` states that every phone number belongs to at most one person. If two persons have the same phone number, they are the same person.
 
-`owl:SymmetricProperty` and `owl:TransitiveProperty` can be used to state the Symmetry and Transitivity of properties. Examples for properties that are both transitive and symmetric are `owl:sameAs`, `owl:equivalentClass` and `owl:equivalentProperty`.
-The symmetry of a property `p` can be stated using `p rdf:type owl:SymmetricProperty`. For triples having a symmetric property in predicate position, subject and object can be switched: If `x p y`, `y p x` is entailed. For example, `:hasSibling rdf:type owl:SymmetricProperty`. `:Luke :hasSibling :Leia` will entail `:Leia :hasSibling :Luke`.
-Similarly, the transitivity of a property `p` can be stated as `p rdf:type owl:TransitiveProperty`. `x p y` and `y p z` together entail `x p z`. The following example triples will entail `:Jack :hasSibling :Arthur`:
+`owl:SymmetricProperty` and `owl:TransitiveProperty` can be used to state the symmetry and transitivity of properties. Examples of properties that are both transitive and symmetric are `owl:sameAs`, `owl:equivalentClass` and `owl:equivalentProperty`.
+The symmetry of a property `?p` can be stated using `?p rdf:type owl:SymmetricProperty`. For triples having a symmetric property in predicate position, subject and object can be switched: If `?x ?p ?y`, `?y ?p ?x` is entailed. For example, `:hasSibling rdf:type owl:SymmetricProperty`. `:Luke :hasSibling :Leia` will entail `:Leia :hasSibling :Luke`.
+Similarly, the transitivity of a property `?p` can be stated as `?p rdf:type owl:TransitiveProperty`. `?x ?p ?y` and `?y ?p ?z` together entail `?x ?p ?z`. The following example triples will entail `:Jack :hasSibling :Arthur`:
 
 ```sparql
 :hasSibling rdf:type owl:TransitiveProperty.
@@ -437,9 +437,9 @@ Similarly, the transitivity of a property `p` can be stated as `p rdf:type owl:T
 :Rita :hasSibling :Arthur.
 ```
 
-A property `p1` can be the inverse of a property `p2`, expressed as `p1 owl:inverseOf p2`. That means a triple using `p1` as predicate entails a corresponding triple using `p2` as its predicate, with the subject and object exchanged. `x p1 y` entails `y p2 x`, and vice versa. An example for two inverse properties is `:hasChild owl:inverseOf :hasParent`. `:DarthVader :hasChild :Leia` entails `:Leia :hasParent :DarthVader`.
+A property `?p1` can be the inverse of a property `?p2`, expressed as `?p1 owl:inverseOf ?p2`. That means a triple using `?p1` as predicate entails a corresponding triple using `?p2` as its predicate, with the subject and object exchanged. `?x ?p1 ?y` entails `?y ?p2 ?x`, and vice versa. An example for two inverse properties is `:hasChild owl:inverseOf :hasParent`. `:DarthVader :hasChild :Leia` entails `:Leia :hasParent :DarthVader`.
 
-More complex relations between properties can be specified using `owl:propertyChainAxiom` and a list of properties. If `p owl:propertyChainAxiom h` and `LIST[h, p1, p2, ..., pn]`, and there is a chain `u1 p1 u2`, `u2 p2 u3`, ..., `un pn u(n+1)`, then `u1 p u(n+1)`. Consider the following example:
+More complex relations between properties can be specified using `owl:propertyChainAxiom` and a list of properties. If `?p owl:propertyChainAxiom ?h` and `LIST[?h, ?p1, ?p2, ..., ?pn]`, and there is a chain `?u1 ?p1 ?u2`, `?u2 ?p2 ?u3`, ..., `?un ?pn ?v`, then `?u1 ?p ?v`. Consider the following example:
 
 ```sparql
 :hasUncle owl:propertyChainAxiom :h.
@@ -450,8 +450,22 @@ LIST[:h, :hasParent, :hasBrother].
 ```
 If a person has a parent and that parent has a brother, that brother is an uncle of the person. Thus, `:Felix :hasUncle :Jack` will be entailed.
 
+OWL also introduces the class `owl:AnnotationProperty`. Annotation properties are used to attach additional information, such as human-readable labels, comments or version information, to resources. OWL 2 RL defines nine built-in annotation properties:
+```sparql
+rdfs:label
+rdfs:comment
+rdfs:seeAlso
+rdfs:isDefinedBy
+owl:deprecated
+owl:versionInfo
+owl:priorVersion
+owl:backwardCompatibleWith
+owl:incompatibleWith
+```
+For every built-in annotation property `?ap`, `?ap rdf:type owl:AnnotationProperty` is entailed.
+
 ### Datatypes
-OWL 2 RL defines a set of supported datatypes. For each of these datatypes `dt`, `dt rdf:type rdfs:Datatype` is entailed:
+OWL 2 RL defines a set of supported datatypes. For each of these datatypes `?dt`, `?dt rdf:type rdfs:Datatype` is entailed:
 
 ```sparql
 rdf:PlainLiteral
@@ -489,7 +503,7 @@ WHERE {
 }
 ```
 
-To implement the rule that `a rdfs:subClassOf b`, `b rdfs:subClassOf c` entails `a rdfs:subClassOf c`, the following update query can be used: 
+To implement the rule that `?a rdfs:subClassOf ?b`, `?b rdfs:subClassOf ?c` entails `?a rdfs:subClassOf ?c`, the following update query can be used: 
 
 ```sparql
 INSERT {
@@ -502,15 +516,15 @@ WHERE {
 ```
 Note that this query does not materialize all triples one might expect at first. Consider a graph containing the following triples:
 ```sparql
-ex:LeopardCat rdfs:subClassOf ex:Cat.
-ex:Cat rdfs:subClassOf ex:Mammal.
-ex:Mammal rdfs:subClassOf ex:Animal.
+:LeopardCat rdfs:subClassOf :Cat.
+:Cat rdfs:subClassOf :Mammal.
+:Mammal rdfs:subClassOf :Animal.
 ```
 
-Running the update query will result in the triples `ex:LeopardCat rdfs:subClassOf ex:Mammal` and `ex:Cat rdfs:subClassOf ex:Animal`. `ex:LeopardCat rdfs:subClassOf ex:Animal` will not be materialized yet. This is because there is no `c` in the graph for which both `ex:LeopardCat rdfs:subClassOf c` and `c rdfs:subClassOf ex:Animal` exist when the query is executed.
-Running the same update query a second time will then materialize `ex:LeopardCat rdfs:subClassOf Animal`. This illustrates why some entailment rules require running an update query repeatedly. After each execution, we check if the update query has added triples. Once a run does not add triples, applying the rule again will not compute new triples, and all by the rule entailed triples are materialized.
+Running the update query will result in the triples `:LeopardCat rdfs:subClassOf :Mammal` and `:Cat rdfs:subClassOf :Animal`. `:LeopardCat rdfs:subClassOf :Animal` will not be materialized yet. This is because there is no `?c` in the graph for which both `:LeopardCat rdfs:subClassOf ?c` and `?c rdfs:subClassOf :Animal` exist when the query is executed.
+Running the same update query a second time will then materialize `:LeopardCat rdfs:subClassOf :Animal`. This illustrates why some entailment rules require running an update query repeatedly. After each execution, we check if the update query has added triples. Once a run does not add triples, applying the rule again will not compute new triples, and all triples entailed by the rule are materialized.
 
-Some entailment rules are more complex. For example, the rule regarding `owl:intersectionOf` requires processing all elements of an RDF list. In the implementation, multiple different SPARQL queries have to be executed. Recall that `c owl:intersectionOf h` and `LIST[h, c1, c2, ..., cn]` will together entail `c rdfs:subClassOf ci` for every `ci` contained in the list. To implement this, we first use a query to find all classes `c` for which `c owl:intersectionOf h`. The query also returns the first element of the list `c1` and the remainder of the list, `lst`, which contains the remaining classes `c2, c3, ..., cn`:
+Some entailment rules are more complex. For example, the rule regarding `owl:intersectionOf` requires processing all elements of an RDF list. In the implementation, multiple different SPARQL queries have to be executed. Recall that `?c owl:intersectionOf ?h` and `LIST[?h, ?c1, ?c2, ..., ?cn]` will together entail `?c rdfs:subClassOf ?ci` for every `?ci` contained in the list. To implement this, we first use a query to find all classes `?c` for which `?c owl:intersectionOf ?h`. The query also returns the first element of the list `?c1` and the remainder of the list, `?lst1`, which contains the remaining classes `?c2, ?c3, ..., ?cn`:
 
 ```sparql
 SELECT ?c ?c1 ?lst1
@@ -520,53 +534,55 @@ WHERE {
   ?h rdf:rest ?lst1.
 }
 ```
-For every class `c`, all classes `ci` contained in its intersection list have to be found. Starting with `c1` and the remainder of the list `lst1`, we iteratively retrieve the next class and the new remainder of the list using a query of the following form:
+For every class `?c`, all classes `?ci` contained in its intersection list have to be found. Starting with `?c1` and the remainder of the list `?lst1`, we iteratively retrieve the next class and the new remainder of the list using a query of the following form:
 
 ```sparql
-SELECT c(i+1) ?lst(i+1)
+SELECT ?next ?rest
 WHERE {
-  ?lsti rdf:first ?c(i+1).
-  ?lsti rdf:rest ?lst(i+1).
+  :lsti rdf:first ?next.
+  :lsti rdf:rest ?rest.
 }
 ```
+Here, `:lsti` is the concrete list node obtained in the previous step. `?next` is the next class of the intersection, and `?rest` is the new remainder of the list.
 
-Recall that an RDF list ends with `rdf:nil` as the value of the `rdf:rest` property of the last list node. Before each iteration, we therefore check whether the current remainder of the list is `rdf:nil`. Once this is the case, all classes `c1, ..., cn` belonging to the intersection of `c` have been found.
-For every class `c` and the classes in its intersection `c1, ..., cn`, we then apply an update query that is supposed to find all individuals `y` that are type of the class `c`. For every of these individuals `y` and every `ci`, we materialize `y rdf:type ci`. Additionally, we want to find all individuals `y` that are type of all classes `ci` of the intersection in order to entail `y rdf:type c`:
+Recall that an RDF list ends with `rdf:nil` as the value of the `rdf:rest` property of the last list node. Before each iteration, we therefore check whether the current remainder of the list is `rdf:nil`. Once this is the case, all classes `?c1, ..., ?cn` belonging to the intersection of `?c` have been found.
+For every class `?c` and the classes in its intersection `?c1, ..., ?cn`, we then apply an update query that is supposed to find all individuals `?y` that are of type `?c`. For each of these individuals `?y` and every `?ci`, we materialize `?y rdf:type ?ci`. Additionally, we want to find all individuals `?y` that are instances of all classes `?ci` of the intersection in order to entail `?y rdf:type ?c`:
 
 ```sparql
 INSERT {
-  ?y rdf:type c1.
-  ?y rdf:type c2.
+  ?y rdf:type :c1.
+  ?y rdf:type :c2.
   ...
-  ?y rdf:type cn.
+  ?y rdf:type :cn.
 }
 WHERE {
-  ?y rdf:type c.
+  ?y rdf:type :c.
 };
 
 INSERT {
-  ?y rdf:type c.
+  ?y rdf:type :c.
 }
 WHERE {
-  ?y rdf:type c1.
-  ?y rdf:type c2.
+  ?y rdf:type :c1.
+  ?y rdf:type :c2.
   ...
-  ?y rdf:type cn.
+  ?y rdf:type :cn.
 }
 ```
-In another update query, we will entail `c rdfs:subClassOf ci` for every `ci` in the list:
+`:c`, `:c1`, ..., `:cn` represent the concrete classes found by the previous queries.
+In another update query, we will entail `:c rdfs:subClassOf :ci` for every `:ci` in the list:
 
 ```sparql
 INSERT DATA {
-  ?c rdf:subClassOf c1.
-  ?c rdf:subClassOf c2.
+  :c rdfs:subClassOf :c1.
+  :c rdfs:subClassOf :c2.
   ...
-  ?c rdfs:subClassOf cn.
+  :c rdfs:subClassOf :cn.
 }
 ```
 Other entailment rules which also require processing elements of a list can be implemented in a similar way. Examples for these are the previously discussed rules involving `owl:unionOf`, `owl:hasKey`, `owl:oneOf`, and `owl:propertyChainAxiom`.
 
-Another more complex rule is the one concerning the reification of resources in RDF Entailment. As discussed previously, for every literal occuring in the graph, a blank node is introduced. If a literal occurs multiple times, it is represented by the same blank node. For example:
+Another more complex rule is the one concerning the reification of literals in RDF Entailment. As discussed previously, for every literal occurring in the graph, a blank node is introduced. If a literal occurs multiple times, it is represented by the same blank node. For example:
 
 ```sparql
 :Jack :age "42"^^xsd:integer.
@@ -585,26 +601,26 @@ To implement this, we first use a query to find all literals occurring in the gr
 
 ```sparql
 INSERT {
-  ?b1 rdf:type d1.
-  s1a p1a ?b1.
-  s1b p1b ?b1.
+  ?b1 rdf:type :d1.
+  :s1a :p1a ?b1.
+  :s1b :p1b ?b1.
   ...
-  ?b2 rdf:type d2.
-  s2a p2a ?b1
-  s2b p2b ?b2
+  ?b2 rdf:type :d2.
+  :s2a :p2a ?b2.
+  :s2b :p2b ?b2.
   ...
 }
 WHERE {
-  BIND(BNODE() AS ?b1)
-  BIND(BNODE() AS ?b1)
+  BIND(BNODE() AS ?b1).
+  BIND(BNODE() AS ?b2).
   ...
 }
 ```
-`d1`, `s1a`, `p1a`, etc. represent the concrete values obtained from the graph. A separate blank node is generated for each distinct literal.
+`:d1`, `:s1a`, `:p1a`, etc. represent the concrete values obtained from the graph. A separate blank node is generated for each distinct literal.
 
 For large graphs, this can add a large number of triples. Therefore, instead of processing all literals in one query, we process them in small batches of 40 blank nodes per batch.
 
-One aspect that hast to be kept in mind is that, in RDF, literals are not allowed to occur in subject position. For example, a graph must not contain the triple `"42"^^xsd:integer :answerTo :Universe`. Consider the following query, which implements the `owl:allValuesFrom` functionality:
+One aspect that has to be kept in mind is that, in RDF, literals are not allowed to occur in subject position. For example, a graph must not contain the triple `"42"^^xsd:integer :answerTo :Universe`. Consider the following query, which implements the `owl:allValuesFrom` functionality:
 ```sparql
 INSERT {
   ?v rdf:type ?y.
@@ -626,29 +642,27 @@ Now consider a graph containing:
 :Anika rdf:type :Student.
 :Anika :studies "SustainableSystems"^^xsd:string.
 ```
-The update query would entail `"SustainableSystems"^^xsd:string rdf:type :Program`. However, this triple is not allowed in an RDF graph because its subject is a literal. Therefore, in update queries that add a triple with term `v` in subject position without guaranteeing that `v` is not a literal, a filter 
-```FILTER(!isLiteral(?v))```
-needs to be added to the `WHERE` clause. If we already know that `v` occurs in the subject position of a triple in the graph, the filter is not necessary, since we then know it cannot be a literal.
+The update query would entail `"SustainableSystems"^^xsd:string rdf:type :Program`. However, this triple is not allowed in an RDF graph because its subject is a literal. Therefore, in update queries that add a triple with term `?v` in subject position without guaranteeing that `?v` is not a literal, a filter `FILTER(!isLiteral(?v))` needs to be added to the `WHERE` clause. If we already know that `?v` occurs in the subject position of a triple in the graph, the filter is not necessary, since we then know it cannot be a literal.
 
 
 An important aspect is that newly entailed triples can themselves be premises for other entailment rules. Therefore, applying every rule once is not sufficient to compute all entailed triples. Instead, all rules have to be applied repeatedly. After each iteration, we will count the triples in the graph and compare that number to the number of the last iteration. As soon as an iteration ends without adding new triples, applying any of the entailment rules again will not compute any new triples. We then know that all entailed triples were added.
 
 
-Note that when applying all discussed entailment rules to a graph, some rules or parts of rules can be redundant. For example, consider again the previously discussed rule regarding `owl:interSectionOf` and the following graph: 
+Note that when applying all discussed entailment rules to a graph, some rules or parts of rules can be redundant. For example, consider again the previously discussed rule regarding `owl:intersectionOf` and the following graph: 
 ```sparql
-c owl:intersectionOf h.
-LIST[h, c1, c2, ..., cn].
-y type c.
+:c owl:intersectionOf :h.
+LIST[:h, :c1, :c2, ..., :cn].
+:y rdf:type :c.
 
 ```
-The discussed implementation materializes both `y rdf:type c1` and `c rdfs:subClassOf c1`. If it materialized only the latter triple, the former would still be entailed by the rule regarding subclasses: `y rdf:type c` and `c rdfs:subClassOf c1` together entail `y rdf:type c1`. Thus, the update query adding `y rdf:type ci` for every `ci` in the intersection could be omitted. The drawback of this approach, however, would be that this specific `owl:intersectionOf` entailment rule could no longer be used independently. To obtain `y rdf:type c1`, the rules for subclass entailment would also have to be applied.
+The discussed implementation materializes both `:y rdf:type :c1` and `:c rdfs:subClassOf :c1`. If it materialized only the latter triple, the former would still be entailed by the rule regarding subclasses: `:y rdf:type :c` and `:c rdfs:subClassOf :c1` together entail `:y rdf:type :c1`. Thus, the update query adding `:y rdf:type :ci` for every `:ci` in the intersection could be omitted. The drawback of this approach, however, would be that this specific `owl:intersectionOf` entailment rule could no longer be used independently. To obtain `:y rdf:type :c1`, the rules for subclass entailment would also have to be applied.
 
 ## Materialization Performance and Triple Counts
 
 The implementation of each of the entailment rules was tested in a unit test. Additionally, all entailment rules were applied to graphs consisting of different numbers of triples to find the number of triples entailed and to measure the time required to materialize them in QLever. All measurements were performed on an AMD Ryzen 7 3700X.
 
 
-The dataset [Olympics RDF](https://github.com/wallscope/olympics-rdf), published by Wallscope, is an RDF graph containing roughly 1.8 million triples. It contains information about the Olympic games, athletes, sport disciplines, results and medals, and more. One rule that requires a significant amount of computation and produces a large number of triples is the reification of the RDF Entailment Regime previously discussed. Running only the reification rule takes roughly seven minutes and adds about 700,000 triples. Running all other rules from RDF, RDFS, and OWL 2 RL takes another five minutes and adds 1.2 million triples. The fully entailed graph consists of 3.7 million triples.
+The dataset [Olympics RDF](https://github.com/wallscope/olympics-rdf), published by Wallscope, is an RDF graph containing roughly 1.8 million triples. It contains information about the Olympic Games, athletes, sport disciplines, results and medals, and more. One rule that requires a significant amount of computation and produces a large number of triples is the reification of the RDF Entailment Regime previously discussed. Running only the reification rule takes roughly seven minutes and adds about 700,000 triples. Running all other rules from RDF, RDFS, and OWL 2 RL takes another five minutes and adds 1.2 million triples. The fully entailed graph consists of 3.7 million triples.
 
 [WikiPathways](https://sandbox.wikipathways.org/rdf.html) is a dataset containing information about genes, proteins, metabolites and other biological entities and how they interact with each other. The graph used for testing consists of roughly 11.3 million triples.
 Running the reification rule introduces 700,000 new blank nodes and 7.8 million triples that use these blank nodes. Materializing these triples takes roughly 3.5 hours. Applying all other rules takes roughly 1.5 hours and adds 16 million triples. The fully entailed graph consists of 35 million triples.
@@ -656,7 +670,7 @@ Running the reification rule introduces 700,000 new blank nodes and 7.8 million 
 [IMDb](https://www.imdb.com/) is a dataset containing information about movies, actors, directors, release information and more. The graph used for testing contains 41.8 million triples.
 Running the reification rule would introduce 18.5 million new blank nodes and 60.4 million triples that use these blank nodes. Materializing these triples would take an impractically long time, making it no longer reasonable to perform the reification for this dataset. Materializing all entailment rules except the reification takes about 2.5 hours. It adds 25.6 million triples. The entailed graph consists of 67.4 million triples.
 
-For larger datasets, materialization would theoretically still be feasible. However, the materialization process will take an impractically long time. Another limitation when applying the rules to larger datasets is the amount of RAM used by QLever. When materializing new triples, QLever initially stores them in RAM. When entailing IMDb, the largest graph discussed, QLever uses 40 GB of RAM after applying all entailment rules except reification. For larger datasets, the process may therefore run out of available memory. This problem can be addressed by periodically rebuilding the index using QLever's `rebuild-index` command during the materialization process. Rebuilding the index moves the newly added triples from RAM to disk storage, freeing up RAM for further materialization.
+For larger datasets, materialization would theoretically still be feasible. However, the materialization process would take an impractically long time. Another limitation when applying the rules to larger datasets is the amount of RAM used by QLever. When materializing new triples, QLever initially stores them in RAM. When entailing IMDb, the largest graph discussed, QLever uses 40 GB of RAM after applying all entailment rules except reification. For larger datasets, the process may therefore run out of available memory. This problem can be addressed by periodically rebuilding the index using QLever's `rebuild-index` command during the materialization process. Rebuilding the index moves the newly added triples from RAM to disk storage, freeing up RAM for further materialization.
 
 ## Conclusion
 
