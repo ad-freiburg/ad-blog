@@ -25,18 +25,19 @@ I used Open WebUI and ChatGPT to improve wording and to identify grammatical and
   - [Hierarchies](#hierarchies)
   - [Domain and Range](#domain-and-range)
   - [Datatypes](#datatypes)
-  - [Additional axiomatic triples](#additional-axiomatic-triples)
+  - [Additional Axiomatic Triples](#additional-axiomatic-triples)
 - [OWL 2 RL Entailment Regime](#owl-2-rl-entailment-regime)
   - [Equality](#equality)
   - [Domain and Range](#domain-and-range-1)
   - [Classes](#classes)
-    - [Equivalent classes](#equivalent-classes)
-    - [Intersections, unions and owl:oneOf](#intersections-unions-and-owloneof)
+    - [Equivalent Classes](#equivalent-classes)
+    - [Intersections, Unions and owl:oneOf](#intersections-unions-and-owloneof)
     - [owl:someValuesFrom, owl:allValuesFrom and owl:hasValue](#owlsomevaluesfrom-owlallvaluesfrom-and-owlhasvalue)
     - [owl:hasKey](#owlhaskey)
-    - [Cardinality restrictions](#cardinality-restrictions)
+    - [Cardinality Restrictions](#cardinality-restrictions)
   - [Properties](#properties-1)
   - [Datatypes](#datatypes-1)
+- [Entailment Rules at a Glance](#entailment-rules-at-a-glance)
 - [Implementation](#implementation)
 - [Materialization Performance and Triple Counts](#materialization-performance-and-triple-counts)
 - [Conclusion](#conclusion)
@@ -132,7 +133,7 @@ This allows us to make a statement about the object, such as `:hasDaughter rdfs:
 ### Datatypes
 A graph can make use of any number of datatypes. They are used to determine the type of literals, such as `:Anakin :favoriteColor "black"^^xsd:string`. Every datatype that occurs in the graph is of type `rdfs:Datatype`, and a subclass of `rdfs:Literal`. In a graph that contains the latter triple, it is entailed `xsd:string rdf:type rdfs:Datatype` and `xsd:string rdfs:subClassOf rdfs:Literal`.
 
-### Additional axiomatic triples
+### Additional Axiomatic Triples
 
 In addition to the RDF axiomatic triples, RDFS defines further axiomatic triples, describing some of the introduced RDFS standard vocabulary terms.
 ```sparql
@@ -186,6 +187,9 @@ rdf:_i rdfs:domain rdfs:Resource.
 ```
 
 Again, these triples are only materialized if `rdf:_i` occurs in the graph.
+
+Moreover, every container membership property is a subproperty of `rdfs:member`: `?cmp rdf:type rdfs:ContainerMembershipProperty` entails `?cmp rdfs:subPropertyOf rdfs:member`. Together with the semantics of `rdfs:subPropertyOf`, a triple such as `:MyBag rdf:_1 :Apple` therefore entails `:MyBag rdfs:member :Apple`.
+
 ## OWL 2 RL Entailment Regime
 In the following, we will discuss a subset of the Web Ontology Language (OWL 2), the so-called OWL 2 Rule Language ([OWL 2 RL](https://www.w3.org/TR/owl2-profiles/)). It is designed so that its entailments can be computed using a set of rules, making it suitable for materialization.
 OWL 2 RL does not only define rules that result in new triples. It also defines rules that state if a graph is inconsistent. For example, a graph containing `"Some String" rdf:type xsd:integer` is considered inconsistent. The inconsistency rules are not discussed in this blog post, since that would go beyond the scope of this blog post.
@@ -215,12 +219,12 @@ it will be entailed `:hasDaughter rdfs:domain :Parent`: everyone who has a daugh
 
 OWL introduces `owl:Thing` and `owl:Nothing` as the opposite ends of the class hierarchy. `owl:Thing` represents the class of all individuals, which means that `?c rdfs:subClassOf owl:Thing` is entailed for every class `?c`. `owl:Nothing` represents the empty class, there is no resource `?x` for which `?x rdf:type owl:Nothing` is in a graph. `owl:Nothing rdfs:subClassOf ?c` is entailed for every class `?c`. Since both `owl:Thing` and `owl:Nothing` are classes, `owl:Thing rdf:type owl:Class` and `owl:Nothing rdf:type owl:Class` are entailed for every graph.
 
-#### Equivalent classes
+#### Equivalent Classes
 In OWL, the same rules for subclasses are applied. Therefore, if `?x rdf:type ?c1` and `?c1 rdfs:subClassOf ?c2`, `?x rdf:type ?c2` will be entailed. Reflexivity and transitivity are applied in the same way as in RDFS.
 Additionally, OWL introduces equivalent classes. Two classes are equivalent if they are subclasses of each other. `?c1 owl:equivalentClass ?c2` entails `?c1 rdfs:subClassOf ?c2` and `?c2 rdfs:subClassOf ?c1`, and vice versa: `?c1 rdfs:subClassOf ?c2` and `?c2 rdfs:subClassOf ?c1` together entail `?c1 owl:equivalentClass ?c2`. Therefore, if `?x` is of type `?c1` or `?c2`, it will also be type of the equivalent class, respectively.
 `owl:equivalentClass` is a symmetric, transitive and reflexive relation. Therefore, `?c1 owl:equivalentClass ?c2` entails `?c2 owl:equivalentClass ?c1`. The two triples `?c1 owl:equivalentClass ?c2` and `?c2 owl:equivalentClass ?c3` entail the triple `?c1 owl:equivalentClass ?c3`. From reflexivity it follows that for every class `?c`, `?c owl:equivalentClass ?c`.
 
-#### Intersections, unions and owl:oneOf
+#### Intersections, Unions and owl:oneOf
 `owl:oneOf`, `owl:intersectionOf`, `owl:unionOf` are all properties used to assign a list of terms to a class. A list containing elements `?element1`, `?element2`, ..., `?elementN` in RDF is formatted as follows:
 ```sparql
 ?head rdf:first ?element1.
@@ -362,7 +366,7 @@ If two students study at the same university and have the same matriculation num
 :Student2 :university :AlbertLudwigsUniversity.
 ```
 
-#### Cardinality restrictions
+#### Cardinality Restrictions
 
 Additional properties used to describe features of a class are `owl:maxQualifiedCardinality` and `owl:maxCardinality`.
 
@@ -488,6 +492,94 @@ xsd:anyURI
 xsd:dateTime
 xsd:dateTimeStamp
 ```
+## Entailment Rules at a Glance
+
+Every rule previouly discussed has a short name defined by the World Wide Web Consortium (W3C). For every rule, a short description of their premise and effect is in the following table. All rules of the RDFS Entailment Regime can be found [here](https://www.w3.org/TR/rdf11-mt/). The rules of OWL 2 RL Entailment Regime are described [here](https://www.w3.org/TR/owl2-profiles). 
+<style>
+.rules-table table { white-space: normal; }
+</style>
+<details class="rules-table">
+<summary>Show all entailment rules</summary>
+
+| Name | If | Then |
+|------|----|------|
+| rdf-predicates | `?x ?p ?y` | `?p rdf:type rdf:Property` |
+| rdf-axioms | | all RDF axiomatic triples, e.g. `rdf:type rdf:type rdf:Property`<br>`rdf:_i rdf:type rdf:Property` for every `rdf:_i` occurring in the graph |
+| rdf-reification | `?x ?p "sss"^^?d` | `?x ?p _:b`<br>`_:b rdf:type ?d` |
+| rdfs-axioms | | all RDFS axiomatic triples, e.g. `rdf:type rdfs:domain rdfs:Resource`<br>`rdf:_i rdf:type rdfs:ContainerMembershipProperty`<br>`rdf:_i rdfs:domain rdfs:Resource`<br>`rdf:_i rdfs:range rdfs:Resource` for every `rdf:_i` occurring in the graph |
+| rdfs1 | `?x ?p "sss"^^?d` | `?d rdf:type rdfs:Datatype` |
+| rdfs2 | `?p rdfs:domain ?c`<br>`?x ?p ?y` | `?x rdf:type ?c` |
+| rdfs3 | `?p rdfs:range ?c`<br>`?x ?p ?y` | `?y rdf:type ?c` |
+| rdfs4 | `?x ?p ?y` | `?x rdf:type rdfs:Resource`<br>`?y rdf:type rdfs:Resource` |
+| rdfs5 | `?p1 rdfs:subPropertyOf ?p2`<br>`?p2 rdfs:subPropertyOf ?p3` | `?p1 rdfs:subPropertyOf ?p3` |
+| rdfs6 | `?p rdf:type rdf:Property` | `?p rdfs:subPropertyOf ?p` |
+| rdfs7 | `?p1 rdfs:subPropertyOf ?p2`<br>`?x ?p1 ?y` | `?x ?p2 ?y` |
+| rdfs8 | `?c rdf:type rdfs:Class` | `?c rdfs:subClassOf rdfs:Resource` |
+| rdfs9 | `?c1 rdfs:subClassOf ?c2`<br>`?x rdf:type ?c1` | `?x rdf:type ?c2` |
+| rdfs10 | `?c rdf:type rdfs:Class` | `?c rdfs:subClassOf ?c` |
+| rdfs11 | `?c1 rdfs:subClassOf ?c2`<br>`?c2 rdfs:subClassOf ?c3` | `?c1 rdfs:subClassOf ?c3` |
+| rdfs12 | `?p rdf:type rdfs:ContainerMembershipProperty` | `?p rdfs:subPropertyOf rdfs:member` |
+| rdfs13 | `?d rdf:type rdfs:Datatype` | `?d rdfs:subClassOf rdfs:Literal` |
+| eq-ref | `?s ?p ?o` | `?s owl:sameAs ?s`<br>`?p owl:sameAs ?p`<br>`?o owl:sameAs ?o` |
+| eq-sym | `?x owl:sameAs ?y` | `?y owl:sameAs ?x` |
+| eq-trans | `?x owl:sameAs ?y`<br>`?y owl:sameAs ?z` | `?x owl:sameAs ?z` |
+| eq-rep-s | `?s owl:sameAs ?s'`<br>`?s ?p ?o` | `?s' ?p ?o` |
+| eq-rep-p | `?p owl:sameAs ?p'`<br>`?s ?p ?o` | `?s ?p' ?o` |
+| eq-rep-o | `?o owl:sameAs ?o'`<br>`?s ?p ?o` | `?s ?p ?o'` |
+| prp-ap | | `?ap rdf:type owl:AnnotationProperty` for every built-in annotation property `?ap` of OWL 2 RL |
+| prp-dom | `?p rdfs:domain ?c`<br>`?x ?p ?y` | `?x rdf:type ?c` |
+| prp-rng | `?p rdfs:range ?c`<br>`?x ?p ?y` | `?y rdf:type ?c` |
+| prp-fp | `?p rdf:type owl:FunctionalProperty`<br>`?x ?p ?y1`<br>`?x ?p ?y2` | `?y1 owl:sameAs ?y2` |
+| prp-ifp | `?p rdf:type owl:InverseFunctionalProperty`<br>`?x1 ?p ?y`<br>`?x2 ?p ?y` | `?x1 owl:sameAs ?x2` |
+| prp-symp | `?p rdf:type owl:SymmetricProperty`<br>`?x ?p ?y` | `?y ?p ?x` |
+| prp-trp | `?p rdf:type owl:TransitiveProperty`<br>`?x ?p ?y`<br>`?y ?p ?z` | `?x ?p ?z` |
+| prp-spo1 | `?p1 rdfs:subPropertyOf ?p2`<br>`?x ?p1 ?y` | `?x ?p2 ?y` |
+| prp-spo2 | `?p owl:propertyChainAxiom ?x`<br>`LIST[?x, ?p1, ..., ?pn]`<br>`?u1 ?p1 ?u2`<br>`?u2 ?p2 ?u3`<br>...<br>`?un ?pn ?un+1` | `?u1 ?p ?un+1` |
+| prp-eqp1 | `?p1 owl:equivalentProperty ?p2`<br>`?x ?p1 ?y` | `?x ?p2 ?y` |
+| prp-eqp2 | `?p1 owl:equivalentProperty ?p2`<br>`?x ?p2 ?y` | `?x ?p1 ?y` |
+| prp-inv1 | `?p1 owl:inverseOf ?p2`<br>`?x ?p1 ?y` | `?y ?p2 ?x` |
+| prp-inv2 | `?p1 owl:inverseOf ?p2`<br>`?x ?p2 ?y` | `?y ?p1 ?x` |
+| prp-key | `?c owl:hasKey ?u`<br>`LIST[?u, ?p1, ..., ?pn]`<br>`?x rdf:type ?c`<br>`?x ?p1 ?z1`<br>...<br>`?x ?pn ?zn`<br>`?y rdf:type ?c`<br>`?y ?p1 ?z1`<br>...<br>`?y ?pn ?zn` | `?x owl:sameAs ?y` |
+| cls-thing | | `owl:Thing rdf:type owl:Class` |
+| cls-nothing1 | | `owl:Nothing rdf:type owl:Class` |
+| cls-int1 | `?c owl:intersectionOf ?x`<br>`LIST[?x, ?c1, ..., ?cn]`<br>`?y rdf:type ?c1`<br>...<br>`?y rdf:type ?cn` | `?y rdf:type ?c` |
+| cls-int2 | `?c owl:intersectionOf ?x`<br>`LIST[?x, ?c1, ..., ?cn]`<br>`?y rdf:type ?c` | `?y rdf:type ?c1`<br>...<br>`?y rdf:type ?cn` |
+| cls-uni | `?c owl:unionOf ?x`<br>`LIST[?x, ?c1, ..., ?cn]`<br>`?y rdf:type ?ci` for any `?ci` | `?y rdf:type ?c` |
+| cls-svf1 | `?x owl:someValuesFrom ?y`<br>`?x owl:onProperty ?p`<br>`?u ?p ?v`<br>`?v rdf:type ?y` | `?u rdf:type ?x` |
+| cls-svf2 | `?x owl:someValuesFrom owl:Thing`<br>`?x owl:onProperty ?p`<br>`?u ?p ?v` | `?u rdf:type ?x` |
+| cls-avf | `?x owl:allValuesFrom ?y`<br>`?x owl:onProperty ?p`<br>`?u rdf:type ?x`<br>`?u ?p ?v` | `?v rdf:type ?y` |
+| cls-hv1 | `?x owl:hasValue ?y`<br>`?x owl:onProperty ?p`<br>`?u rdf:type ?x` | `?u ?p ?y` |
+| cls-hv2 | `?x owl:hasValue ?y`<br>`?x owl:onProperty ?p`<br>`?u ?p ?y` | `?u rdf:type ?x` |
+| cls-maxc2 | `?x owl:maxCardinality "1"^^xsd:nonNegativeInteger`<br>`?x owl:onProperty ?p`<br>`?u rdf:type ?x`<br>`?u ?p ?y1`<br>`?u ?p ?y2` | `?y1 owl:sameAs ?y2` |
+| cls-maxqc3 | `?x owl:maxQualifiedCardinality "1"^^xsd:nonNegativeInteger`<br>`?x owl:onProperty ?p`<br>`?x owl:onClass ?c`<br>`?u rdf:type ?x`<br>`?u ?p ?y1`<br>`?y1 rdf:type ?c`<br>`?u ?p ?y2`<br>`?y2 rdf:type ?c` | `?y1 owl:sameAs ?y2` |
+| cls-maxqc4 | `?x owl:maxQualifiedCardinality "1"^^xsd:nonNegativeInteger`<br>`?x owl:onProperty ?p`<br>`?x owl:onClass owl:Thing`<br>`?u rdf:type ?x`<br>`?u ?p ?y1`<br>`?u ?p ?y2` | `?y1 owl:sameAs ?y2` |
+| cls-oo | `?c owl:oneOf ?x`<br>`LIST[?x, ?y1, ..., ?yn]` | `?y1 rdf:type ?c`<br>...<br>`?yn rdf:type ?c` |
+| cax-sco | `?c1 rdfs:subClassOf ?c2`<br>`?x rdf:type ?c1` | `?x rdf:type ?c2` |
+| cax-eqc1 | `?c1 owl:equivalentClass ?c2`<br>`?x rdf:type ?c1` | `?x rdf:type ?c2` |
+| cax-eqc2 | `?c1 owl:equivalentClass ?c2`<br>`?x rdf:type ?c2` | `?x rdf:type ?c1` |
+| dt-type1 | | `?dt rdf:type rdfs:Datatype` for every datatype `?dt` supported in OWL 2 RL |
+| scm-cls | `?c rdf:type owl:Class` | `?c rdfs:subClassOf ?c`<br>`?c owl:equivalentClass ?c`<br>`?c rdfs:subClassOf owl:Thing`<br>`owl:Nothing rdfs:subClassOf ?c` |
+| scm-sco | `?c1 rdfs:subClassOf ?c2`<br>`?c2 rdfs:subClassOf ?c3` | `?c1 rdfs:subClassOf ?c3` |
+| scm-eqc1 | `?c1 owl:equivalentClass ?c2` | `?c1 rdfs:subClassOf ?c2`<br>`?c2 rdfs:subClassOf ?c1` |
+| scm-eqc2 | `?c1 rdfs:subClassOf ?c2`<br>`?c2 rdfs:subClassOf ?c1` | `?c1 owl:equivalentClass ?c2` |
+| scm-op | `?p rdf:type owl:ObjectProperty` | `?p rdfs:subPropertyOf ?p`<br>`?p owl:equivalentProperty ?p` |
+| scm-dp | `?p rdf:type owl:DatatypeProperty` | `?p rdfs:subPropertyOf ?p`<br>`?p owl:equivalentProperty ?p` |
+| scm-spo | `?p1 rdfs:subPropertyOf ?p2`<br>`?p2 rdfs:subPropertyOf ?p3` | `?p1 rdfs:subPropertyOf ?p3` |
+| scm-eqp1 | `?p1 owl:equivalentProperty ?p2` | `?p1 rdfs:subPropertyOf ?p2`<br>`?p2 rdfs:subPropertyOf ?p1` |
+| scm-eqp2 | `?p1 rdfs:subPropertyOf ?p2`<br>`?p2 rdfs:subPropertyOf ?p1` | `?p1 owl:equivalentProperty ?p2` |
+| scm-dom1 | `?p rdfs:domain ?c1`<br>`?c1 rdfs:subClassOf ?c2` | `?p rdfs:domain ?c2` |
+| scm-dom2 | `?p2 rdfs:domain ?c`<br>`?p1 rdfs:subPropertyOf ?p2` | `?p1 rdfs:domain ?c` |
+| scm-rng1 | `?p rdfs:range ?c1`<br>`?c1 rdfs:subClassOf ?c2` | `?p rdfs:range ?c2` |
+| scm-rng2 | `?p2 rdfs:range ?c`<br>`?p1 rdfs:subPropertyOf ?p2` | `?p1 rdfs:range ?c` |
+| scm-hv | `?c1 owl:hasValue ?i`<br>`?c1 owl:onProperty ?p1`<br>`?c2 owl:hasValue ?i`<br>`?c2 owl:onProperty ?p2`<br>`?p1 rdfs:subPropertyOf ?p2` | `?c1 rdfs:subClassOf ?c2` |
+| scm-svf1 | `?c1 owl:someValuesFrom ?y1`<br>`?c1 owl:onProperty ?p`<br>`?c2 owl:someValuesFrom ?y2`<br>`?c2 owl:onProperty ?p`<br>`?y1 rdfs:subClassOf ?y2` | `?c1 rdfs:subClassOf ?c2` |
+| scm-svf2 | `?c1 owl:someValuesFrom ?y`<br>`?c1 owl:onProperty ?p1`<br>`?c2 owl:someValuesFrom ?y`<br>`?c2 owl:onProperty ?p2`<br>`?p1 rdfs:subPropertyOf ?p2` | `?c1 rdfs:subClassOf ?c2` |
+| scm-avf1 | `?c1 owl:allValuesFrom ?y1`<br>`?c1 owl:onProperty ?p`<br>`?c2 owl:allValuesFrom ?y2`<br>`?c2 owl:onProperty ?p`<br>`?y1 rdfs:subClassOf ?y2` | `?c1 rdfs:subClassOf ?c2` |
+| scm-avf2 | `?c1 owl:allValuesFrom ?y`<br>`?c1 owl:onProperty ?p1`<br>`?c2 owl:allValuesFrom ?y`<br>`?c2 owl:onProperty ?p2`<br>`?p1 rdfs:subPropertyOf ?p2` | `?c1 rdfs:subClassOf ?c2` |
+| scm-int | `?c owl:intersectionOf ?x`<br>`LIST[?x, ?c1, ..., ?cn]` | `?c rdfs:subClassOf ?c1`<br>...<br>`?c rdfs:subClassOf ?cn` |
+| scm-uni | `?c owl:unionOf ?x`<br>`LIST[?x, ?c1, ..., ?cn]` | `?c1 rdfs:subClassOf ?c`<br>...<br>`?cn rdfs:subClassOf ?c` |
+
+</details>
 
 ## Implementation
 
@@ -657,24 +749,76 @@ LIST[:h, :c1, :c2, ..., :cn].
 ```
 The discussed implementation materializes both `:y rdf:type :c1` and `:c rdfs:subClassOf :c1`. If it materialized only the latter triple, the former would still be entailed by the rule regarding subclasses: `:y rdf:type :c` and `:c rdfs:subClassOf :c1` together entail `:y rdf:type :c1`. Thus, the update query adding `:y rdf:type :ci` for every `:ci` in the intersection could be omitted. The drawback of this approach, however, would be that this specific `owl:intersectionOf` entailment rule could no longer be used independently. To obtain `:y rdf:type :c1`, the rules for subclass entailment would also have to be applied.
 
+When QLever adds triples to a graph, they are initially held in RAM. When materializing a large number of triples, the process may therefore run out of memory. To prevent this, the implementation periodically rebuilds the index using QLever's `rebuild-index` command. Rebuilding moves the newly added triples from RAM to disk, which frees memory for the rest of the materialization. Concretely, the index is rebuilt whenever more than one million triples are held in RAM after an entailment rule has been applied.
+
 ## Materialization Performance and Triple Counts
 
-The implementation of each of the entailment rules was tested in a unit test. Additionally, all entailment rules were applied to graphs consisting of different numbers of triples to find the number of triples entailed and to measure the time required to materialize them in QLever. All measurements were performed on an AMD Ryzen 7 3700X.
+The implementation of each of the entailment rules was tested in a unit test. Additionally, all entailment rules were applied to graphs consisting of different numbers of triples to find the number of triples entailed and to measure the time required to materialize them in QLever. Three different graphs were used for testing. All measurements were performed on an AMD Ryzen 7 3700X.
 
-
-The dataset [Olympics RDF](https://github.com/wallscope/olympics-rdf), published by Wallscope, is an RDF graph containing roughly 1.8 million triples. It contains information about the Olympic Games, athletes, sport disciplines, results and medals, and more. One rule that requires a significant amount of computation and produces a large number of triples is the reification of the RDF Entailment Regime previously discussed. Running only the reification rule takes roughly seven minutes and adds about 700,000 triples. Running all other rules from RDF, RDFS, and OWL 2 RL takes another five minutes and adds 1.2 million triples. The fully entailed graph consists of 3.7 million triples.
+The dataset [Olympics RDF](https://github.com/wallscope/olympics-rdf), published by Wallscope, is an RDF graph containing roughly 1.8 million triples. It contains information about the Olympic Games, athletes, sport disciplines, results and medals, and more. 
 
 [WikiPathways](https://sandbox.wikipathways.org/rdf.html) is a dataset containing information about genes, proteins, metabolites and other biological entities and how they interact with each other. The graph used for testing consists of roughly 11.3 million triples.
-Running the reification rule introduces 700,000 new blank nodes and 7.8 million triples that use these blank nodes. Materializing these triples takes roughly 3.5 hours. Applying all other rules takes roughly 1.5 hours and adds 16 million triples. The fully entailed graph consists of 35 million triples.
 
 [IMDb](https://www.imdb.com/) is a dataset containing information about movies, actors, directors, release information and more. The graph used for testing contains 41.8 million triples.
-Running the reification rule would introduce 18.5 million new blank nodes and 60.4 million triples that use these blank nodes. Materializing these triples would take an impractically long time, making it no longer reasonable to perform the reification for this dataset. Materializing all entailment rules except the reification takes about 2.5 hours. It adds 25.6 million triples. The entailed graph consists of 67.4 million triples.
 
-For larger datasets, materialization would theoretically still be feasible. However, the materialization process would take an impractically long time. Another limitation when applying the rules to larger datasets is the amount of RAM used by QLever. When materializing new triples, QLever initially stores them in RAM. When entailing IMDb, the largest graph discussed, QLever uses 40 GB of RAM after applying all entailment rules except reification. For larger datasets, the process may therefore run out of available memory. This problem can be addressed by periodically rebuilding the index using QLever's `rebuild-index` command during the materialization process. Rebuilding the index moves the newly added triples from RAM to disk storage, freeing up RAM for further materialization.
+One rule that requires a significant amount of computation and produces a large number of triples is the reification of the RDF Entailment Regime previously discussed. 
+To measure its impact, Olympics RDF was entailed once with all entailment rules except the reification and once with all entailment rules including it. [Figure 1](#fig-reification) shows the number of triples in the entailed graph and the time needed for the entailment for both runs. The reification adds a high number of new triples, and the new triples are premises of other entailment rules, resulting in even more triples added. Materializing the reification triples takes a huge amount of time. At the same time, the triples it produces carry little useful information for practical applications.
+
+<!-- Hier noch schreiben, warum so lange -->
+
+Therefore, in the following, when considering larger graphs, we omit the reification rule. 
+
+ 
+
+<div id="fig-reification"></div>
+
+{{< figure id="fig-reification" src="img/reification.svg" width="800" caption="> Figure 1: Olympics RDF entailed without and with the rdf-reification rule. Left: number of triples before and after the entailment. Right: total time of the entailment." >}}
+
+
+All entailment rules apart from the reification rule were applied to Olympics RDF, WikiPathways, and IMDb. The number of added triples is shown in [Figure 2](#fig-triple-counts). The time needed for entailing these graphs is shown in [Figure 3](#fig-total-time).
+
+
+
+<!-- Figure 2 -->
+<div id="fig-triple-counts"></div>
+
+{{< figure id="fig-triple-counts" src="img/triple_counts.svg" width="800" caption="> Figure 2: Number of triples in Olympics RDF, WikiPathways, and IMDb, before and after entailing with all entailment rules except the reification rule." >}}
+
+
+<!-- Figure 3 -->
+<div id="fig-total-time"></div>
+
+{{< figure id="fig-total-time" src="img/total_time.svg" width="800" caption="> Figure 3: Time needed for entailing Olympics RDF, WikiPathways, and IMDb." >}}
+
+
+[Figure 4](#fig-triples-per-rule) shows that the entailed triples mainly follow from four entailment rules, other entailment rules add a very low number of triples. For Olympics and IMDb, rules `rdfs4` and `eq-ref` add the most triples by far. `rdfs4` adds `?x rdf:type rdfs:Resource` for every term `?x` that occurs in subject or object position in any triple. `eq-ref` adds `?x owl:sameAs ?x` for every term `?x`. It stands to reason that these add a high number of triples, as every distinct term occuring in the graph results in a new triple. At the same time, one can argue that the triples entailed by these rules are rarely relevant for actual queries to the graph. Therefore, it is reasonable to omit both `rdfs4` and `eq-ref` when entailing a graph.
+
+<!-- Figure 4 -->
+<div id="fig-triples-per-rule"></div>
+
+{{< figure id="fig-triples-per-rule" src="img/triples_per_rule.svg" width="800" caption="> Figure 4: Share of the added triples per entailment rule for Olympics RDF, WikiPathways, and IMDb. Rules are reffered to by their W3C names, see [Entailment Rules at a Glance](#entailment-rules-at-a-glance). Rules contributing only a small share are grouped as Other rules." >}}
+
+
+When considering the time needed for materialization per rule ([Figure 5](#fig-time-per-rule)), it is noticeable that a high amount of the total time is needed for the rules specified as Other rules. There are 46 rules specified as Other rules, and each of them contributes less than 5% of the total time needed. However, all these rules together sum up to a high amount of time in the materialization process. 
+
+
+Between 3.8 % and 8.8% of the time are not related to a specific entailment rule, but are needed for rebuilding the graph and for counting the number of triples.
+In WikiPathways, the rule `eq-rep` adds a high number of triples and needs a lot of time. `eq-rep` replaces terms in triples if there is a `owl:sameAs` relation between terms. WikiPathways contains a high number of `owl:sameAs` relations. That also explains the graph's significant growth relative to its original size (see [Figure 2](#fig-triple-counts)).
+
+
+<div id="fig-time-per-rule"></div>
+
+{{< figure id="fig-time-per-rule" src="img/time_per_rule.svg" width="800" caption="> Figure 5: Share of the time needed for the materialization process per entailment rule for Olympics RDF, WikiPathways, and IMDb. Rules are reffered to by their W3C names, see [Entailment Rules at a Glance](#entailment-rules-at-a-glance). Rules needing less than 5 % of the total entailment time in every graph are counted as Other rules." >}}
+
+
 
 ## Conclusion
 
-The entailment rules defined by the RDF, RDFS, and OWL 2 RL Entailment Regimes were discussed and implemented. Given an RDF graph, it is now possible to materialize triples that are entailed by triples in that graph. This is achieved by executing SPARQL Update queries in QLever, resulting in an extended version of the original graph.
+The entailment rules defined by the RDF, RDFS, and OWL 2 RL Entailment Regimes were discussed and implemented. 
+The entailment rule regarding the reification of literals is by far the most expensive one. It introduces a blank node for every distinct literal in the graph, which greatly increases both the number of entailed triples and the time needed for materialization. At the same time, the triples it produces carry little useful information. 
+Another rule that results in a high number of new triples is the one stating that every term occurring in subject or object position of a triple is a resource. These triples and are rarely relevant for actual queries. In OWL 2 RL, another rule that adds a lot of trivial triples is the one that materializes `?x owl:sameAs ?x` for every resource `?x`.
+For practical applications, it is therefore reasonable to omit these three rules. Omitting triples that are entailed by these rules makes the entailed graph significantly smaller and the entailment process faster, and is therefore a reasonable trade-off especially for large graphs.
 
+Given an RDF graph, it is then possible to materialize triples that are entailed by triples in that graph. This is achieved by executing SPARQL Update queries in QLever, resulting in an extended version of the original graph.
 
 A query to the extended graph will yield all results obtainable from the original triples, as well as all additional results that follow from the discussed entailment rules. No changes to the queries themselves will be required. In the future, QLever could be extended to support the discussed entailment rules.

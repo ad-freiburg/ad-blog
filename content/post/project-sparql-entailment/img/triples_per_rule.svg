@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="864pt" height="342pt" viewBox="0 0 864 342" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-09-29T13:54:02.311216</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.1, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 342 
+L 864 342 
+L 864 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 154.617871 282.417386 
+C 179.070379 282.068641 202.417498 272.054833 219.523844 254.578574 
+C 236.630191 237.102315 246.14231 213.546349 245.96793 189.091976 
+C 245.793554 164.637603 235.946483 141.219677 218.592647 123.98915 
+C 201.238812 106.758623 177.751265 97.078779 153.296269 97.078779 
+L 153.296273 189.752794 
+z
+" style="fill: #2a78d6; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 150.653338 97.116473 
+C 126.208292 97.813897 103.006366 108.15963 86.150982 125.878053 
+C 69.295598 143.596475 60.120365 167.28571 60.643463 191.735105 
+C 61.166562 216.1845 71.346591 239.459625 88.94438 256.440924 
+C 106.542168 273.422223 130.165365 282.766137 154.617871 282.417386 
+L 153.296273 189.752794 
+z
+" style="fill: #eb6834; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 153.296274 97.078779 
+C 152.855723 97.078779 152.415178 97.081922 151.974672 97.088202 
+C 151.534166 97.094483 151.09371 97.103906 150.653338 97.116473 
+L 153.296273 189.752794 
+z
+" style="fill: #b3bcc2; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_1">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #090a0b" x="255.235096" y="192.57152" transform="rotate(-0 255.235096 192.57152)">49.8%</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #090a0b" x="51.378175" y="195.478961" transform="rotate(-0 51.378175 195.478961)">49.8%</text>
+   </g>
+   <g id="text_3">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #3c484e" x="153.296273" y="57.418476" transform="rotate(-0 153.296273 57.418476)">+817 K triples</text>
+   </g>
+   <g id="text_4">
+    <text style="font-weight: 700; font-size: 14.4px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; fill: #090a0b" transform="translate(121.746773 38.570673)">Olympics</text>
+    <text style="font-weight: 700; font-size: 14.4px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; fill: #090a0b" transform="translate(153.296273 54.642873)"/>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 476.836458 108.701813 
+C 469.989015 104.905509 462.688013 101.992206 455.108081 100.031582 
+C 447.528149 98.070958 439.730213 97.078779 431.900818 97.078779 
+L 431.900822 189.752794 
+z
+" style="fill: #2a78d6; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 512.954703 144.822387 
+C 508.766308 137.266574 503.541885 130.333397 497.433361 124.224481 
+C 491.324838 118.115565 484.391997 112.890694 476.836458 108.701813 
+L 431.900822 189.752794 
+z
+" style="fill: #eb6834; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 422.585687 97.548125 
+C 412.733719 98.543437 403.104622 101.111364 394.065338 105.154041 
+C 385.026056 109.196718 376.692865 114.662139 369.383257 121.342072 
+C 362.073649 128.022006 355.881655 135.830524 351.043246 144.470067 
+C 346.204838 153.109611 342.782235 162.469047 340.90586 172.191758 
+C 339.029485 181.91447 338.723467 191.875374 339.999471 201.694933 
+C 341.275474 211.514492 344.117095 221.066398 348.416038 229.986655 
+C 352.714981 238.906913 358.415953 247.080786 365.301725 254.19683 
+C 372.187498 261.312873 380.169491 267.279529 388.943569 271.869466 
+C 397.717645 276.459402 407.170925 279.613565 416.943216 281.211767 
+C 426.715507 282.809974 436.681087 282.83166 446.460241 281.275997 
+C 456.239394 279.72034 465.706334 276.607341 474.500304 272.055634 
+C 483.294274 267.503928 491.302157 261.572055 498.218835 254.48605 
+C 505.135513 247.400046 510.871998 239.251057 515.209723 230.349594 
+C 519.547449 221.448128 522.430608 211.90868 523.749333 202.094768 
+C 525.068058 192.280855 524.80539 182.318736 522.97135 172.58795 
+C 521.137304 162.857166 517.755467 153.482904 512.954703 144.822387 
+L 431.900822 189.752794 
+z
+" style="fill: #1baf7a; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 430.495357 97.089434 
+C 429.174563 97.109469 427.854348 97.157741 426.535617 97.234213 
+C 425.216887 97.310684 423.899943 97.415349 422.585687 97.548125 
+L 431.900822 189.752794 
+z
+" style="fill: #eda100; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 431.900823 97.078779 
+C 431.66657 97.078779 431.432317 97.079662 431.19807 97.081441 
+C 430.963823 97.08322 430.729584 97.085882 430.495357 97.089434 
+L 431.900822 189.752794 
+z
+" style="fill: #b3bcc2; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_5">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #090a0b" x="457.428807" y="94.605084" transform="rotate(-0 457.428807 94.605084)">8.1%</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #090a0b" x="503.986618" y="121.217275" transform="rotate(-0 503.986618 121.217275)">8.9%</text>
+   </g>
+   <g id="text_7">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #090a0b" x="384.647841" y="283.626758" transform="rotate(-0 384.647841 283.626758)">81.5%</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #3c484e" x="431.900822" y="57.418476" transform="rotate(-0 431.900822 57.418476)">+13.3 M triples</text>
+   </g>
+   <g id="text_9">
+    <text style="font-weight: 700; font-size: 14.4px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; fill: #090a0b" transform="translate(384.007322 38.570673)">WikiPathways</text>
+    <text style="font-weight: 700; font-size: 14.4px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; fill: #090a0b" transform="translate(431.900822 54.642873)"/>
+   </g>
+  </g>
+  <g id="axes_3">
+   <g id="patch_10">
+    <path d="M 710.509046 282.42681 
+C 735.077979 282.425837 758.6654 272.654646 776.037745 255.281273 
+C 793.410091 237.9079 803.179873 214.319891 803.179387 189.75096 
+C 803.178901 165.182029 793.408179 141.594407 776.035149 124.221719 
+C 758.662118 106.849031 735.0743 97.078779 710.505367 97.078779 
+L 710.505372 189.752794 
+z
+" style="fill: #2a78d6; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 710.497993 97.078779 
+C 685.92906 97.080734 662.342029 106.85287 644.97038 124.226939 
+C 627.59873 141.601008 617.829887 165.1894 617.831356 189.758332 
+C 617.832825 214.327263 627.604475 237.914468 644.978196 255.286466 
+C 662.351917 272.658463 685.940116 282.427782 710.509046 282.42681 
+L 710.505372 189.752794 
+z
+" style="fill: #eb6834; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 710.505373 97.078779 
+C 710.504143 97.078779 710.502891 97.078779 710.501661 97.078779 
+C 710.500431 97.078779 710.499223 97.078779 710.497993 97.078779 
+L 710.505372 189.752794 
+z
+" style="fill: #b3bcc2; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #090a0b" x="812.446791" y="193.296397" transform="rotate(-0 812.446791 193.296397)">50.0%</text>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #090a0b" x="608.563952" y="193.304511" transform="rotate(-0 608.563952 193.304511)">50.0%</text>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #3c484e" x="710.505372" y="57.418476" transform="rotate(-0 710.505372 57.418476)">+25.6 M triples</text>
+   </g>
+   <g id="text_13">
+    <text style="font-weight: 700; font-size: 14.4px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; fill: #090a0b" transform="translate(692.116122 38.570673)">IMDb</text>
+    <text style="font-weight: 700; font-size: 14.4px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; fill: #090a0b" transform="translate(710.505372 54.642873)"/>
+   </g>
+  </g>
+  <g id="legend_1">
+   <g id="patch_13">
+    <path d="M 245.1225 21.54 
+L 257.1225 21.54 
+L 257.1225 10.8 
+L 245.1225 10.8 
+z
+" style="fill: #2a78d6"/>
+   </g>
+   <g id="text_14">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #3c484e" x="266.7225" y="20.28" transform="rotate(-0 266.7225 20.28)">eq-ref</text>
+   </g>
+   <g id="patch_14">
+    <path d="M 316.86 21.54 
+L 328.86 21.54 
+L 328.86 10.8 
+L 316.86 10.8 
+z
+" style="fill: #eb6834"/>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #3c484e" x="338.46" y="20.28" transform="rotate(-0 338.46 20.28)">rdfs4</text>
+   </g>
+   <g id="patch_15">
+    <path d="M 383.71125 21.54 
+L 395.71125 21.54 
+L 395.71125 10.8 
+L 383.71125 10.8 
+z
+" style="fill: #1baf7a"/>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #3c484e" x="405.31125" y="20.28" transform="rotate(-0 405.31125 20.28)">eq-rep</text>
+   </g>
+   <g id="patch_16">
+    <path d="M 457.88625 21.54 
+L 469.88625 21.54 
+L 469.88625 10.8 
+L 457.88625 10.8 
+z
+" style="fill: #eda100"/>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #3c484e" x="479.48625" y="20.28" transform="rotate(-0 479.48625 20.28)">eq-sym</text>
+   </g>
+   <g id="patch_17">
+    <path d="M 535.299375 21.54 
+L 547.299375 21.54 
+L 547.299375 10.8 
+L 535.299375 10.8 
+z
+" style="fill: #b3bcc2"/>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #3c484e" x="556.899375" y="20.28" transform="rotate(-0 556.899375 20.28)">Other rules</text>
+   </g>
+  </g>
+ </g>
+</svg>
