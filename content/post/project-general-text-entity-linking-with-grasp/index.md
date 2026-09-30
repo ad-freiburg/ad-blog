@@ -2,9 +2,10 @@
 title: "General Text Entity Linking with GRASP using Large Reasoning Models"
 date: 2026-05-02T11:24:44+01:00
 author: "Marius Birmele"
-tags: [entity-linking, sparql, grasp, elevant]
+tags: [entity-linking, sparql, grasp, elevant, agents]
 categories: ["project"]
 draft: false 
+image: "img/Background.png"
 ---
 
 
