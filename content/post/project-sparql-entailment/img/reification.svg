@@ -6,7 +6,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-29T13:54:03.737867</dc:date>
+    <dc:date>2026-10-01T12:58:42.902253</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -58,7 +58,7 @@ z
      <g id="line2d_3">
       <path d="M 64.36 315.732 
 L 266.4 315.732 
-" clip-path="url(#p9d6ee28f8c)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+" clip-path="url(#p2687a5c971)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
      </g>
      <g id="line2d_4"/>
      <g id="text_3">
@@ -69,7 +69,7 @@ L 266.4 315.732
      <g id="line2d_5">
       <path d="M 64.36 286.390455 
 L 266.4 286.390455 
-" clip-path="url(#p9d6ee28f8c)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+" clip-path="url(#p2687a5c971)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
      </g>
      <g id="line2d_6"/>
      <g id="text_4">
@@ -80,7 +80,7 @@ L 266.4 286.390455
      <g id="line2d_7">
       <path d="M 64.36 257.048911 
 L 266.4 257.048911 
-" clip-path="url(#p9d6ee28f8c)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+" clip-path="url(#p2687a5c971)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
      </g>
      <g id="line2d_8"/>
      <g id="text_5">
@@ -91,7 +91,7 @@ L 266.4 257.048911
      <g id="line2d_9">
       <path d="M 64.36 227.707366 
 L 266.4 227.707366 
-" clip-path="url(#p9d6ee28f8c)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+" clip-path="url(#p2687a5c971)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
      </g>
      <g id="line2d_10"/>
      <g id="text_6">
@@ -102,7 +102,7 @@ L 266.4 227.707366
      <g id="line2d_11">
       <path d="M 64.36 198.365822 
 L 266.4 198.365822 
-" clip-path="url(#p9d6ee28f8c)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+" clip-path="url(#p2687a5c971)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
      </g>
      <g id="line2d_12"/>
      <g id="text_7">
@@ -113,7 +113,7 @@ L 266.4 198.365822
      <g id="line2d_13">
       <path d="M 64.36 169.024277 
 L 266.4 169.024277 
-" clip-path="url(#p9d6ee28f8c)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+" clip-path="url(#p2687a5c971)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
      </g>
      <g id="line2d_14"/>
      <g id="text_8">
@@ -124,7 +124,7 @@ L 266.4 169.024277
      <g id="line2d_15">
       <path d="M 64.36 139.682733 
 L 266.4 139.682733 
-" clip-path="url(#p9d6ee28f8c)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+" clip-path="url(#p2687a5c971)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
      </g>
      <g id="line2d_16"/>
      <g id="text_9">
@@ -135,7 +135,7 @@ L 266.4 139.682733
      <g id="line2d_17">
       <path d="M 64.36 110.341188 
 L 266.4 110.341188 
-" clip-path="url(#p9d6ee28f8c)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+" clip-path="url(#p2687a5c971)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
      </g>
      <g id="line2d_18"/>
      <g id="text_10">
@@ -146,7 +146,7 @@ L 266.4 110.341188
      <g id="line2d_19">
       <path d="M 64.36 80.999644 
 L 266.4 80.999644 
-" clip-path="url(#p9d6ee28f8c)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+" clip-path="url(#p2687a5c971)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
      </g>
      <g id="line2d_20"/>
      <g id="text_11">
@@ -163,7 +163,7 @@ L 147.012727 315.732
 L 147.012727 211.180741 
 L 91.910909 211.180741 
 z
-" clip-path="url(#p9d6ee28f8c)" style="fill: #2a78d6; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p2687a5c971)" style="fill: #2a78d6; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_4">
     <path d="M 91.910909 211.180741 
@@ -171,7 +171,7 @@ L 147.012727 211.180741
 L 147.012727 163.220461 
 L 91.910909 163.220461 
 z
-" clip-path="url(#p9d6ee28f8c)" style="fill: #eb6834; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p2687a5c971)" style="fill: #eb6834; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_5">
     <path d="M 183.747273 315.732 
@@ -179,7 +179,7 @@ L 238.849091 315.732
 L 238.849091 211.180741 
 L 183.747273 211.180741 
 z
-" clip-path="url(#p9d6ee28f8c)" style="fill: #2a78d6; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p2687a5c971)" style="fill: #2a78d6; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_6">
     <path d="M 183.747273 211.180741 
@@ -187,7 +187,7 @@ L 238.849091 211.180741
 L 238.849091 139.023017 
 L 183.747273 139.023017 
 z
-" clip-path="url(#p9d6ee28f8c)" style="fill: #eb6834; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p2687a5c971)" style="fill: #eb6834; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_7">
     <path d="M 183.747273 139.023017 
@@ -195,7 +195,7 @@ L 238.849091 139.023017
 L 238.849091 100.443229 
 L 183.747273 100.443229 
 z
-" clip-path="url(#p9d6ee28f8c)" style="fill: #1baf7a; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p2687a5c971)" style="fill: #1baf7a; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_8">
     <path d="M 64.36 315.732 
@@ -248,7 +248,7 @@ z
      <g id="line2d_23">
       <path d="M 361 315.732 
 L 563.04 315.732 
-" clip-path="url(#pe25ef7ffcf)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+" clip-path="url(#p40a25ebc62)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
      </g>
      <g id="line2d_24"/>
      <g id="text_20">
@@ -257,77 +257,99 @@ L 563.04 315.732
     </g>
     <g id="ytick_11">
      <g id="line2d_25">
-      <path d="M 361 245.353193 
-L 563.04 245.353193 
-" clip-path="url(#pe25ef7ffcf)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+      <path d="M 361 265.579312 
+L 563.04 265.579312 
+" clip-path="url(#p40a25ebc62)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
      </g>
      <g id="line2d_26"/>
      <g id="text_21">
-      <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #3c484e" x="355" y="250.008818" transform="rotate(-0 355 250.008818)">5 min</text>
+      <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #3c484e" x="355" y="270.234937" transform="rotate(-0 355 270.234937)">5 min</text>
      </g>
     </g>
     <g id="ytick_12">
      <g id="line2d_27">
-      <path d="M 361 174.974386 
-L 563.04 174.974386 
-" clip-path="url(#pe25ef7ffcf)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+      <path d="M 361 215.426624 
+L 563.04 215.426624 
+" clip-path="url(#p40a25ebc62)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
      </g>
      <g id="line2d_28"/>
      <g id="text_22">
-      <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #3c484e" x="355" y="179.630011" transform="rotate(-0 355 179.630011)">10 min</text>
+      <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #3c484e" x="355" y="220.082249" transform="rotate(-0 355 220.082249)">10 min</text>
      </g>
     </g>
     <g id="ytick_13">
      <g id="line2d_29">
-      <path d="M 361 104.595578 
-L 563.04 104.595578 
-" clip-path="url(#pe25ef7ffcf)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+      <path d="M 361 165.273937 
+L 563.04 165.273937 
+" clip-path="url(#p40a25ebc62)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
      </g>
      <g id="line2d_30"/>
      <g id="text_23">
-      <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #3c484e" x="355" y="109.251203" transform="rotate(-0 355 109.251203)">15 min</text>
+      <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #3c484e" x="355" y="169.929562" transform="rotate(-0 355 169.929562)">15 min</text>
      </g>
     </g>
-    <g id="text_24">
+    <g id="ytick_14">
+     <g id="line2d_31">
+      <path d="M 361 115.121249 
+L 563.04 115.121249 
+" clip-path="url(#p40a25ebc62)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_32"/>
+     <g id="text_24">
+      <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #3c484e" x="355" y="119.776874" transform="rotate(-0 355 119.776874)">20 min</text>
+     </g>
+    </g>
+    <g id="ytick_15">
+     <g id="line2d_33">
+      <path d="M 361 64.968561 
+L 563.04 64.968561 
+" clip-path="url(#p40a25ebc62)" style="fill: none; stroke: #e3e9ed; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_34"/>
+     <g id="text_25">
+      <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #3c484e" x="355" y="69.624186" transform="rotate(-0 355 69.624186)">25 min</text>
+     </g>
+    </g>
+    <g id="text_26">
      <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #3c484e" x="312.215625" y="188.711625" transform="rotate(-90 312.215625 188.711625)">Total time of the entailment</text>
     </g>
    </g>
    <g id="patch_10">
     <path d="M 388.550909 315.732 
 L 443.652727 315.732 
-L 443.652727 281.011788 
-L 388.550909 281.011788 
+L 443.652727 290.990007 
+L 388.550909 290.990007 
 z
-" clip-path="url(#pe25ef7ffcf)" style="fill: #eb6834; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p40a25ebc62)" style="fill: #eb6834; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_11">
     <path d="M 480.387273 315.732 
 L 535.489091 315.732 
-L 535.489091 266.326077 
-L 480.387273 266.326077 
+L 535.489091 274.23901 
+L 480.387273 274.23901 
 z
-" clip-path="url(#pe25ef7ffcf)" style="fill: #eb6834; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p40a25ebc62)" style="fill: #eb6834; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_12">
-    <path d="M 480.387273 266.326077 
-L 535.489091 266.326077 
+    <path d="M 480.387273 274.23901 
+L 535.489091 274.23901 
 L 535.489091 100.443229 
 L 480.387273 100.443229 
 z
-" clip-path="url(#pe25ef7ffcf)" style="fill: #1baf7a; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p40a25ebc62)" style="fill: #1baf7a; stroke: #ffffff; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_13">
     <path d="M 361 315.732 
 L 563.04 315.732 
 " style="fill: none; stroke: #3c484e; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
    </g>
-   <g id="text_25">
-    <text style="font-weight: 700; font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #090a0b" x="416.101818" y="275.562457" transform="rotate(-0 416.101818 275.562457)">2 min 28 s</text>
-   </g>
-   <g id="text_26">
-    <text style="font-weight: 700; font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #090a0b" x="507.938182" y="94.993897" transform="rotate(-0 507.938182 94.993897)">15 min 18 s</text>
-   </g>
    <g id="text_27">
+    <text style="font-weight: 700; font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #090a0b" x="416.101818" y="285.540676" transform="rotate(-0 416.101818 285.540676)">2 min 28 s</text>
+   </g>
+   <g id="text_28">
+    <text style="font-weight: 700; font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #090a0b" x="507.938182" y="94.993897" transform="rotate(-0 507.938182 94.993897)">21 min 28 s</text>
+   </g>
+   <g id="text_29">
     <text style="font-weight: 700; font-size: 14.4px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #090a0b" x="462.02" y="49.69125" transform="rotate(-0 462.02 49.69125)">Time</text>
    </g>
   </g>
@@ -340,7 +362,7 @@ L 100.956562 10.8
 z
 " style="fill: #2a78d6; stroke: #2a78d6; stroke-linejoin: miter"/>
    </g>
-   <g id="text_28">
+   <g id="text_30">
     <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #3c484e" x="122.556562" y="20.28" transform="rotate(-0 122.556562 20.28)">Triples before entailment</text>
    </g>
    <g id="patch_15">
@@ -351,7 +373,7 @@ L 277.849687 10.8
 z
 " style="fill: #eb6834; stroke: #eb6834; stroke-linejoin: miter"/>
    </g>
-   <g id="text_29">
+   <g id="text_31">
     <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #3c484e" x="299.449687" y="20.28" transform="rotate(-0 299.449687 20.28)">Other rules</text>
    </g>
    <g id="patch_16">
@@ -362,16 +384,16 @@ L 378.227812 10.8
 z
 " style="fill: #1baf7a; stroke: #1baf7a; stroke-linejoin: miter"/>
    </g>
-   <g id="text_30">
+   <g id="text_32">
     <text style="font-size: 12px; font-family: '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #3c484e" x="399.827812" y="20.28" transform="rotate(-0 399.827812 20.28)">rdf-reification</text>
    </g>
   </g>
  </g>
  <defs>
-  <clipPath id="p9d6ee28f8c">
+  <clipPath id="p2687a5c971">
    <rect x="64.36" y="61.69125" width="202.04" height="254.04075"/>
   </clipPath>
-  <clipPath id="pe25ef7ffcf">
+  <clipPath id="p40a25ebc62">
    <rect x="361" y="61.69125" width="202.04" height="254.04075"/>
   </clipPath>
  </defs>
