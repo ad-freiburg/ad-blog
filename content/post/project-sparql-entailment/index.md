@@ -188,7 +188,7 @@ rdf:_i rdfs:domain rdfs:Resource.
 
 Again, these triples are only materialized if `rdf:_i` occurs in the graph.
 
-Moreover, every container membership property is a subproperty of `rdfs:member`: `?cmp rdf:type rdfs:ContainerMembershipProperty` entails `?cmp rdfs:subPropertyOf rdfs:member`. Together with the semantics of `rdfs:subPropertyOf`, a triple such as `:MyBag rdf:_1 :Apple` therefore entails `:MyBag rdfs:member :Apple`.
+Moreover, every container membership property is a subproperty of `rdfs:member`: `?cmp rdf:type rdfs:ContainerMembershipProperty` entails `?cmp rdfs:subPropertyOf rdfs:member`. Together with the semantics of `rdfs:subPropertyOf`, a triple such as `:firstnames rdf:_1 "Anika"^^xsd:string` therefore entails `:firstnames rdfs:member "Anika"^^xsd:string`.
 
 ## OWL 2 RL Entailment Regime
 In the following, we will discuss a subset of the Web Ontology Language (OWL 2), the so-called OWL 2 Rule Language ([OWL 2 RL](https://www.w3.org/TR/owl2-profiles/)). It is designed so that its entailments can be computed using a set of rules, making it suitable for materialization.
@@ -557,7 +557,7 @@ Every rule previouly discussed has a short name defined by the World Wide Web Co
 | cax-sco | `?c1 rdfs:subClassOf ?c2`<br>`?x rdf:type ?c1` | `?x rdf:type ?c2` |
 | cax-eqc1 | `?c1 owl:equivalentClass ?c2`<br>`?x rdf:type ?c1` | `?x rdf:type ?c2` |
 | cax-eqc2 | `?c1 owl:equivalentClass ?c2`<br>`?x rdf:type ?c2` | `?x rdf:type ?c1` |
-| dt-type1 | | `?dt rdf:type rdfs:Datatype` for every datatype `?dt` supported in OWL 2 RL |
+| dt-type | | `?dt rdf:type rdfs:Datatype` for every datatype `?dt` supported in OWL 2 RL |
 | scm-cls | `?c rdf:type owl:Class` | `?c rdfs:subClassOf ?c`<br>`?c owl:equivalentClass ?c`<br>`?c rdfs:subClassOf owl:Thing`<br>`owl:Nothing rdfs:subClassOf ?c` |
 | scm-sco | `?c1 rdfs:subClassOf ?c2`<br>`?c2 rdfs:subClassOf ?c3` | `?c1 rdfs:subClassOf ?c3` |
 | scm-eqc1 | `?c1 owl:equivalentClass ?c2` | `?c1 rdfs:subClassOf ?c2`<br>`?c2 rdfs:subClassOf ?c1` |
@@ -737,7 +737,7 @@ Now consider a graph containing:
 The update query would entail `"SustainableSystems"^^xsd:string rdf:type :Program`. However, this triple is not allowed in an RDF graph because its subject is a literal. Therefore, in update queries that add a triple with term `?v` in subject position without guaranteeing that `?v` is not a literal, a filter `FILTER(!isLiteral(?v))` needs to be added to the `WHERE` clause. If we already know that `?v` occurs in the subject position of a triple in the graph, the filter is not necessary, since we then know it cannot be a literal.
 
 
-An important aspect is that newly entailed triples can themselves be premises for other entailment rules. Therefore, applying every rule once is not sufficient to compute all entailed triples. Instead, all rules have to be applied repeatedly. After each iteration, we will count the triples in the graph and compare that number to the number of the last iteration. As soon as an iteration ends without adding new triples, applying any of the entailment rules again will not compute any new triples. We then know that all entailed triples were added.
+An important aspect is that newly entailed triples can themselves be premises for other entailment rules. Therefore, applying every rule once is not sufficient to compute all entailed triples. Instead, all rules have to be applied repeatedly. After each iteration, we will count the triples in the graph and compare that number to the number of the last iteration. As soon as an iteration ends without adding new triples, applying any of the entailment rules again will not compute any new triples. We then know that all entailed triples were added. An exception to this are rules that add a fixed set of triples, such as the [RDFS axioms](#additional-axiomatic-triples). For such rules it is sufficient to apply them once before applying all other rules repeatedly. Concretely, these are the rules rdf-axioms, rdfs-axioms, cls-thing, cls-nothing, dt-type, and prp-ap (see [Entailment Rules at a Glance](#entailment-rules-at-a-glance)).
 
 
 Note that when applying all discussed entailment rules to a graph, some rules or parts of rules can be redundant. For example, consider again the previously discussed rule regarding `owl:intersectionOf` and the following graph: 
@@ -796,20 +796,29 @@ All entailment rules apart from the reification rule were applied to Olympics RD
 <!-- Figure 4 -->
 <div id="fig-triples-per-rule"></div>
 
-{{< figure id="fig-triples-per-rule" src="img/triples_per_rule.svg" width="800" caption="> Figure 4: Share of the added triples per entailment rule for Olympics RDF, WikiPathways, and IMDb. Rules are reffered to by their W3C names, see [Entailment Rules at a Glance](#entailment-rules-at-a-glance). Rules contributing only a small share are grouped as Other rules." >}}
+{{< figure id="fig-triples-per-rule" src="img/triples_per_rule.svg" width="800" caption="> Figure 4: Share of the added triples per entailment rule for Olympics RDF, WikiPathways, and IMDb. Rules are referred to by their W3C names, see [Entailment Rules at a Glance](#entailment-rules-at-a-glance). Rules contributing only a small share are grouped as Other rules." >}}
 
 
 When considering the time needed for materialization per rule ([Figure 5](#fig-time-per-rule)), it is noticeable that a high amount of the total time is needed for the rules specified as Other rules. There are 46 rules specified as Other rules, and each of them contributes less than 5% of the total time needed. However, all these rules together sum up to a high amount of time in the materialization process. 
 
 
 Between 3.8 % and 8.8% of the time are not related to a specific entailment rule, but are needed for rebuilding the graph and for counting the number of triples.
-In WikiPathways, the rule `eq-rep` adds a high number of triples and needs a lot of time. `eq-rep` replaces terms in triples if there is a `owl:sameAs` relation between terms. WikiPathways contains a high number of `owl:sameAs` relations. That also explains the graph's significant growth relative to its original size (see [Figure 2](#fig-triple-counts)).
+In WikiPathways, the rule `eq-rep` adds a high number of triples and needs a lot of time. `eq-rep` replaces terms in triples if there is a `owl:sameAs` relation between terms. WikiPathways contains a high number of `owl:sameAs` relations. That also explains the graph's significant growth relative to its original size ([Figure 2](#fig-triple-counts)).
 
 
 <div id="fig-time-per-rule"></div>
 
-{{< figure id="fig-time-per-rule" src="img/time_per_rule.svg" width="800" caption="> Figure 5: Share of the time needed for the materialization process per entailment rule for Olympics RDF, WikiPathways, and IMDb. Rules are reffered to by their W3C names, see [Entailment Rules at a Glance](#entailment-rules-at-a-glance). Rules needing less than 5 % of the total entailment time in every graph are counted as Other rules." >}}
+{{< figure id="fig-time-per-rule" src="img/time_per_rule.svg" width="800" caption="> Figure 5: Share of the time needed for the materialization process per entailment rule for Olympics RDF, WikiPathways, and IMDb. Rules are referred to by their W3C names, see [Entailment Rules at a Glance](#entailment-rules-at-a-glance). Rules needing less than 5 % of the total entailment time in every graph are counted as Other rules." >}}
 
+
+
+In the materialization process of IMDb, the time needed for each part of the process was measured for every entailment rule ([Figure 6](#fig-time-breakdown)). QLever measures and reports these times for every update, except for the times shown for "queries" and for "COUNT queries, rebuilds etc". All rules except those that add a fixed set of triples (rdfs-axioms, cls-thing, cls-nothing, dt-type, and prp-ap) were run four times in the materialization process. The times shown in [Figure 6](#fig-time-breakdown) are the sum of the times needed for all calls of each rule.
+
+When processing an update query, QLever evaluates the `WHERE` clause of the query similarly to a `SELECT` query, resulting in a table in which every row is a solution (WHERE). It then computes the ID of each term by looking it up, sorts the resulting triples and removes duplicates (IDs). The resulting triples are inserted by writing them to the so-called delta triples in RAM, and the delta triples in every block are sorted and duplicates are removed (insert). The metadata that stores the first and last triple of every block might have changed. Therefore, a snapshot of the metadata is created (snapshot). All delta triples (including those from earlier updates) are then written to a temporary file (writeback). QLever also needs time for parsing the update query, for waiting for a possible other update thread, for waiting on a possible write lock, for clearing the cache that contains results of previous queries, and for planning the query (QL other). When an entailment rule consists of multiple updates or an update that is run more than once, it may also send one or more `SELECT` queries, for example to count the number of triples in the graph or to read all members of a list (queries). The time for these queries is not measured by QLever but by the script applying the entailment rules. Of the total time needed for applying all rules, 6.3 % is not related to a specific entailment rule but is spent, for example, on `COUNT` queries between the entailment rules and on rebuilds of the index.
+
+<div id="fig-time-breakdown"></div>
+
+{{< figure id="fig-time-breakdown" src="img/time_breakdown.svg" width="800" caption="> Figure 6: Time that was needed for each part of the entailment process when entailing IMDb, for different entailment rules. Rules are referred to by their W3C names, see [Entailment Rules at a Glance](#entailment-rules-at-a-glance)." >}}
 
 
 ## Conclusion
